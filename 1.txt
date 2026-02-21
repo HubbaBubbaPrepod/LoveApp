@@ -1,0 +1,10 @@
+Make this all:
+
+Custom Event Calendars - Create sex calendar, sports calendar, etc. Добавление этих календарей должно делаться в приложении в меню этих календарей
+Relationship Dashboard - Counter showing days since start date
+Settings Screen - Theme toggle (light/dark), preferences
+Advanced Animations - Screen transitions, bounce effects
+Backend Integration - Connect to PostgreSQL with API
+Photo Support - Gallery integration and image uploads
+Notifications - Reminders for cycle, events, etc.
+Two-Account Linking - Link girlfriend's account

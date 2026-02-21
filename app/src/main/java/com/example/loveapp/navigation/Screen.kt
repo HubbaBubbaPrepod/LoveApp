@@ -1,0 +1,16 @@
+package com.example.loveapp.navigation
+
+sealed class Screen(val route: String) {
+    object Login : Screen("login")
+    object Signup : Screen("signup")
+    object Dashboard : Screen("dashboard")
+    object Notes : Screen("notes")
+    object Wishes : Screen("wishes")
+    object MoodTracker : Screen("mood_tracker")
+    object ActivityFeed : Screen("activity_feed")
+    object MenstrualCalendar : Screen("menstrual_calendar")
+    object CustomCalendars : Screen("custom_calendars")
+    object RelationshipDashboard : Screen("relationship_dashboard")
+    object Settings : Screen("settings")
+    object Profile : Screen("profile")
+}

@@ -35,6 +35,12 @@ class MoodViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private val _successMessage = MutableStateFlow<String?>(null)
+    val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
+
+    val moods: StateFlow<List<MoodResponse>>
+        get() = todayMoods
+
     val moodTypes = listOf("Excellent", "Good", "Neutral", "Sad", "Romantic", "Nervous", "Tired")
     val moodColors = mapOf(
         "Excellent" to MoodExcellent,
@@ -45,6 +51,8 @@ class MoodViewModel @Inject constructor(
         "Nervous" to MoodRomantic,
         "Tired" to MoodTired
     )
+
+    fun createMood(moodType: String) = addMood(moodType)
 
     fun addMood(moodType: String) {
         viewModelScope.launch {
@@ -109,5 +117,10 @@ class MoodViewModel @Inject constructor(
                 _isLoading.value = false
             }
         }
+    }
+
+    fun clearMessages() {
+        _errorMessage.value = null
+        _successMessage.value = null
     }
 }

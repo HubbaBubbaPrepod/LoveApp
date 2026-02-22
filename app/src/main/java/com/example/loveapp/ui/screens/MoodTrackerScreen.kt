@@ -1,5 +1,6 @@
 package com.example.loveapp.ui.screens
 
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -52,6 +53,7 @@ val moodEmojis = listOf(
     "😄" to "Very Good"
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoodTrackerScreen(
     navController: NavHostController,
@@ -240,12 +242,12 @@ fun MoodCardStandalone(mood: com.example.loveapp.data.api.models.MoodResponse) {
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = "Mood: ${mood.mood}",
+                text = "Mood: ${mood.moodType}",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = "Logged on: ${mood.createdAt}",
+                text = "Logged on: ${mood.timestamp}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )

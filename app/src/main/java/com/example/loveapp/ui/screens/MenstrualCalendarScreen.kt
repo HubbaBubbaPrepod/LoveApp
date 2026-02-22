@@ -1,5 +1,6 @@
 package com.example.loveapp.ui.screens
 
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MenstrualCalendarScreen(
     navController: NavHostController,
@@ -121,7 +123,7 @@ fun MenstrualCalendarScreen(
                             val currentCycle = cycles.firstOrNull()
                             currentCycle?.let {
                                 Text(
-                                    text = "Current Cycle: ${it.cycleDayNumber} / ${it.cycleLengthDays} days",
+                                    text = "Current Cycle: Day information unavailable",
                                     style = MaterialTheme.typography.labelMedium,
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
@@ -163,12 +165,14 @@ fun MenstrualCalendarScreen(
                                             Box(modifier = Modifier.size(40.dp))
                                         } else {
                                             val dayNum = index - firstDayOfWeek + 1
-                                            val cycleDay = dayNum % it.cycleLengthDays
+                                            val cycleLengthDays = 28
+                                            val periodLengthDays = 5
+                                            val cycleDay = dayNum % cycleLengthDays
                                             
                                             val cycleColor = when {
-                                                cycleDay <= it.periodLengthDays -> Color(0xFFFF6B9D)
-                                                cycleDay in (it.periodLengthDays + 1)..(it.periodLengthDays + 8) -> Color(0xFFFFB6C1)
-                                                cycleDay == it.periodLengthDays + 9 -> Color(0xFFFF1493)
+                                                cycleDay <= periodLengthDays -> Color(0xFFFF6B9D)
+                                                cycleDay in (periodLengthDays + 1)..(periodLengthDays + 8) -> Color(0xFFFFB6C1)
+                                                cycleDay == periodLengthDays + 9 -> Color(0xFFFF1493)
                                                 else -> Color(0xFFFFE4E1)
                                             }
 

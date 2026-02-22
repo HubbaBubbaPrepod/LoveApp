@@ -1,5 +1,6 @@
 package com.example.loveapp.ui.screens
 
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -46,6 +47,7 @@ import androidx.navigation.NavHostController
 import com.example.loveapp.data.api.models.NoteResponse
 import com.example.loveapp.viewmodel.NoteViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotesScreen(
     navController: NavHostController,

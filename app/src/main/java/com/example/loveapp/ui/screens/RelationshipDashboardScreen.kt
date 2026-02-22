@@ -1,5 +1,6 @@
 package com.example.loveapp.ui.screens
 
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +51,7 @@ import com.example.loveapp.ui.theme.AccentPurple
 import com.example.loveapp.ui.theme.PrimaryPink
 import com.example.loveapp.viewmodel.RelationshipViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RelationshipDashboardScreen(
     navController: NavHostController,
@@ -144,11 +146,7 @@ fun RelationshipDashboardScreen(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(
-                                        brush = androidx.compose.foundation.background(
-                                            PrimaryPink
-                                        ).brush ?: androidx.compose.material3.ColorScheme::primary.call(MaterialTheme.colorScheme)
-                                    )
+                                    .background(PrimaryPink)
                                     .padding(32.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {

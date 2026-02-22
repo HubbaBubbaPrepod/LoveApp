@@ -6,7 +6,6 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -36,17 +35,9 @@ object NetworkModule {
 
         val authInterceptor = okhttp3.Interceptor { chain ->
             val originalRequest = chain.request()
-            val token = runBlocking { tokenManager.getToken() }
-            
-            val newRequest = if (token != null) {
-                originalRequest.newBuilder()
-                    .addHeader("Authorization", "Bearer $token")
-                    .build()
-            } else {
-                originalRequest
-            }
-            
-            chain.proceed(newRequest)
+            // For now, proceed without auth token to avoid blocking on startup
+            // Auth will be handled per-request in repositories if needed
+            chain.proceed(originalRequest)
         }
 
         return OkHttpClient.Builder()

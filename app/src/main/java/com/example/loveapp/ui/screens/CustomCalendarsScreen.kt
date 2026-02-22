@@ -1,5 +1,6 @@
 package com.example.loveapp.ui.screens
 
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -55,6 +56,7 @@ import com.example.loveapp.ui.theme.PrimaryPink
 import com.example.loveapp.ui.theme.SecondaryPeach
 import com.example.loveapp.viewmodel.CalendarViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomCalendarsScreen(
     navController: NavHostController,

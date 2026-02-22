@@ -1,5 +1,6 @@
 package com.example.loveapp.ui.screens
 
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +15,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SentimentSatisfied
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -43,6 +43,7 @@ data class MenutileData(
     val onNavigate: () -> Unit
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     onNavigateToNotes: () -> Unit,
@@ -58,7 +59,7 @@ fun DashboardScreen(
     val tiles = listOf(
         MenutileData("Notes", Icons.Default.List, PrimaryPink, onNavigateToNotes),
         MenutileData("Wishes", Icons.Default.Favorite, SecondaryPeach, onNavigateToWishes),
-        MenutileData("Mood", Icons.Default.SentimentSatisfied, AccentBlue, onNavigateToMood),
+        MenutileData("Mood", Icons.Default.Favorite, AccentBlue, onNavigateToMood),
         MenutileData("Activities", Icons.Default.Info, AccentOrange, onNavigateToActivity),
         MenutileData("Cycle", Icons.Default.Favorite, AccentPurple, onNavigateToMenstrual),
         MenutileData("Calendars", Icons.Default.List, TertiaryRose, onNavigateToCalendars),

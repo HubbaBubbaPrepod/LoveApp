@@ -1,5 +1,6 @@
 package com.example.loveapp.ui.screens
 
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,9 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -40,6 +39,7 @@ import androidx.navigation.NavHostController
 import com.example.loveapp.ui.theme.PrimaryPink
 import com.example.loveapp.viewmodel.SettingsViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     navController: NavHostController,
@@ -83,7 +83,7 @@ fun SettingsScreen(
 
             item {
                 SettingsSwitchCard(
-                    icon = Icons.Default.DarkMode,
+                    icon = Icons.Default.Notifications,
                     title = "Dark Mode",
                     description = "Use dark theme",
                     isChecked = isDarkMode,
@@ -138,7 +138,7 @@ fun SettingsScreen(
 
             item {
                 SettingsCard(
-                    icon = Icons.Default.Logout,
+                    icon = Icons.Default.ArrowBack,
                     title = "Logout",
                     description = "Sign out from your account",
                     onClick = { /* TODO: Logout */ },

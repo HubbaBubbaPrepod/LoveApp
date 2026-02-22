@@ -1,6 +1,7 @@
 package com.example.loveapp
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -8,18 +9,24 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.loveapp.viewmodel.AuthViewModel
 import com.example.loveapp.navigation.Screen
 import com.example.loveapp.ui.screens.ActivityFeedScreen
 import com.example.loveapp.ui.screens.CustomCalendarsScreen
@@ -38,24 +45,48 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            LoveAppTheme {
-                LoveAppNavigation()
+        try {
+            super.onCreate(savedInstanceState)
+            Log.d("LoveApp", "MainActivity.onCreate started")
+            enableEdgeToEdge()
+            setContent {
+                LoveAppTheme {
+                    LoveAppNavigation()
+                }
             }
+            Log.d("LoveApp", "MainActivity.onCreate completed")
+        } catch (e: Exception) {
+            Log.e("LoveApp", "Error in MainActivity.onCreate", e)
+            throw e
         }
     }
 }
 
 @Composable
-fun LoveAppNavigation() {
-    val navController = rememberNavController()
+fun LoveAppNavigation(
+    authViewModel: AuthViewModel = hiltViewModel()
+) {
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState(initial = null)
 
-    NavHost(
-        navController = navController,
-        startDestination = Screen.Login.route
-    ) {
+    val startDestination = when (isLoggedIn) {
+        true -> Screen.Dashboard.route
+        false -> Screen.Login.route
+        null -> null
+    }
+
+    if (startDestination == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    key(startDestination) {
+        val navController = rememberNavController()
+        NavHost(
+            navController = navController,
+            startDestination = startDestination
+        ) {
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoginSuccess = {
@@ -125,6 +156,7 @@ fun LoveAppNavigation() {
 
         composable(Screen.Settings.route) {
             SettingsScreen(navController)
+        }
         }
     }
 }

@@ -19,10 +19,12 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -42,6 +44,16 @@ fun SignupScreen(
     var password by remember { mutableStateOf("") }
     var displayName by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
+    val authSuccess by viewModel.authSuccessEvent.collectAsState(initial = false)
+    val isLoading by viewModel.isLoading.collectAsState(initial = false)
+    val errorMessage by viewModel.errorMessage.collectAsState(initial = null)
+
+    LaunchedEffect(authSuccess) {
+        if (authSuccess) {
+            viewModel.clearAuthSuccessEvent()
+            onSignupSuccess()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -121,17 +133,25 @@ fun SignupScreen(
             }
         }
 
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage!!,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            )
+        }
+
         Button(
-            onClick = {
-                viewModel.signup(username, email, password, displayName, gender)
-                onSignupSuccess()
-            },
+            onClick = { viewModel.signup(username, email, password, displayName, gender) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            enabled = username.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && displayName.isNotEmpty() && gender.isNotEmpty()
+            enabled = !isLoading && username.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && displayName.isNotEmpty() && gender.isNotEmpty()
         ) {
-            Text("Sign Up")
+            Text(if (isLoading) "Loading..." else "Sign Up")
         }
 
         Spacer(modifier = Modifier.height(16.dp))

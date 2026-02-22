@@ -23,12 +23,12 @@ data class AuthResponse(
     val email: String,
     @SerializedName("display_name")
     val displayName: String,
-    val gender: String,
+    val gender: String? = null,
     @SerializedName("profile_image")
     val profileImage: String? = null,
     val token: String? = null,
     @SerializedName("created_at")
-    val createdAt: String
+    val createdAt: String? = null
 )
 
 // Notes Models
@@ -102,10 +102,11 @@ data class MoodResponse(
     val userId: Int,
     @SerializedName("mood_type")
     val moodType: String,
-    val timestamp: String,
+    @SerializedName("created_at")
+    val timestamp: String = "",
     val date: String,
-    val note: String,
-    val color: String
+    val note: String = "",
+    val color: String? = null
 )
 
 // Activity Models
@@ -152,11 +153,11 @@ data class CycleResponse(
     val cycleDuration: Int,
     @SerializedName("period_duration")
     val periodDuration: Int,
-    @SerializedName("last_updated")
-    val lastUpdated: String,
-    val symptoms: String,
-    val mood: String,
-    val notes: String
+    @SerializedName("updated_at")
+    val lastUpdated: String = "",
+    val symptoms: String = "",
+    val mood: String = "",
+    val notes: String = ""
 )
 
 // Custom Calendar Models
@@ -171,11 +172,11 @@ data class CustomCalendarRequest(
 data class CustomCalendarResponse(
     val id: Int,
     val name: String,
-    val description: String,
+    val description: String = "",
     val type: String,
     @SerializedName("color_hex")
     val colorHex: String,
-    val icon: String,
+    val icon: String? = null,
     @SerializedName("created_at")
     val createdAt: String,
     @SerializedName("user_id")
@@ -216,10 +217,10 @@ data class RelationshipResponse(
     val createdAt: String
 )
 
-// Generic Response Wrapper
+// Generic Response Wrapper (matches server sendResponse)
 data class ApiResponse<T>(
     val success: Boolean,
-    val message: String,
+    val message: String? = null,
     val data: T? = null,
     val errors: Map<String, String>? = null
 )

@@ -1,15 +1,16 @@
 package com.example.loveapp.di
 
 import com.example.loveapp.data.api.LoveAppApiService
-import com.example.loveapp.utils.TokenManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.IOException
 import javax.inject.Singleton
 
 /**
@@ -28,21 +29,27 @@ object NetworkModule {
 
     @Singleton
     @Provides
-    fun provideHttpClient(tokenManager: TokenManager): OkHttpClient {
+    fun provideHttpClient(): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
-
-        val authInterceptor = okhttp3.Interceptor { chain ->
-            val originalRequest = chain.request()
-            // For now, proceed without auth token to avoid blocking on startup
-            // Auth will be handled per-request in repositories if needed
-            chain.proceed(originalRequest)
+        val errorInterceptor = Interceptor { chain ->
+            val response = chain.proceed(chain.request())
+            if (!response.isSuccessful) {
+                val body = response.peekBody(Long.MAX_VALUE).string()
+                val msg = try {
+                    org.json.JSONObject(body).optString("message", "Error ${response.code}")
+                } catch (_: Exception) {
+                    "Error ${response.code}"
+                }
+                throw IOException(msg)
+            }
+            response
         }
 
         return OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
-            .addInterceptor(authInterceptor)
+            .addNetworkInterceptor(errorInterceptor)
             .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)

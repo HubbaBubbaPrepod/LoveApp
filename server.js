@@ -234,14 +234,23 @@ app.post('/api/upload/profile', authenticateToken, upload.single('file'), async 
 
 // ==================== NOTES ====================
 
+// Create Note (tags в БД — массив text[], пустая строка недопустима)
+function parseTags(tags) {
+  if (tags == null || tags === '') return [];
+  if (Array.isArray(tags)) return tags;
+  if (typeof tags === 'string') return tags.split(',').map(s => s.trim()).filter(Boolean);
+  return [String(tags)];
+}
+
 // Create Note
 app.post('/api/notes', authenticateToken, async (req, res) => {
   try {
     const { title, content, is_private, tags } = req.body;
+    const tagsArr = parseTags(tags);
 
     const result = await pool.query(
       'INSERT INTO notes (user_id, title, content, is_private, tags) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [req.userId, title, content, is_private || false, tags]
+      [req.userId, title, content, is_private || false, tagsArr]
     );
 
     sendResponse(res, true, 'Note created', result.rows[0], 201);
@@ -303,10 +312,11 @@ app.get('/api/notes/:id', authenticateToken, async (req, res) => {
 app.put('/api/notes/:id', authenticateToken, async (req, res) => {
   try {
     const { title, content, is_private, tags } = req.body;
+    const tagsArr = parseTags(tags);
 
     const result = await pool.query(
       'UPDATE notes SET title = $1, content = $2, is_private = $3, tags = $4, updated_at = NOW() WHERE id = $5 AND user_id = $6 RETURNING *',
-      [title, content, is_private, tags, req.params.id, req.userId]
+      [title, content, is_private, tagsArr, req.params.id, req.userId]
     );
 
     if (result.rows.length === 0) {
@@ -510,13 +520,13 @@ app.delete('/api/moods/:id', authenticateToken, async (req, res) => {
 
 // ==================== ACTIVITIES ====================
 
-// Create Activity
+// Create Activity (в схеме БД колонка называется event_date, не date)
 app.post('/api/activities', authenticateToken, async (req, res) => {
   try {
     const { title, description, date, category } = req.body;
 
     const result = await pool.query(
-      'INSERT INTO activity_logs (user_id, title, description, date, category) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      'INSERT INTO activity_logs (user_id, title, description, event_date, category) VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, title, description, event_date AS date, category, created_at, image_urls',
       [req.userId, title, description, date, category]
     );
 
@@ -527,7 +537,7 @@ app.post('/api/activities', authenticateToken, async (req, res) => {
   }
 });
 
-// Get Activities
+// Get Activities (колонка в БД: event_date)
 app.get('/api/activities', authenticateToken, async (req, res) => {
   try {
     const { date } = req.query;
@@ -539,7 +549,7 @@ app.get('/api/activities', authenticateToken, async (req, res) => {
     let countParams = [req.userId];
 
     if (date) {
-      query += ' AND DATE(date) = $2';
+      query += ' AND DATE(event_date) = $2';
       countParams.push(date);
     }
 
@@ -550,12 +560,14 @@ app.get('/api/activities', authenticateToken, async (req, res) => {
     let paramCount = 2;
 
     if (date) {
-      query += ` AND DATE(date) = $${paramCount}`;
+      query += ` AND DATE(event_date) = $${paramCount}`;
       params.push(date);
       paramCount++;
     }
 
-    query += ` ORDER BY date DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    query = 'SELECT id, user_id, title, description, event_date AS date, category, created_at, image_urls FROM activity_logs WHERE user_id = $1';
+    if (date) query += ` AND DATE(event_date) = $${paramCount}`;
+    query += ` ORDER BY event_date DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
     params.push(pageSize, offset);
 
     const result = await pool.query(query, params);

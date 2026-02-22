@@ -28,15 +28,36 @@ class AuthViewModel @Inject constructor(
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
+    /** One-shot: true when login/signup succeeded (UI should navigate and then call clearAuthSuccessEvent()) */
+    private val _authSuccessEvent = MutableStateFlow(false)
+    val authSuccessEvent: StateFlow<Boolean> = _authSuccessEvent.asStateFlow()
+
+    /** null = ещё проверяем токен, true = залогинен, false = не залогинен. При старте проверяем сохранённый токен. */
+    private val _isLoggedIn = MutableStateFlow<Boolean?>(null)
+    val isLoggedIn: StateFlow<Boolean?> = _isLoggedIn.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            _isLoggedIn.value = authRepository.getToken() != null
+        }
+    }
+
+    fun clearAuthSuccessEvent() {
+        _authSuccessEvent.value = false
+    }
+
     fun signup(username: String, email: String, password: String, displayName: String, gender: String) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
-            
+            _authSuccessEvent.value = false
+
             val result = authRepository.signup(username, email, password, displayName, gender)
             result.onSuccess { authResponse ->
                 _currentUser.value = authResponse
+                _isLoggedIn.value = true
                 _successMessage.value = "Signup successful"
+                _authSuccessEvent.value = true
                 _isLoading.value = false
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Signup failed"
@@ -49,11 +70,14 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
-            
+            _authSuccessEvent.value = false
+
             val result = authRepository.login(email, password)
             result.onSuccess { authResponse ->
                 _currentUser.value = authResponse
+                _isLoggedIn.value = true
                 _successMessage.value = "Login successful"
+                _authSuccessEvent.value = true
                 _isLoading.value = false
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Login failed"
@@ -68,6 +92,7 @@ class AuthViewModel @Inject constructor(
             val result = authRepository.logout()
             result.onSuccess {
                 _currentUser.value = null
+                _isLoggedIn.value = false
                 _successMessage.value = "Logged out"
                 _isLoading.value = false
             }.onFailure { error ->

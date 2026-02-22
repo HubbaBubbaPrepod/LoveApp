@@ -106,7 +106,7 @@ interface LoveAppApiService {
         @Path("id") id: Int
     ): ApiResponse<String>
 
-    @PUT("wishes/{id}/complete")
+    @POST("wishes/{id}/complete")
     suspend fun completeWish(
         @Header("Authorization") token: String,
         @Path("id") id: Int
@@ -240,12 +240,7 @@ interface LoveAppApiService {
     ): ApiResponse<String>
 
     // ==================== Relationship Endpoints ====================
-    @POST("relationship")
-    suspend fun createRelationship(
-        @Header("Authorization") token: String,
-        @Body request: RelationshipRequest
-    ): ApiResponse<RelationshipResponse>
-
+    // Server has no POST; use PUT for both create and update (server does upsert)
     @GET("relationship")
     suspend fun getRelationship(
         @Header("Authorization") token: String

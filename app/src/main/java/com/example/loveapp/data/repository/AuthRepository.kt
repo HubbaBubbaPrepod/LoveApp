@@ -42,13 +42,13 @@ class AuthRepository @Inject constructor(
                 )
             }
             
-            // Save to local database
+            // Save to local database (cache after successful server signup)
             val user = User(
                 username = response.data.username,
                 email = response.data.email,
                 password = password,
                 displayName = response.data.displayName,
-                gender = response.data.gender,
+                gender = response.data.gender ?: "",
                 isLoggedIn = true
             )
             userDao.insertUser(user)
@@ -76,13 +76,13 @@ class AuthRepository @Inject constructor(
                 )
             }
             
-            // Save to local database
+            // Save to local database (cache after successful server login)
             val user = User(
                 username = response.data.username,
                 email = response.data.email,
                 password = password,
                 displayName = response.data.displayName,
-                gender = response.data.gender,
+                gender = response.data.gender ?: "",
                 isLoggedIn = true
             )
             userDao.insertUser(user)

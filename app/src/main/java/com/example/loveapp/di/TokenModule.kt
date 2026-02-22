@@ -21,3 +21,4 @@ object TokenModule {
         return TokenManager.getInstance(context)
     }
 }
+

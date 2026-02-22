@@ -17,10 +17,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -37,6 +39,16 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    val authSuccess by viewModel.authSuccessEvent.collectAsState(initial = false)
+    val isLoading by viewModel.isLoading.collectAsState(initial = false)
+    val errorMessage by viewModel.errorMessage.collectAsState(initial = null)
+
+    LaunchedEffect(authSuccess) {
+        if (authSuccess) {
+            viewModel.clearAuthSuccessEvent()
+            onLoginSuccess()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -75,16 +87,25 @@ fun LoginScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
         )
 
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage!!,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            )
+        }
+
         Button(
-            onClick = {
-                viewModel.login(email, password)
-                onLoginSuccess()
-            },
+            onClick = { viewModel.login(email, password) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .height(48.dp),
+            enabled = !isLoading && email.isNotBlank() && password.isNotBlank()
         ) {
-            Text("Login")
+            Text(if (isLoading) "Loading..." else "Login")
         }
 
         Spacer(modifier = Modifier.height(16.dp))

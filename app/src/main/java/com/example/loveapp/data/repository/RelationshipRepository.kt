@@ -16,19 +16,8 @@ class RelationshipRepository @Inject constructor(
         firstKissDate: String? = null,
         anniversaryDate: String? = null
     ): Result<RelationshipResponse> = try {
-        val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
-        val request = RelationshipRequest(
-            relationshipStartDate = relationshipStartDate,
-            firstKissDate = firstKissDate,
-            anniversaryDate = anniversaryDate
-        )
-        val response = apiService.createRelationship("Bearer $token", request)
-        
-        if (response.success && response.data != null) {
-            Result.success(response.data)
-        } else {
-            Result.failure(Exception(response.message ?: "Failed to create relationship"))
-        }
+        // Server has no POST /relationship; PUT does upsert (create or update)
+        updateRelationship(relationshipStartDate, firstKissDate, anniversaryDate)
     } catch (e: Exception) {
         Result.failure(e)
     }

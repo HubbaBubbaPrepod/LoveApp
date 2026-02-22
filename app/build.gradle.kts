@@ -3,6 +3,11 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.android)
     id("org.jetbrains.kotlin.plugin.compose") version "2.2.0"
+    id("kotlin-kapt")
+}
+
+hilt {
+    enableAggregatingTask = false
 }
 
 android {
@@ -54,11 +59,11 @@ dependencies {
     // Room Database
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    annotationProcessor(libs.room.compiler)
+    kapt(libs.room.compiler)
     
     // Hilt Dependency Injection
     implementation(libs.hilt.android)
-    annotationProcessor(libs.hilt.compiler)
+    kapt(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
     
     // Retrofit & OkHttp

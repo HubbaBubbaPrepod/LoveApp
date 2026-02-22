@@ -20,7 +20,7 @@ class ActivityRepository @Inject constructor(
         category: String = ""
     ): Result<ActivityResponse> = try {
         val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", java.util.Locale("ru", "RU"))
         val date = dateFormat.format(Date())
         
         val request = ActivityRequest(

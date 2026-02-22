@@ -24,8 +24,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,7 +33,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
+import com.example.loveapp.R
 import com.example.loveapp.ui.theme.PrimaryPink
 import com.example.loveapp.viewmodel.SettingsViewModel
 
@@ -50,21 +50,6 @@ fun SettingsScreen(
     val remindersEnabled by viewModel.remindersEnabled.collectAsState()
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Settings") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PrimaryPink,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -75,7 +60,7 @@ fun SettingsScreen(
         ) {
             item {
                 Text(
-                    text = "Appearance",
+                    text = stringResource(R.string.appearance),
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(top = 8.dp)
                 )
@@ -84,8 +69,8 @@ fun SettingsScreen(
             item {
                 SettingsSwitchCard(
                     icon = Icons.Default.Notifications,
-                    title = "Dark Mode",
-                    description = "Use dark theme",
+                    title = stringResource(R.string.dark_mode),
+                    description = stringResource(R.string.dark_mode_desc),
                     isChecked = isDarkMode,
                     onCheckedChange = { viewModel.setDarkMode(it) }
                 )
@@ -93,7 +78,7 @@ fun SettingsScreen(
 
             item {
                 Text(
-                    text = "Notifications",
+                    text = stringResource(R.string.notifications),
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(top = 16.dp)
                 )
@@ -102,8 +87,8 @@ fun SettingsScreen(
             item {
                 SettingsSwitchCard(
                     icon = Icons.Default.Notifications,
-                    title = "Enable Notifications",
-                    description = "Get notified about important events",
+                    title = stringResource(R.string.enable_notifications),
+                    description = stringResource(R.string.notifications_desc),
                     isChecked = notificationsEnabled,
                     onCheckedChange = { viewModel.setNotificationsEnabled(it) }
                 )
@@ -112,8 +97,8 @@ fun SettingsScreen(
             item {
                 SettingsSwitchCard(
                     icon = Icons.Default.Notifications,
-                    title = "Cycle Reminders",
-                    description = "Remind me about cycle events",
+                    title = stringResource(R.string.cycle_reminders),
+                    description = stringResource(R.string.cycle_reminders_desc),
                     isChecked = remindersEnabled,
                     onCheckedChange = { viewModel.setRemindersEnabled(it) }
                 )
@@ -121,7 +106,7 @@ fun SettingsScreen(
 
             item {
                 Text(
-                    text = "Account",
+                    text = stringResource(R.string.account),
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(top = 16.dp)
                 )
@@ -130,8 +115,8 @@ fun SettingsScreen(
             item {
                 SettingsCard(
                     icon = Icons.Default.Edit,
-                    title = "Edit Profile",
-                    description = "Update your profile information",
+                    title = stringResource(R.string.edit_profile),
+                    description = stringResource(R.string.edit_profile_desc),
                     onClick = { /* TODO: Navigate to profile edit */ }
                 )
             }
@@ -139,8 +124,8 @@ fun SettingsScreen(
             item {
                 SettingsCard(
                     icon = Icons.Default.ArrowBack,
-                    title = "Logout",
-                    description = "Sign out from your account",
+                    title = stringResource(R.string.logout),
+                    description = stringResource(R.string.sign_out_desc),
                     onClick = { /* TODO: Logout */ },
                     isDestructive = true
                 )

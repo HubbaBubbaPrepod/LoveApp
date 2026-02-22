@@ -21,16 +21,22 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.rememberDatePickerState
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,7 +52,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
+import com.example.loveapp.R
+import com.example.loveapp.utils.DateUtils
 import com.example.loveapp.ui.theme.AccentPurple
 import com.example.loveapp.ui.theme.PrimaryPink
 import com.example.loveapp.viewmodel.RelationshipViewModel
@@ -81,21 +90,6 @@ fun RelationshipDashboardScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Our Relationship") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PrimaryPink,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Box(
@@ -117,14 +111,14 @@ fun RelationshipDashboardScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "No relationship info yet",
+                            text = stringResource(R.string.no_relationship_info),
                             style = MaterialTheme.typography.headlineSmall
                         )
                         Button(
                             onClick = { showEditDialog = true },
                             modifier = Modifier.padding(top = 16.dp)
                         ) {
-                            Text("Add Relationship Info")
+                            Text(stringResource(R.string.add_relationship_info))
                         }
                     }
                 }
@@ -168,7 +162,7 @@ fun RelationshipDashboardScreen(
                                             color = Color.White
                                         )
                                         Text(
-                                            text = "days together",
+                                            text = stringResource(R.string.days_together),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = Color.White
                                         )
@@ -176,7 +170,7 @@ fun RelationshipDashboardScreen(
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "💕 Happy Together 💕",
+                                    text = stringResource(R.string.happy_together),
                                     style = MaterialTheme.typography.headlineSmall,
                                     color = Color.White,
                                     textAlign = TextAlign.Center
@@ -197,14 +191,14 @@ fun RelationshipDashboardScreen(
                                         .fillMaxWidth()
                                         .padding(16.dp)
                                 ) {
-                                    InfoRow("Started", rel.relationshipStartDate)
+                                    InfoRow(stringResource(R.string.started), DateUtils.formatDateForDisplay(rel.relationshipStartDate))
                                     if (!rel.firstKissDate.isNullOrEmpty()) {
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        InfoRow("First Kiss", rel.firstKissDate)
+                                        InfoRow(stringResource(R.string.first_kiss_label), DateUtils.formatDateForDisplay(rel.firstKissDate))
                                     }
                                     if (!rel.anniversaryDate.isNullOrEmpty()) {
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        InfoRow("Anniversary", rel.anniversaryDate)
+                                        InfoRow(stringResource(R.string.anniversary_label), DateUtils.formatDateForDisplay(rel.anniversaryDate))
                                     }
                                 }
                             }
@@ -217,7 +211,7 @@ fun RelationshipDashboardScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                            Text("Edit Relationship Info")
+                            Text(stringResource(R.string.edit_relationship_info))
                         }
                     }
                 }
@@ -273,54 +267,140 @@ fun EditRelationshipDialog(
     onDismiss: () -> Unit,
     onUpdate: (String, String?, String?) -> Unit
 ) {
-    var startDate by remember { mutableStateOf(relationship?.relationshipStartDate ?: "") }
-    var kissDate by remember { mutableStateOf(relationship?.firstKissDate ?: "") }
-    var anniversaryDate by remember { mutableStateOf(relationship?.anniversaryDate ?: "") }
+    var startDate by remember { mutableStateOf(relationship?.relationshipStartDate?.split("T")?.get(0) ?: "") }
+    var kissDate by remember { mutableStateOf(relationship?.firstKissDate?.split("T")?.get(0) ?: "") }
+    var anniversaryDate by remember { mutableStateOf(relationship?.anniversaryDate?.split("T")?.get(0) ?: "") }
+    
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showKissDatePicker by remember { mutableStateOf(false) }
+    var showAnniversaryDatePicker by remember { mutableStateOf(false) }
+    
+    val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    
+    fun parseToMillis(dateString: String): Long {
+        return try {
+            val date = LocalDate.parse(dateString, dateFormatter)
+            date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        } catch (e: Exception) {
+            System.currentTimeMillis()
+        }
+    }
+    
+    fun formatDate(millis: Long): String {
+        val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+        return date.format(dateFormatter)
+    }
 
-    androidx.compose.material3.AlertDialog(
+    AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            androidx.compose.material3.TextButton(
+            TextButton(
                 onClick = { onUpdate(startDate, kissDate.ifEmpty { null }, anniversaryDate.ifEmpty { null }) },
                 enabled = startDate.isNotEmpty()
             ) {
-                Text("Save")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
             }
         },
-        title = { Text("Relationship Info") },
+        title = { Text(stringResource(R.string.relationship_info)) },
         text = {
             Column {
-                OutlinedTextField(
-                    value = startDate,
-                    onValueChange = { startDate = it },
-                    label = { Text("Relationship Start (YYYY-MM-DD)") },
+                // Start Date
+                Button(
+                    onClick = { showStartDatePicker = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = kissDate,
-                    onValueChange = { kissDate = it },
-                    label = { Text("First Kiss (YYYY-MM-DD)") },
+                        .padding(bottom = 12.dp)
+                ) {
+                    Text(if (startDate.isEmpty()) stringResource(R.string.start_date) else startDate)
+                }
+                
+                if (showStartDatePicker) {
+                    DatePickerDialogWrapper(
+                        initialDateMillis = parseToMillis(startDate),
+                        onDateSelected = { millis ->
+                            startDate = formatDate(millis)
+                            showStartDatePicker = false
+                        },
+                        onDismiss = { showStartDatePicker = false }
+                    )
+                }
+                
+                // First Kiss Date
+                Button(
+                    onClick = { showKissDatePicker = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = anniversaryDate,
-                    onValueChange = { anniversaryDate = it },
-                    label = { Text("Anniversary (YYYY-MM-DD)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+                        .padding(bottom = 12.dp)
+                ) {
+                    Text(if (kissDate.isEmpty()) stringResource(R.string.first_kiss) else kissDate)
+                }
+                
+                if (showKissDatePicker) {
+                    DatePickerDialogWrapper(
+                        initialDateMillis = if (kissDate.isEmpty()) System.currentTimeMillis() else parseToMillis(kissDate),
+                        onDateSelected = { millis ->
+                            kissDate = formatDate(millis)
+                            showKissDatePicker = false
+                        },
+                        onDismiss = { showKissDatePicker = false }
+                    )
+                }
+                
+                // Anniversary Date
+                Button(
+                    onClick = { showAnniversaryDatePicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (anniversaryDate.isEmpty()) stringResource(R.string.anniversary) else anniversaryDate)
+                }
+                
+                if (showAnniversaryDatePicker) {
+                    DatePickerDialogWrapper(
+                        initialDateMillis = if (anniversaryDate.isEmpty()) System.currentTimeMillis() else parseToMillis(anniversaryDate),
+                        onDateSelected = { millis ->
+                            anniversaryDate = formatDate(millis)
+                            showAnniversaryDatePicker = false
+                        },
+                        onDismiss = { showAnniversaryDatePicker = false }
+                    )
+                }
             }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DatePickerDialogWrapper(
+    initialDateMillis: Long,
+    onDateSelected: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateMillis)
+    
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    datePickerState.selectedDateMillis?.let { onDateSelected(it) }
+                    onDismiss()
+                }
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    ) {
+        DatePicker(state = datePickerState)
+    }
 }

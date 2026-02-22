@@ -18,21 +18,22 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import com.example.loveapp.ui.theme.PastelBackground
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.loveapp.ui.components.FunctionTile
+import com.example.loveapp.ui.components.IOSTile
 import com.example.loveapp.ui.theme.AccentBlue
 import com.example.loveapp.ui.theme.AccentGreen
 import com.example.loveapp.ui.theme.AccentOrange
 import com.example.loveapp.ui.theme.AccentPurple
 import com.example.loveapp.ui.theme.PrimaryPink
 import com.example.loveapp.ui.theme.SecondaryPeach
+import com.example.loveapp.R
 import com.example.loveapp.ui.theme.TertiaryRose
 import com.example.loveapp.viewmodel.AuthViewModel
 
@@ -57,26 +58,17 @@ fun DashboardScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val tiles = listOf(
-        MenutileData("Notes", Icons.Default.List, PrimaryPink, onNavigateToNotes),
-        MenutileData("Wishes", Icons.Default.Favorite, SecondaryPeach, onNavigateToWishes),
-        MenutileData("Mood", Icons.Default.Favorite, AccentBlue, onNavigateToMood),
-        MenutileData("Activities", Icons.Default.Info, AccentOrange, onNavigateToActivity),
-        MenutileData("Cycle", Icons.Default.Favorite, AccentPurple, onNavigateToMenstrual),
-        MenutileData("Calendars", Icons.Default.List, TertiaryRose, onNavigateToCalendars),
-        MenutileData("Relationship", Icons.Default.Favorite, AccentGreen, onNavigateToRelationship),
-        MenutileData("Settings", Icons.Default.Settings, MaterialTheme.colorScheme.outline, onNavigateToSettings),
+        MenutileData(stringResource(R.string.notes), Icons.Default.List, PrimaryPink, onNavigateToNotes),
+        MenutileData(stringResource(R.string.wishes), Icons.Default.Favorite, SecondaryPeach, onNavigateToWishes),
+        MenutileData(stringResource(R.string.mood), Icons.Default.Favorite, AccentBlue, onNavigateToMood),
+        MenutileData(stringResource(R.string.activities), Icons.Default.Info, AccentOrange, onNavigateToActivity),
+        MenutileData(stringResource(R.string.cycle), Icons.Default.Favorite, AccentPurple, onNavigateToMenstrual),
+        MenutileData(stringResource(R.string.calendars), Icons.Default.List, TertiaryRose, onNavigateToCalendars),
+        MenutileData(stringResource(R.string.relationship), Icons.Default.Favorite, AccentGreen, onNavigateToRelationship),
+        MenutileData(stringResource(R.string.settings), Icons.Default.Settings, MaterialTheme.colorScheme.outline, onNavigateToSettings),
     )
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("LoveApp Dashboard") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = androidx.compose.ui.graphics.Color.White
-                )
-            )
-        }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -94,10 +86,10 @@ fun DashboardScreen(
             ) {
                 items(tiles.size) { index ->
                     val tile = tiles[index]
-                    FunctionTile(
+                    IOSTile(
                         title = tile.title,
                         icon = tile.icon,
-                        color = tile.color,
+                        backgroundColor = tile.color,
                         onClick = tile.onNavigate,
                         modifier = Modifier
                             .fillMaxWidth()

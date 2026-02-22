@@ -27,9 +27,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import com.example.loveapp.ui.components.IOSTopAppBar
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,17 +39,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.loveapp.R
+import com.example.loveapp.utils.DateUtils
 import com.example.loveapp.viewmodel.MoodViewModel
 
-val moodEmojis = listOf(
-    "😢" to "Very Bad",
-    "😕" to "Bad",
-    "😐" to "Neutral",
-    "🙂" to "Good",
-    "😄" to "Very Good"
+private val moodEmojiToApi = mapOf("😢" to "Very Bad", "😕" to "Bad", "😐" to "Neutral", "🙂" to "Good", "😄" to "Very Good")
+
+fun getMoodEmojis(veryBad: String, bad: String, neutral: String, good: String, veryGood: String) = listOf(
+    Triple("😢", "Very Bad", veryBad),
+    Triple("😕", "Bad", bad),
+    Triple("😐", "Neutral", neutral),
+    Triple("🙂", "Good", good),
+    Triple("😄", "Very Good", veryGood)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,21 +86,6 @@ fun MoodTrackerScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Mood Tracker") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Box(
@@ -115,7 +104,7 @@ fun MoodTrackerScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            "How are you feeling today?",
+                            stringResource(R.string.how_feeling),
                             style = MaterialTheme.typography.headlineSmall,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
@@ -127,10 +116,16 @@ fun MoodTrackerScreen(
                             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            moodEmojis.forEach { (emoji, label) ->
+                            getMoodEmojis(
+                                stringResource(R.string.mood_very_bad),
+                                stringResource(R.string.mood_bad),
+                                stringResource(R.string.mood_neutral),
+                                stringResource(R.string.mood_good),
+                                stringResource(R.string.mood_very_good)
+                            ).forEach { (emoji, apiValue, displayLabel) ->
                                 MoodBubbleStandalone(
                                     emoji = emoji,
-                                    label = label,
+                                    label = displayLabel,
                                     isSelected = selectedMood == emoji,
                                     onClick = { selectedMood = emoji }
                                 )
@@ -140,8 +135,7 @@ fun MoodTrackerScreen(
                         Button(
                             onClick = {
                                 selectedMood?.let { emoji ->
-                                    val mood = moodEmojis.find { it.first == emoji }?.second ?: "Unknown"
-                                    viewModel.createMood(mood)
+                                    moodEmojiToApi[emoji]?.let { viewModel.createMood(it) }
                                     selectedMood = null
                                 }
                             },
@@ -157,20 +151,20 @@ fun MoodTrackerScreen(
                                     color = Color.White
                                 )
                             } else {
-                                Text("Save Mood")
+                                Text(stringResource(R.string.save_mood))
                             }
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
                         Text(
-                            "Recent Moods",
+                            stringResource(R.string.recent_moods),
                             style = MaterialTheme.typography.headlineSmall
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
                         if (moods.isEmpty()) {
                             Text(
-                                "No mood entries yet",
+                                stringResource(R.string.no_moods),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -242,12 +236,12 @@ fun MoodCardStandalone(mood: com.example.loveapp.data.api.models.MoodResponse) {
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = "Mood: ${mood.moodType}",
+                text = "${stringResource(R.string.mood)}: ${mood.moodType}",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = "Logged on: ${mood.timestamp}",
+                text = "${stringResource(R.string.logged_at)}: ${DateUtils.formatDateForDisplay(mood.timestamp.take(10))}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )

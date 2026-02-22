@@ -73,7 +73,7 @@ class RelationshipViewModel @Inject constructor(
 
     private fun calculateDaysSinceStart(relationship: RelationshipResponse) {
         try {
-            val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+            val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale("ru", "RU"))
             val startDate = dateFormat.parse(relationship.relationshipStartDate)
             if (startDate != null) {
                 val days = (System.currentTimeMillis() - startDate.time) / (1000 * 60 * 60 * 24)

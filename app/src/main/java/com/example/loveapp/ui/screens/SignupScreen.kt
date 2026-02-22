@@ -29,8 +29,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.loveapp.R
 import com.example.loveapp.viewmodel.AuthViewModel
 
 @Composable
@@ -65,7 +67,7 @@ fun SignupScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Create Account",
+            text = stringResource(R.string.create_account),
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 32.dp)
@@ -74,7 +76,7 @@ fun SignupScreen(
         OutlinedTextField(
             value = displayName,
             onValueChange = { displayName = it },
-            label = { Text("Display Name") },
+            label = { Text(stringResource(R.string.display_name)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
@@ -83,7 +85,7 @@ fun SignupScreen(
         OutlinedTextField(
             value = username,
             onValueChange = { username = it },
-            label = { Text("Username") },
+            label = { Text(stringResource(R.string.username)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
@@ -92,7 +94,7 @@ fun SignupScreen(
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            label = { Text(stringResource(R.string.email)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
@@ -102,7 +104,7 @@ fun SignupScreen(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.password)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
@@ -110,7 +112,7 @@ fun SignupScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
         )
 
-        Text("Gender", style = MaterialTheme.typography.labelMedium, modifier = Modifier.align(Alignment.Start))
+        Text(stringResource(R.string.gender), style = MaterialTheme.typography.labelMedium, modifier = Modifier.align(Alignment.Start))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -122,14 +124,14 @@ fun SignupScreen(
                     selected = gender == "female",
                     onClick = { gender = "female" }
                 )
-                Text("Female")
+                Text(stringResource(R.string.female))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
                     selected = gender == "male",
                     onClick = { gender = "male" }
                 )
-                Text("Male")
+                Text(stringResource(R.string.male))
             }
         }
 
@@ -151,13 +153,13 @@ fun SignupScreen(
                 .height(48.dp),
             enabled = !isLoading && username.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && displayName.isNotEmpty() && gender.isNotEmpty()
         ) {
-            Text(if (isLoading) "Loading..." else "Sign Up")
+            Text(if (isLoading) stringResource(R.string.loading) else stringResource(R.string.sign_up))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(onClick = onNavigateToLogin) {
-            Text("Already have an account? Login")
+            Text(stringResource(R.string.have_account))
         }
     }
 }

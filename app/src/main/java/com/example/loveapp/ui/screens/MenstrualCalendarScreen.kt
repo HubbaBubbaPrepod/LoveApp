@@ -26,9 +26,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import com.example.loveapp.ui.components.IOSTopAppBar
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,7 +41,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.loveapp.R
 import com.example.loveapp.viewmodel.CycleViewModel
+import androidx.compose.ui.res.stringResource
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -75,21 +76,6 @@ fun MenstrualCalendarScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Menstrual Calendar") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Box(
@@ -108,14 +94,14 @@ fun MenstrualCalendarScreen(
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = "Your Cycle",
+                            text = stringResource(R.string.your_cycle),
                             style = MaterialTheme.typography.headlineSmall,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
 
                         if (cycles.isEmpty()) {
                             Text(
-                                "No cycle entries yet",
+                                stringResource(R.string.no_cycle_entries),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -123,7 +109,7 @@ fun MenstrualCalendarScreen(
                             val currentCycle = cycles.firstOrNull()
                             currentCycle?.let {
                                 Text(
-                                    text = "Current Cycle: Day information unavailable",
+                                    text = stringResource(R.string.current_cycle_day),
                                     style = MaterialTheme.typography.labelMedium,
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
@@ -141,7 +127,12 @@ fun MenstrualCalendarScreen(
                                         .fillMaxWidth()
                                         .padding(bottom = 8.dp)
                                 ) {
-                                    val dayHeaders = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                                    val dayHeaders = listOf(
+                                        stringResource(R.string.day_sun), stringResource(R.string.day_mon),
+                                        stringResource(R.string.day_tue), stringResource(R.string.day_wed),
+                                        stringResource(R.string.day_thu), stringResource(R.string.day_fri),
+                                        stringResource(R.string.day_sat)
+                                    )
                                     dayHeaders.forEach { day ->
                                         Text(
                                             text = day,
@@ -197,15 +188,15 @@ fun MenstrualCalendarScreen(
                                 // Legend
                                 Spacer(modifier = Modifier.height(24.dp))
                                 Text(
-                                    text = "Legend",
+                                    text = stringResource(R.string.legend),
                                     style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
                                 
-                                LegendItem("Menstruation", Color(0xFFFF6B9D))
-                                LegendItem("Fertile Window", Color(0xFFFFB6C1))
-                                LegendItem("Ovulation", Color(0xFFFF1493))
-                                LegendItem("Luteal Phase", Color(0xFFFFE4E1))
+                                LegendItem(stringResource(R.string.menstruation), Color(0xFFFF6B9D))
+                                LegendItem(stringResource(R.string.fertile_window), Color(0xFFFFB6C1))
+                                LegendItem(stringResource(R.string.ovulation), Color(0xFFFF1493))
+                                LegendItem(stringResource(R.string.luteal_phase), Color(0xFFFFE4E1))
                             }
                         }
                     }
@@ -237,8 +228,8 @@ fun LegendItem(label: String, color: Color) {
 }
 
 fun getMonthYearString(): String {
-    val calendar = Calendar.getInstance()
-    val format = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
+    val calendar = Calendar.getInstance(Locale("ru", "RU"))
+    val format = SimpleDateFormat("LLLL yyyy", Locale("ru", "RU"))
     return format.format(calendar.time)
 }
 

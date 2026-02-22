@@ -28,9 +28,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import com.example.loveapp.ui.components.IOSTopAppBar
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,8 +39,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.loveapp.R
 import androidx.navigation.NavHostController
 import com.example.loveapp.data.api.models.WishResponse
 import com.example.loveapp.viewmodel.WishViewModel
@@ -75,21 +76,6 @@ fun WishesScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Our Wishes") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
@@ -117,9 +103,9 @@ fun WishesScreen(
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("No wishes yet", style = MaterialTheme.typography.headlineSmall)
+                        Text(stringResource(R.string.no_wishes), style = MaterialTheme.typography.headlineSmall)
                         Text(
-                            "Add your first wish by tapping the + button",
+                            stringResource(R.string.create_first_wish),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
                             modifier = Modifier.padding(top = 8.dp)
@@ -188,7 +174,7 @@ fun WishCard(
                     color = MaterialTheme.colorScheme.outline
                 )
                 Text(
-                    text = "Priority: ${wish.priority}",
+                    text = "${stringResource(R.string.priority)}: ${wish.priority}",
                     style = MaterialTheme.typography.labelSmall
                 )
             }
@@ -227,21 +213,21 @@ fun AddWishDialog(
                 onClick = { onAdd(title, description) },
                 enabled = title.isNotEmpty()
             ) {
-                Text("Add")
+                Text(stringResource(R.string.add))
             }
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         },
-        title = { Text("Add a Wish") },
+        title = { Text(stringResource(R.string.add_wish)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Wish Title") },
+                    label = { Text(stringResource(R.string.wish_title)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp),
@@ -250,7 +236,7 @@ fun AddWishDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Description") },
+                    label = { Text(stringResource(R.string.description)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2
                 )

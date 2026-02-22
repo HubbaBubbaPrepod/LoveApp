@@ -18,12 +18,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.loveapp.R
 import androidx.navigation.NavHostController
 import com.example.loveapp.data.api.models.ActivityResponse
+import com.example.loveapp.utils.DateUtils
 import com.example.loveapp.viewmodel.ActivityViewModel
-import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,21 +57,6 @@ fun ActivityFeedScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Activity Feed") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
@@ -97,9 +84,9 @@ fun ActivityFeedScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("No activities yet", style = MaterialTheme.typography.headlineSmall)
+                        Text(stringResource(R.string.no_activities), style = MaterialTheme.typography.headlineSmall)
                         Text(
-                            "Start logging your couple activities",
+                            stringResource(R.string.add_first_activity),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
                             modifier = Modifier.padding(top = 8.dp)
@@ -167,7 +154,7 @@ fun ActivityItemCard(
                     modifier = Modifier.padding(top = 4.dp)
                 )
                 Text(
-                    text = activity.date,
+                    text = DateUtils.formatDateForDisplay(activity.date.take(10)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(top = 4.dp)
@@ -199,21 +186,21 @@ fun AddActivityDialog(
                 onClick = { onAdd(title, description) },
                 enabled = title.isNotEmpty()
             ) {
-                Text("Add")
+                Text(stringResource(R.string.add))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         },
-        title = { Text("Log Activity") },
+        title = { Text(stringResource(R.string.log_activity)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Activity Title") },
+                    label = { Text(stringResource(R.string.activity_title)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp),
@@ -222,7 +209,7 @@ fun AddActivityDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Description") },
+                    label = { Text(stringResource(R.string.description)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2
                 )

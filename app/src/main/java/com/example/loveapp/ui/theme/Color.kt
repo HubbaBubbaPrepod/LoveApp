@@ -45,3 +45,10 @@ val CycleFollicular = Color(0xFF4DB6AC)      // Teal - follicular phase
 val TextDark = Color(0xFF1A0E12)
 val TextLight = Color(0xFFFDEFED)
 val TextMuted = Color(0xFF8D6E73)
+
+// iOS-style pastel & glass colors (use with .copy(alpha = x) for translucency)
+val PastelBackground = Color(0xFFF8F8FA)
+val GlassWhite = Color(0xFFFFFFFF)
+val PastelPink = Color(0xFFFFEAF0)
+val PastelPeach = Color(0xFFFFF0EA)
+val PastelMint = Color(0xFFF0FFFB)

@@ -27,8 +27,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.loveapp.R
 import com.example.loveapp.viewmodel.AuthViewModel
 
 @Composable
@@ -60,7 +62,7 @@ fun LoginScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "LoveApp",
+            text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.displayMedium,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(bottom = 32.dp)
@@ -69,7 +71,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            label = { Text(stringResource(R.string.email)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
@@ -79,7 +81,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.password)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp),
@@ -105,13 +107,13 @@ fun LoginScreen(
                 .height(48.dp),
             enabled = !isLoading && email.isNotBlank() && password.isNotBlank()
         ) {
-            Text(if (isLoading) "Loading..." else "Login")
+            Text(if (isLoading) stringResource(R.string.loading) else stringResource(R.string.login))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         TextButton(onClick = onNavigateToSignup) {
-            Text("Don't have an account? Sign up")
+            Text(stringResource(R.string.no_account))
         }
     }
 }

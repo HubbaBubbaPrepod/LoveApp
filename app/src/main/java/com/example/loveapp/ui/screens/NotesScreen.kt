@@ -29,9 +29,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import com.example.loveapp.ui.components.IOSTopAppBar
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,10 +40,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.loveapp.R
 import androidx.navigation.NavHostController
 import com.example.loveapp.data.api.models.NoteResponse
+import com.example.loveapp.utils.DateUtils
 import com.example.loveapp.viewmodel.NoteViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,21 +78,6 @@ fun NotesScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Our Notes") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
@@ -121,12 +108,12 @@ fun NotesScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "No notes yet",
+                            text = stringResource(R.string.no_notes),
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.outline
                         )
                         Text(
-                            text = "Create your first note by tapping the + button",
+                            text = stringResource(R.string.create_first_note),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline,
                             modifier = Modifier.padding(top = 8.dp)
@@ -187,7 +174,7 @@ fun NoteCard(note: NoteResponse, onDelete: (Int) -> Unit) {
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = note.createdAt.substringBefore("T"),
+                        text = DateUtils.formatDateForDisplay(note.createdAt.substringBefore("T").take(10)),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -233,21 +220,21 @@ fun AddNoteDialog(
                 onClick = { onAdd(title, content) },
                 enabled = title.isNotEmpty() && content.isNotEmpty()
             ) {
-                Text("Add")
+                Text(stringResource(R.string.add))
             }
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         },
-        title = { Text("Add a Note") },
+        title = { Text(stringResource(R.string.add_note)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Title") },
+                    label = { Text(stringResource(R.string.title)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp),
@@ -256,7 +243,7 @@ fun AddNoteDialog(
                 OutlinedTextField(
                     value = content,
                     onValueChange = { content = it },
-                    label = { Text("Content") },
+                    label = { Text(stringResource(R.string.content)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3
                 )

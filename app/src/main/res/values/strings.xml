@@ -1,3 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">LoveApp</string>
+    
+    <!-- Auth -->
+    <string name="login">Вход</string>
+    <string name="signup">Регистрация</string>
+    <string name="email">Email</string>
+    <string name="password">Пароль</string>
+    <string name="loading">Загрузка…</string>
+    <string name="no_account">Нет аккаунта? Зарегистрироваться</string>
+    <string name="have_account">Уже есть аккаунт? Войти</string>
+    <string name="display_name">Имя</string>
+    <string name="username">Логин</string>
+    <string name="gender">Пол</string>
+    <string name="female">Женский</string>
+    <string name="male">Мужской</string>
+    <string name="create_account">Создать аккаунт</string>
+    <string name="sign_up">Зарегистрироваться</string>
+    
+    <!-- Dashboard -->
+    <string name="dashboard">Главная</string>
+    <string name="notes">Заметки</string>
+    <string name="wishes">Желания</string>
+    <string name="mood">Настроение</string>
+    <string name="activities">Активности</string>
+    <string name="cycle">Цикл</string>
+    <string name="calendars">Календари</string>
+    <string name="relationship">Отношения</string>
+    <string name="settings">Настройки</string>
+    <string name="back">Назад</string>
+    
+    <!-- Notes -->
+    <string name="our_notes">Мои заметки</string>
+    <string name="no_notes">Пока нет заметок</string>
+    <string name="add_note">Добавить заметку</string>
+    <string name="title">Заголовок</string>
+    <string name="content">Содержание</string>
+    <string name="add">Добавить</string>
+    <string name="cancel">Отмена</string>
+    
+    <!-- Wishes -->
+    <string name="our_wishes">Мои желания</string>
+    <string name="no_wishes">Пока нет желаний</string>
+    <string name="add_wish">Добавить желание</string>
+    <string name="wish_title">Название желания</string>
+    <string name="description">Описание</string>
+    
+    <!-- Mood -->
+    <string name="mood_tracker">Настроение</string>
+    <string name="how_feeling">Как вы себя чувствуете?</string>
+    <string name="save_mood">Сохранить</string>
+    <string name="no_moods">Нет записей о настроении</string>
+    <string name="mood_very_bad">Очень плохо</string>
+    <string name="mood_bad">Плохо</string>
+    <string name="mood_neutral">Нормально</string>
+    <string name="mood_good">Хорошо</string>
+    <string name="mood_very_good">Отлично</string>
+    
+    <!-- Activities -->
+    <string name="activity_feed">Активности</string>
+    <string name="no_activities">Пока нет активностей</string>
+    <string name="log_activity">Добавить активность</string>
+    <string name="activity_title">Название</string>
+    
+    <!-- Menstrual -->
+    <string name="menstrual_calendar">Календарь цикла</string>
+    <string name="current_cycle">Текущий цикл: данные недоступны</string>
+    <string name="day">день</string>
+    <string name="days">дней</string>
+    
+    <!-- Relationship -->
+    <string name="our_relationship">Наши отношения</string>
+    <string name="add_relationship">Добавить информацию</string>
+    <string name="edit_relationship">Редактировать</string>
+    <string name="relationship_info">Информация об отношениях</string>
+    <string name="start_date">Дата начала (ГГГГ-ММ-ДД)</string>
+    <string name="first_kiss">Первый поцелуй (ГГГГ-ММ-ДД)</string>
+    <string name="anniversary">Годовщина (ГГГГ-ММ-ДД)</string>
+    <string name="save">Сохранить</string>
+    
+    <!-- Settings -->
+    <string name="dark_mode">Тёмная тема</string>
+    <string name="dark_mode_desc">Использовать тёмную тему</string>
+    <string name="notifications">Уведомления</string>
+    <string name="notifications_desc">Получать уведомления о важных событиях</string>
+    <string name="cycle_reminders">Напоминания о цикле</string>
+    <string name="cycle_reminders_desc">Напоминать о событиях цикла</string>
+    <string name="edit_profile">Редактировать профиль</string>
+    <string name="edit_profile_desc">Обновить информацию профиля</string>
+    <string name="logout">Выйти</string>
+    
+    <!-- Calendars -->
+    <string name="custom_calendars">Календари</string>
+    <string name="create_calendar">Создать календарь</string>
+    <string name="calendar_name">Название календаря</string>
+    <string name="create">Создать</string>
+    
+    <!-- Common -->
+    <string name="error_load">Ошибка загрузки</string>
+    <string name="create_first_note">Создайте первую заметку, нажав кнопку +</string>
+    <string name="create_first_wish">Создайте первое желание, нажав кнопку +</string>
+    <string name="add_first_activity">Добавьте первую активность, нажав кнопку +</string>
+    <string name="day_short">день</string>
+    <string name="private_label">🔒 Приватная</string>
+    <string name="priority">Приоритет</string>
+    <string name="recent_moods">Последние записи</string>
+    <string name="logged_at">Записано</string>
+    
+    <!-- Menstrual Calendar -->
+    <string name="your_cycle">Ваш цикл</string>
+    <string name="no_cycle_entries">Пока нет записей цикла</string>
+    <string name="current_cycle_day">Текущий цикл: данные недоступны</string>
+    <string name="legend">Легенда</string>
+    <string name="menstruation">Менструация</string>
+    <string name="fertile_window">Фертильное окно</string>
+    <string name="ovulation">Овуляция</string>
+    <string name="luteal_phase">Лютеиновая фаза</string>
+    <string name="day_sun">Вс</string>
+    <string name="day_mon">Пн</string>
+    <string name="day_tue">Вт</string>
+    <string name="day_wed">Ср</string>
+    <string name="day_thu">Чт</string>
+    <string name="day_fri">Пт</string>
+    <string name="day_sat">Сб</string>
+    
+    <!-- Custom Calendars -->
+    <string name="no_calendars">Пока нет календарей</string>
+    <string name="no_calendars_desc">Создайте календарь: секс, спорт, кино, путешествия и др.</string>
+    <string name="type">Тип</string>
+    <string name="delete">Удалить</string>
+    <string name="sex_calendar">Календарь секса</string>
+    <string name="sports_calendar">Спортивный календарь</string>
+    <string name="movie_calendar">Кино-календарь</string>
+    <string name="travel_calendar">Календарь путешествий</string>
+    <string name="other">Другое</string>
+    
+    <!-- Relationship -->
+    <string name="no_relationship_info">Нет информации об отношениях</string>
+    <string name="add_relationship_info">Добавить информацию</string>
+    <string name="days_together">дней вместе</string>
+    <string name="happy_together">💕 Счастливы вместе 💕</string>
+    <string name="started">Начало</string>
+    <string name="first_kiss_label">Первый поцелуй</string>
+    <string name="anniversary_label">Годовщина</string>
+    <string name="edit_relationship_info">Редактировать</string>
+    
+    <!-- Settings -->
+    <string name="appearance">Внешний вид</string>
+    <string name="account">Аккаунт</string>
+    <string name="enable_notifications">Включить уведомления</string>
+    <string name="sign_out_desc">Выйти из аккаунта</string>
 </resources>

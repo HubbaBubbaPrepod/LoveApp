@@ -33,9 +33,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import com.example.loveapp.ui.components.IOSTopAppBar
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,8 +44,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.loveapp.R
 import androidx.navigation.NavHostController
 import com.example.loveapp.ui.theme.AccentBlue
 import com.example.loveapp.ui.theme.AccentGreen
@@ -85,21 +86,6 @@ fun CustomCalendarsScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Custom Calendars") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
@@ -128,11 +114,11 @@ fun CustomCalendarsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "No calendars yet",
+                            text = stringResource(R.string.no_calendars),
                             style = MaterialTheme.typography.headlineSmall
                         )
                         Text(
-                            text = "Create a custom calendar like Sex Calendar, Sports Calendar, etc.",
+                            text = stringResource(R.string.no_calendars_desc),
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 8.dp),
                             color = MaterialTheme.colorScheme.outline
@@ -203,7 +189,7 @@ fun CalendarCard(calendar: com.example.loveapp.data.api.models.CustomCalendarRes
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Text(
-                    text = "Type: ${calendar.type}",
+                    text = "${stringResource(R.string.type)}: ${calendar.type}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -211,7 +197,7 @@ fun CalendarCard(calendar: com.example.loveapp.data.api.models.CustomCalendarRes
             IconButton(onClick = { onDelete(calendar.id) }) {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.delete),
                     tint = MaterialTheme.colorScheme.error
                 )
             }
@@ -235,28 +221,28 @@ fun AddCalendarDialog(
                 onClick = { onAdd(name, selectedType) },
                 enabled = name.isNotEmpty()
             ) {
-                Text("Create")
+                Text(stringResource(R.string.create))
             }
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         },
-        title = { Text("Create Calendar") },
+        title = { Text(stringResource(R.string.create_calendar)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Calendar Name") },
+                    label = { Text(stringResource(R.string.calendar_name)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp),
                     singleLine = true
                 )
                 Text(
-                    text = "Type:",
+                    text = "${stringResource(R.string.type)}:",
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )

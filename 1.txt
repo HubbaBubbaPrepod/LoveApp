@@ -1,10 +1,48 @@
-Make this all:
+Вот две ошибки с сервера
+  Create wish error: error: новая строка в отношении "wishes" нарушает ограничение-проверку "wishes_priority_check"
+    at C:\Users\Administrator\LoveApp-main\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async C:\Users\Administrator\LoveApp-main\server.js:359:20 {
+  length: 398,
+  severity: 'ОШИБКА',
+  code: '23514',
+  detail: 'Ошибочная строка содержит (4, 1, о, О, 0, , f, null, null, null, 2026-02-22 13:04:49.098348+00, 2026-02-22 13:04:49.098348+00).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'wishes',
+  column: undefined,
+  dataType: undefined,
+  constraint: 'wishes_priority_check',
+  file: 'execMain.c',
+  line: '2081',
+  routine: 'ExecConstraints'
+}
+Create calendar error: error: значение не умещается в тип character varying(7)
+    at C:\Users\Administrator\LoveApp-main\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async C:\Users\Administrator\LoveApp-main\server.js:680:20 {
+  length: 131,
+  severity: 'ОШИБКА',
+  code: '22001',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'varchar.c',
+  line: '640',
+  routine: 'varchar'
+}
 
-Custom Event Calendars - Create sex calendar, sports calendar, etc. Добавление этих календарей должно делаться в приложении в меню этих календарей
-Relationship Dashboard - Counter showing days since start date
-Settings Screen - Theme toggle (light/dark), preferences
-Advanced Animations - Screen transitions, bounce effects
-Backend Integration - Connect to PostgreSQL with API
-Photo Support - Gallery integration and image uploads
-Notifications - Reminders for cycle, events, etc.
-Two-Account Linking - Link girlfriend's account
+И еще на странице Notes есть ошибка 
+java.lang.illegalSteteExceprion: Expected a string but was BEGIN_ARRAY at line 1 column 142 path $.data.items[0].tags

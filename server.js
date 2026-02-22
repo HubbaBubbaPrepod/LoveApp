@@ -234,6 +234,14 @@ app.post('/api/upload/profile', authenticateToken, upload.single('file'), async 
 
 // ==================== NOTES ====================
 
+// Приложение ждёт tags как строку, в БД — массив text[]
+function formatNoteForApi(row) {
+  if (!row) return row;
+  const r = { ...row };
+  r.tags = Array.isArray(r.tags) ? r.tags.join(',') : (r.tags || '');
+  return r;
+}
+
 // Create Note (tags в БД — массив text[], пустая строка недопустима)
 function parseTags(tags) {
   if (tags == null || tags === '') return [];
@@ -253,7 +261,7 @@ app.post('/api/notes', authenticateToken, async (req, res) => {
       [req.userId, title, content, is_private || false, tagsArr]
     );
 
-    sendResponse(res, true, 'Note created', result.rows[0], 201);
+    sendResponse(res, true, 'Note created', formatNoteForApi(result.rows[0]), 201);
   } catch (err) {
     console.error('Create note error:', err);
     sendResponse(res, false, 'Internal server error', null, 500);
@@ -278,7 +286,7 @@ app.get('/api/notes', authenticateToken, async (req, res) => {
     );
 
     sendResponse(res, true, 'Notes retrieved', {
-      items: result.rows,
+      items: result.rows.map(formatNoteForApi),
       total: parseInt(countResult.rows[0].total),
       page,
       page_size: pageSize,
@@ -301,7 +309,7 @@ app.get('/api/notes/:id', authenticateToken, async (req, res) => {
       return sendResponse(res, false, 'Note not found', null, 404);
     }
 
-    sendResponse(res, true, 'Note retrieved', result.rows[0]);
+    sendResponse(res, true, 'Note retrieved', formatNoteForApi(result.rows[0]));
   } catch (err) {
     console.error('Get note error:', err);
     sendResponse(res, false, 'Internal server error', null, 500);
@@ -323,7 +331,7 @@ app.put('/api/notes/:id', authenticateToken, async (req, res) => {
       return sendResponse(res, false, 'Note not found', null, 404);
     }
 
-    sendResponse(res, true, 'Note updated', result.rows[0]);
+    sendResponse(res, true, 'Note updated', formatNoteForApi(result.rows[0]));
   } catch (err) {
     console.error('Update note error:', err);
     sendResponse(res, false, 'Internal server error', null, 500);
@@ -351,14 +359,15 @@ app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
 
 // ==================== WISHES ====================
 
-// Create Wish
+// Create Wish (wishes_priority_check: priority обычно 1-5, 0 недопустим)
 app.post('/api/wishes', authenticateToken, async (req, res) => {
   try {
     const { title, description, priority, category, is_completed } = req.body;
+    const validPriority = Math.min(5, Math.max(1, parseInt(priority, 10) || 1));
 
     const result = await pool.query(
       'INSERT INTO wishes (user_id, title, description, priority, category, is_completed) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [req.userId, title, description, priority, category, is_completed || false]
+      [req.userId, title, description, validPriority, category || null, is_completed || false]
     );
 
     sendResponse(res, true, 'Wish created', result.rows[0], 201);
@@ -672,14 +681,23 @@ app.get('/api/cycles/latest', authenticateToken, async (req, res) => {
 
 // ==================== CALENDARS ====================
 
+// Create Calendar (color_hex varchar(7) — максимум 7 символов, например #RRGGBB)
+function normalizeColorHex(hex) {
+  if (!hex || typeof hex !== 'string') return '#000000';
+  const s = hex.trim();
+  if (s.startsWith('#')) return s.substring(0, 7);
+  return ('#' + s).substring(0, 7);
+}
+
 // Create Calendar
 app.post('/api/calendars', authenticateToken, async (req, res) => {
   try {
     const { name, description, type, color_hex } = req.body;
+    const color = normalizeColorHex(color_hex);
 
     const result = await pool.query(
       'INSERT INTO custom_calendars (user_id, name, description, type, color_hex) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [req.userId, name, description, type, color_hex]
+      [req.userId, name || '', description || '', type || 'default', color]
     );
 
     sendResponse(res, true, 'Calendar created', result.rows[0], 201);

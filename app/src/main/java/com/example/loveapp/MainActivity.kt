@@ -52,6 +52,7 @@ import com.example.loveapp.ui.screens.NotesScreen
 import com.example.loveapp.ui.screens.RelationshipDashboardScreen
 import com.example.loveapp.ui.screens.SettingsScreen
 import com.example.loveapp.ui.screens.SignupScreen
+import com.example.loveapp.ui.screens.WishDetailScreen
 import com.example.loveapp.ui.screens.WishesScreen
 import com.example.loveapp.ui.theme.LoveAppTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -184,7 +185,24 @@ fun LoveAppNavigation(
         }
 
         composable(Screen.Wishes.route) {
-            WishesScreen(onNavigateBack = { navController.popBackStack() })
+            WishesScreen(
+                navController = navController,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToWish = { wishId ->
+                    navController.navigate(Screen.WishDetail.createRoute(wishId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.WishDetail.route,
+            arguments = listOf(navArgument("wishId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val wishId = backStackEntry.arguments?.getInt("wishId") ?: -1
+            WishDetailScreen(
+                wishId = wishId,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable(Screen.MoodTracker.route) {

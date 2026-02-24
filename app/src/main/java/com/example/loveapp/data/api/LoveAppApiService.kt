@@ -17,14 +17,18 @@ import com.example.loveapp.data.api.models.PaginatedResponse
 import com.example.loveapp.data.api.models.RelationshipRequest
 import com.example.loveapp.data.api.models.RelationshipResponse
 import com.example.loveapp.data.api.models.SignupRequest
+import com.example.loveapp.data.api.models.UploadResponse
 import com.example.loveapp.data.api.models.WishRequest
 import com.example.loveapp.data.api.models.WishResponse
+import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -72,6 +76,14 @@ interface LoveAppApiService {
         @Header("Authorization") token: String,
         @Path("id") id: Int
     ): ApiResponse<String>
+
+    // ==================== Upload Endpoints ====================
+    @Multipart
+    @POST("upload/image")
+    suspend fun uploadImage(
+        @Header("Authorization") token: String,
+        @Part file: MultipartBody.Part
+    ): ApiResponse<UploadResponse>
 
     // ==================== Wishes Endpoints ====================
     @POST("wishes")

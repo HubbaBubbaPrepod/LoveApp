@@ -69,7 +69,11 @@ data class WishRequest(
     @SerializedName("category")
     val category: String = "",
     @SerializedName("due_date")
-    val dueDate: String? = null
+    val dueDate: String? = null,
+    @SerializedName("is_private")
+    val isPrivate: Boolean = false,
+    @SerializedName("image_url")
+    val imageUrl: String? = null
 )
 
 data class WishResponse(
@@ -78,6 +82,8 @@ data class WishResponse(
     val description: String,
     @SerializedName("user_id")
     val userId: Int,
+    @SerializedName("display_name")
+    val displayName: String? = null,
     @SerializedName("created_at")
     val createdAt: String,
     @SerializedName("is_completed")
@@ -86,6 +92,10 @@ data class WishResponse(
     val completedAt: String? = null,
     val priority: Int,
     val category: String,
+    @SerializedName("is_private")
+    val isPrivate: Boolean = false,
+    @SerializedName("image_url")
+    val imageUrl: String? = null,
     @SerializedName("due_date")
     val dueDate: String? = null
 )
@@ -217,6 +227,11 @@ data class RelationshipResponse(
     val nickname2: String,
     @SerializedName("created_at")
     val createdAt: String
+)
+
+// Upload Response
+data class UploadResponse(
+    val url: String
 )
 
 // Generic Response Wrapper (matches server sendResponse)

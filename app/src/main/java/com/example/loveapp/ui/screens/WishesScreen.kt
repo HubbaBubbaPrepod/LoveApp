@@ -1,8 +1,16 @@
 package com.example.loveapp.ui.screens
 
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -10,27 +18,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.example.loveapp.ui.components.IOSTopAppBar
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,40 +42,55 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import coil.compose.AsyncImage
 import com.example.loveapp.R
 import com.example.loveapp.data.api.models.WishResponse
+import com.example.loveapp.navigation.Screen
+import com.example.loveapp.ui.components.IOSTopAppBar
 import com.example.loveapp.viewmodel.WishViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WishesScreen(
+    navController: NavHostController,
     onNavigateBack: () -> Unit,
+    onNavigateToWish: (Int) -> Unit,
     viewModel: WishViewModel = hiltViewModel()
 ) {
-    var showAddDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
-    
     val wishes by viewModel.wishes.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val successMessage by viewModel.successMessage.collectAsState()
+    val currentUserId by viewModel.currentUserId.collectAsState()
 
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearMessages()
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    LaunchedEffect(currentBackStackEntry?.destination?.route) {
+        if (currentBackStackEntry?.destination?.route == Screen.Wishes.route) {
+            viewModel.loadWishes()
         }
     }
 
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearMessages() }
+    }
     LaunchedEffect(successMessage) {
-        successMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearMessages()
-        }
+        successMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearMessages() }
     }
 
     Scaffold(
@@ -83,171 +101,215 @@ fun WishesScreen(
                 onBackClick = onNavigateBack
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Wish", tint = Color.White)
-            }
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
         ) {
             when {
                 isLoading && wishes.isEmpty() -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
                 wishes.isEmpty() -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+                            .padding(32.dp),
+                        verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(stringResource(R.string.no_wishes), style = MaterialTheme.typography.headlineSmall)
                         Text(
-                            stringResource(R.string.create_first_wish),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
+                            text = "✨",
+                            fontSize = 52.sp,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.no_wishes),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = stringResource(R.string.create_first_wish),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     }
                 }
                 else -> {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(wishes) { wish ->
-                            WishCard(
+                            WishIOSTile(
                                 wish = wish,
-                                onComplete = { viewModel.completeWish(it) },
-                                onDelete = { viewModel.deleteWish(it) }
+                                onClick = { onNavigateToWish(wish.id) }
                             )
                         }
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
                     }
                 }
             }
-        }
 
-        if (showAddDialog) {
-            AddWishDialog(
-                onDismiss = { showAddDialog = false },
-                onAdd = { title, description ->
-                    viewModel.createWish(title, description)
-                    showAddDialog = false
-                }
-            )
+            // FAB — new wish
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(20.dp)
+                    .size(56.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    .clickable { onNavigateToWish(-1) },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "New wish",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
     }
 }
 
 @Composable
-fun WishCard(
-    wish: WishResponse,
-    onComplete: (Int) -> Unit,
-    onDelete: (Int) -> Unit
-) {
-    Card(
+fun WishIOSTile(wish: WishResponse, onClick: () -> Unit) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    val shadowElevation by animateFloatAsState(
+        targetValue = if (isPressed) 4f else 8f,
+        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+        label = "wish-tile-shadow"
+    )
+
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val tileBg = if (isDark) Color(0xFF3A2C2E) else Color(0xFFFCE4EC)
+    val titleColor = if (isDark) Color(0xFFF2F2F7) else Color(0xFF37474F)
+    val contentColor = if (isDark) Color(0xFF8E8E93) else Color(0xFF546E7A)
+    val lineColor = if (isDark) Color(0xFF58484A).copy(alpha = 0.8f) else Color(0xFFB0BEC5).copy(alpha = 0.4f)
+    val hasImage = !wish.imageUrl.isNullOrBlank()
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(4.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = wish.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = wish.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 2,
-                    color = MaterialTheme.colorScheme.outline
-                )
-                Text(
-                    text = "${stringResource(R.string.priority)}: ${wish.priority}",
-                    style = MaterialTheme.typography.labelSmall
-                )
+            .height(155.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .shadow(
+                elevation = shadowElevation.dp,
+                shape = RoundedCornerShape(20.dp),
+                ambientColor = Color.Black.copy(alpha = 0.1f),
+                spotColor = Color.Black.copy(alpha = 0.15f)
+            )
+            .background(tileBg)
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
+                isPressed = true
+                onClick()
             }
-            if (!wish.isCompleted) {
-                IconButton(onClick = { onComplete(wish.id) }) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = "Complete",
-                        tint = MaterialTheme.colorScheme.primary
+    ) {
+        if (hasImage) {
+            AsyncImage(
+                model = wish.imageUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            // Gradient overlay for text readability
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f))
+                        )
+                    )
+            )
+        } else {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val lineSpacing = 22.dp.toPx()
+                val startY = 58.dp.toPx()
+                var y = startY
+                while (y < size.height - 8.dp.toPx()) {
+                    drawLine(
+                        color = lineColor,
+                        start = Offset(16.dp.toPx(), y),
+                        end = Offset(size.width - 16.dp.toPx(), y),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                    y += lineSpacing
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = wish.title,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (hasImage) Color.White else titleColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 20.sp
+                    )
+                    if (wish.isPrivate) {
+                        Text(
+                            text = "🔒",
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(start = 4.dp, top = 1.dp)
+                        )
+                    }
+                }
+                if (wish.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = wish.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (hasImage) Color.White.copy(alpha = 0.85f) else contentColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 20.sp
                     )
                 }
             }
-            IconButton(onClick = { onDelete(wish.id) }) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error
+            if (!wish.displayName.isNullOrBlank()) {
+                Text(
+                    text = wish.displayName,
+                    fontSize = 10.sp,
+                    color = (if (hasImage) Color.White else contentColor).copy(alpha = 0.65f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
     }
 }
 
-@Composable
-fun AddWishDialog(
-    onDismiss: () -> Unit,
-    onAdd: (String, String) -> Unit
-) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            androidx.compose.material3.TextButton(
-                onClick = { onAdd(title, description) },
-                enabled = title.isNotEmpty()
-            ) {
-                Text(stringResource(R.string.add))
-            }
-        },
-        dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        },
-        title = { Text(stringResource(R.string.add_wish)) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text(stringResource(R.string.wish_title)) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text(stringResource(R.string.description)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2
-                )
-            }
-        }
-    )
-}

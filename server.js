@@ -232,6 +232,18 @@ app.post('/api/upload/profile', authenticateToken, upload.single('file'), async 
   }
 });
 
+// Generic image upload (for wishes, activities, etc.)
+app.post('/api/upload/image', authenticateToken, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return sendResponse(res, false, 'File is required', null, 400);
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    sendResponse(res, true, 'Image uploaded', { url: fileUrl });
+  } catch (err) {
+    console.error('Upload image error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
 // ==================== NOTES ====================
 
 // Приложение ждёт tags как строку, в БД — массив text[]
@@ -404,37 +416,62 @@ app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
 // Create Wish (wishes_priority_check: priority обычно 1-5, 0 недопустим)
 app.post('/api/wishes', authenticateToken, async (req, res) => {
   try {
-    const { title, description, priority, category, is_completed } = req.body;
+    const { title, description, priority, category, is_completed, is_private, image_url } = req.body;
     const validPriority = Math.min(5, Math.max(1, parseInt(priority, 10) || 1));
 
     const result = await pool.query(
-      'INSERT INTO wishes (user_id, title, description, priority, category, is_completed) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [req.userId, title, description, validPriority, category || null, is_completed || false]
+      'INSERT INTO wishes (user_id, title, description, priority, category, is_completed, is_private, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [req.userId, title, description, validPriority, category || null, is_completed || false, is_private || false, image_url || null]
     );
 
-    sendResponse(res, true, 'Wish created', result.rows[0], 201);
+    // Attach display_name
+    const userRes = await pool.query('SELECT display_name FROM users WHERE id = $1', [req.userId]);
+    const row = { ...result.rows[0], display_name: userRes.rows[0]?.display_name || '' };
+    sendResponse(res, true, 'Wish created', row, 201);
   } catch (err) {
     console.error('Create wish error:', err);
     sendResponse(res, false, 'Internal server error', null, 500);
   }
 });
 
-// Get Wishes
+// Get Wishes (own + partner's public)
 app.get('/api/wishes', authenticateToken, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const pageSize = 20;
     const offset = (page - 1) * pageSize;
 
-    const countResult = await pool.query(
-      'SELECT COUNT(*) as total FROM wishes WHERE user_id = $1',
+    const relResult = await pool.query(
+      'SELECT partner_user_id FROM relationship_info WHERE user_id = $1 LIMIT 1',
       [req.userId]
     );
+    const partnerId = relResult.rows[0]?.partner_user_id || null;
 
-    const result = await pool.query(
-      'SELECT * FROM wishes WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
-      [req.userId, pageSize, offset]
-    );
+    let countResult, result;
+    if (partnerId) {
+      countResult = await pool.query(
+        'SELECT COUNT(*) as total FROM wishes w WHERE w.user_id = $1 OR (w.user_id = $2 AND w.is_private = false)',
+        [req.userId, partnerId]
+      );
+      result = await pool.query(
+        `SELECT w.*, u.display_name FROM wishes w
+         JOIN users u ON w.user_id = u.id
+         WHERE w.user_id = $1 OR (w.user_id = $2 AND w.is_private = false)
+         ORDER BY w.created_at DESC LIMIT $3 OFFSET $4`,
+        [req.userId, partnerId, pageSize, offset]
+      );
+    } else {
+      countResult = await pool.query(
+        'SELECT COUNT(*) as total FROM wishes w WHERE w.user_id = $1',
+        [req.userId]
+      );
+      result = await pool.query(
+        `SELECT w.*, u.display_name FROM wishes w
+         JOIN users u ON w.user_id = u.id
+         WHERE w.user_id = $1 ORDER BY w.created_at DESC LIMIT $2 OFFSET $3`,
+        [req.userId, pageSize, offset]
+      );
+    }
 
     sendResponse(res, true, 'Wishes retrieved', {
       items: result.rows,
@@ -444,6 +481,57 @@ app.get('/api/wishes', authenticateToken, async (req, res) => {
     });
   } catch (err) {
     console.error('Get wishes error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Get Wish by ID (own or partner's public)
+app.get('/api/wishes/:id', authenticateToken, async (req, res) => {
+  try {
+    const relResult = await pool.query(
+      'SELECT partner_user_id FROM relationship_info WHERE user_id = $1 LIMIT 1',
+      [req.userId]
+    );
+    const partnerId = relResult.rows[0]?.partner_user_id || null;
+    let result;
+    if (partnerId) {
+      result = await pool.query(
+        `SELECT w.*, u.display_name FROM wishes w JOIN users u ON w.user_id = u.id
+         WHERE w.id = $1 AND (w.user_id = $2 OR (w.user_id = $3 AND w.is_private = false))`,
+        [req.params.id, req.userId, partnerId]
+      );
+    } else {
+      result = await pool.query(
+        `SELECT w.*, u.display_name FROM wishes w JOIN users u ON w.user_id = u.id
+         WHERE w.id = $1 AND w.user_id = $2`,
+        [req.params.id, req.userId]
+      );
+    }
+    if (result.rows.length === 0) return sendResponse(res, false, 'Wish not found', null, 404);
+    sendResponse(res, true, 'Wish retrieved', result.rows[0]);
+  } catch (err) {
+    console.error('Get wish error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Update Wish
+app.put('/api/wishes/:id', authenticateToken, async (req, res) => {
+  try {
+    const { title, description, priority, category, is_private, image_url } = req.body;
+    const validPriority = Math.min(5, Math.max(1, parseInt(priority, 10) || 1));
+    const result = await pool.query(
+      `UPDATE wishes SET title = $1, description = $2, priority = $3, category = $4,
+       is_private = $5, image_url = $6, updated_at = NOW()
+       WHERE id = $7 AND user_id = $8 RETURNING *`,
+      [title, description, validPriority, category || null, is_private || false, image_url || null, req.params.id, req.userId]
+    );
+    if (result.rows.length === 0) return sendResponse(res, false, 'Wish not found', null, 404);
+    const userRes = await pool.query('SELECT display_name FROM users WHERE id = $1', [req.userId]);
+    const row = { ...result.rows[0], display_name: userRes.rows[0]?.display_name || '' };
+    sendResponse(res, true, 'Wish updated', row);
+  } catch (err) {
+    console.error('Update wish error:', err);
     sendResponse(res, false, 'Internal server error', null, 500);
   }
 });
@@ -460,7 +548,9 @@ app.post('/api/wishes/:id/complete', authenticateToken, async (req, res) => {
       return sendResponse(res, false, 'Wish not found', null, 404);
     }
 
-    sendResponse(res, true, 'Wish completed', result.rows[0]);
+    const userRes = await pool.query('SELECT display_name FROM users WHERE id = $1', [req.userId]);
+    const row = { ...result.rows[0], display_name: userRes.rows[0]?.display_name || '' };
+    sendResponse(res, true, 'Wish completed', row);
   } catch (err) {
     console.error('Complete wish error:', err);
     sendResponse(res, false, 'Internal server error', null, 500);
@@ -869,6 +959,12 @@ app.use((req, res) => {
 // ==================== SERVER START ====================
 
 const PORT = process.env.API_PORT || 3005;
+
+// Auto-migrate: ensure is_private column exists on wishes
+pool.query(`ALTER TABLE wishes ADD COLUMN IF NOT EXISTS is_private BOOLEAN NOT NULL DEFAULT false`)
+  .then(() => console.log('wishes.is_private column ready'))
+  .catch(err => console.error('Migration error:', err));
+
 app.listen(PORT, () => {
   console.log(`LoveApp API Server running on port ${PORT}`);
   console.log(`Database: ${process.env.PGHOST}:${process.env.PGPORT}/${process.env.PGDATABASE}`);

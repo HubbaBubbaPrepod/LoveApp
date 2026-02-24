@@ -8,6 +8,7 @@ const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use(express.json());
 
 // Static file serving for uploaded files
 const storagePath = process.env.STORAGE_PATH || path.join(__dirname, 'uploads');
+fs.mkdirSync(storagePath, { recursive: true }); // ensure uploads dir exists
 app.use('/uploads', express.static(storagePath));
 
 // Multer setup for file uploads
@@ -233,7 +235,15 @@ app.post('/api/upload/profile', authenticateToken, upload.single('file'), async 
 });
 
 // Generic image upload (for wishes, activities, etc.)
-app.post('/api/upload/image', authenticateToken, upload.single('file'), async (req, res) => {
+app.post('/api/upload/image', authenticateToken, (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('Upload multer error:', err);
+      return sendResponse(res, false, err.message || 'File upload failed', null, 400);
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) return sendResponse(res, false, 'File is required', null, 400);
     const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;

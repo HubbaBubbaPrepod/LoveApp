@@ -89,7 +89,7 @@ class WishViewModel @Inject constructor(
         priority: Int = 1,
         category: String = "",
         isPrivate: Boolean = false,
-        imageUrls: String = "",
+        imageUrls: String? = null,
         emoji: String? = null
     ) {
         viewModelScope.launch {
@@ -112,7 +112,7 @@ class WishViewModel @Inject constructor(
         title: String,
         description: String,
         isPrivate: Boolean = false,
-        imageUrls: String = "",
+        imageUrls: String? = null,
         emoji: String? = null
     ) {
         viewModelScope.launch {

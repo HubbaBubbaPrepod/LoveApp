@@ -116,7 +116,7 @@ fun WishDetailScreen(
         if (wishId != -1 && currentWish != null && !isInitialized) {
             title = currentWish!!.title
             description = currentWish!!.description
-            imageUrls = currentWish!!.imageUrls.split(",").filter { it.isNotBlank() }
+            imageUrls = currentWish!!.imageUrls.orEmpty().split(",").filter { it.isNotBlank() }
             emoji = currentWish!!.emoji.orEmpty()
             isPrivate = currentWish!!.isPrivate
             if (currentUserId != null && currentWish!!.userId != currentUserId) {
@@ -158,7 +158,7 @@ fun WishDetailScreen(
         if (hasContent) {
             isSaving = true
             val finalTitle = title.ifBlank { "Untitled" }
-            val urlsJoined = imageUrls.joinToString(",")
+            val urlsJoined = imageUrls.joinToString(",").ifBlank { null }
             if (wishId == -1) {
                 viewModel.createWish(finalTitle, description, isPrivate = isPrivate, imageUrls = urlsJoined, emoji = emoji.ifBlank { null })
             } else {

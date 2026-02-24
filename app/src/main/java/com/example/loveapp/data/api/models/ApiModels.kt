@@ -73,7 +73,7 @@ data class WishRequest(
     @SerializedName("is_private")
     val isPrivate: Boolean = false,
     @SerializedName("image_urls")
-    val imageUrls: String = "",
+    val imageUrls: String? = null,
     val emoji: String? = null
 )
 
@@ -96,7 +96,7 @@ data class WishResponse(
     @SerializedName("is_private")
     val isPrivate: Boolean = false,
     @SerializedName("image_urls")
-    val imageUrls: String = "",
+    val imageUrls: String? = null,
     @SerializedName("due_date")
     val dueDate: String? = null,
     val emoji: String? = null

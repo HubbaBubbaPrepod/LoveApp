@@ -48,6 +48,8 @@ data class NoteResponse(
     val content: String,
     @SerializedName("user_id")
     val userId: Int,
+    @SerializedName("display_name")
+    val displayName: String? = null,
     @SerializedName("created_at")
     val createdAt: String,
     @SerializedName("updated_at")

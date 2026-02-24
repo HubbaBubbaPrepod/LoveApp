@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -31,9 +32,11 @@ import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.viewmodel.AuthViewModel
 import com.example.loveapp.viewmodel.SettingsViewModel
@@ -44,6 +47,7 @@ import com.example.loveapp.ui.screens.DashboardScreen
 import com.example.loveapp.ui.screens.LoginScreen
 import com.example.loveapp.ui.screens.MenstrualCalendarScreen
 import com.example.loveapp.ui.screens.MoodTrackerScreen
+import com.example.loveapp.ui.screens.NoteDetailScreen
 import com.example.loveapp.ui.screens.NotesScreen
 import com.example.loveapp.ui.screens.RelationshipDashboardScreen
 import com.example.loveapp.ui.screens.SettingsScreen
@@ -93,6 +97,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoveAppNavigation(
     authViewModel: AuthViewModel = hiltViewModel()
@@ -160,6 +165,20 @@ fun LoveAppNavigation(
         composable(Screen.Notes.route) {
             NotesScreen(
                 navController = navController,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToNote = { noteId ->
+                    navController.navigate(Screen.NoteDetail.createRoute(noteId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.NoteDetail.route,
+            arguments = listOf(navArgument("noteId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val noteId = backStackEntry.arguments?.getInt("noteId") ?: -1
+            NoteDetailScreen(
+                noteId = noteId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

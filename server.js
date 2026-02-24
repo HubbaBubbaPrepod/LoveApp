@@ -268,22 +268,45 @@ app.post('/api/notes', authenticateToken, async (req, res) => {
   }
 });
 
-// Get Notes
+// Get Notes (own notes + partner's public notes)
 app.get('/api/notes', authenticateToken, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const pageSize = 20;
     const offset = (page - 1) * pageSize;
 
-    const countResult = await pool.query(
-      'SELECT COUNT(*) as total FROM notes WHERE user_id = $1',
+    // Look up partner
+    const relResult = await pool.query(
+      'SELECT partner_user_id FROM relationship_info WHERE user_id = $1 LIMIT 1',
       [req.userId]
     );
+    const partnerId = relResult.rows[0]?.partner_user_id || null;
 
-    const result = await pool.query(
-      'SELECT * FROM notes WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
-      [req.userId, pageSize, offset]
-    );
+    let countResult, result;
+    if (partnerId) {
+      countResult = await pool.query(
+        'SELECT COUNT(*) as total FROM notes n WHERE n.user_id = $1 OR (n.user_id = $2 AND n.is_private = false)',
+        [req.userId, partnerId]
+      );
+      result = await pool.query(
+        `SELECT n.*, u.display_name FROM notes n
+         JOIN users u ON n.user_id = u.id
+         WHERE n.user_id = $1 OR (n.user_id = $2 AND n.is_private = false)
+         ORDER BY n.created_at DESC LIMIT $3 OFFSET $4`,
+        [req.userId, partnerId, pageSize, offset]
+      );
+    } else {
+      countResult = await pool.query(
+        'SELECT COUNT(*) as total FROM notes n WHERE n.user_id = $1',
+        [req.userId]
+      );
+      result = await pool.query(
+        `SELECT n.*, u.display_name FROM notes n
+         JOIN users u ON n.user_id = u.id
+         WHERE n.user_id = $1 ORDER BY n.created_at DESC LIMIT $2 OFFSET $3`,
+        [req.userId, pageSize, offset]
+      );
+    }
 
     sendResponse(res, true, 'Notes retrieved', {
       items: result.rows.map(formatNoteForApi),
@@ -297,13 +320,32 @@ app.get('/api/notes', authenticateToken, async (req, res) => {
   }
 });
 
-// Get Note by ID
+// Get Note by ID (own note, or partner's public note)
 app.get('/api/notes/:id', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM notes WHERE id = $1 AND user_id = $2',
-      [req.params.id, req.userId]
+    // Allow fetching partner's public note too
+    const relResult = await pool.query(
+      'SELECT partner_user_id FROM relationship_info WHERE user_id = $1 LIMIT 1',
+      [req.userId]
     );
+    const partnerId = relResult.rows[0]?.partner_user_id || null;
+
+    let result;
+    if (partnerId) {
+      result = await pool.query(
+        `SELECT n.*, u.display_name FROM notes n
+         JOIN users u ON n.user_id = u.id
+         WHERE n.id = $1 AND (n.user_id = $2 OR (n.user_id = $3 AND n.is_private = false))`,
+        [req.params.id, req.userId, partnerId]
+      );
+    } else {
+      result = await pool.query(
+        `SELECT n.*, u.display_name FROM notes n
+         JOIN users u ON n.user_id = u.id
+         WHERE n.id = $1 AND n.user_id = $2`,
+        [req.params.id, req.userId]
+      );
+    }
 
     if (result.rows.length === 0) {
       return sendResponse(res, false, 'Note not found', null, 404);

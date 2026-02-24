@@ -28,10 +28,19 @@ class NoteViewModel @Inject constructor(
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
+    private val _currentNote = MutableStateFlow<NoteResponse?>(null)
+    val currentNote: StateFlow<NoteResponse?> = _currentNote.asStateFlow()
+
+    private val _currentUserId = MutableStateFlow<Int?>(null)
+    val currentUserId: StateFlow<Int?> = _currentUserId.asStateFlow()
+
     private val _currentPage = MutableStateFlow(1)
 
     init {
         loadNotes()
+        viewModelScope.launch {
+            _currentUserId.value = noteRepository.getCurrentUserId()
+        }
     }
 
     fun loadNotes() {
@@ -48,6 +57,22 @@ class NoteViewModel @Inject constructor(
                 _isLoading.value = false
             }
         }
+    }
+
+    fun loadNoteById(id: Int) {
+        viewModelScope.launch {
+            _currentNote.value = null
+            val result = noteRepository.getNoteById(id)
+            result.onSuccess { note ->
+                _currentNote.value = note
+            }.onFailure { error ->
+                _errorMessage.value = error.message ?: "Failed to load note"
+            }
+        }
+    }
+
+    fun clearCurrentNote() {
+        _currentNote.value = null
     }
 
     fun createNote(title: String, content: String, isPrivate: Boolean = false, tags: String = "") {

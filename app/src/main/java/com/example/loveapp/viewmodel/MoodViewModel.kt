@@ -52,6 +52,10 @@ class MoodViewModel @Inject constructor(
         "Tired" to MoodTired
     )
 
+    init {
+        loadTodayMoods()
+    }
+
     fun createMood(moodType: String) = addMood(moodType)
 
     fun addMood(moodType: String) {

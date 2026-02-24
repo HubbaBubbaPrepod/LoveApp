@@ -88,4 +88,6 @@ class NoteRepository @Inject constructor(
     } catch (e: Exception) {
         Result.failure(e)
     }
+
+    suspend fun getCurrentUserId(): Int? = authRepository.getUserId()
 }

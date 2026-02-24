@@ -120,4 +120,6 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun getToken(): String? = tokenManager.getToken()
+
+    suspend fun getUserId(): Int? = tokenManager.getUserId()?.toIntOrNull()
 }

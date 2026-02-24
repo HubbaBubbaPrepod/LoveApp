@@ -252,21 +252,6 @@ fun WishIOSTile(wish: WishResponse, onClick: () -> Unit) {
                         )
                     )
             )
-            // Show emoji as overlay badge on image
-            if (displayEmoji != null) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(10.dp)
-                        .background(
-                            Color.Black.copy(alpha = 0.35f),
-                            shape = RoundedCornerShape(10.dp)
-                        )
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(displayEmoji, fontSize = 20.sp)
-                }
-            }
         }
 
         // Content column (always shown; on image tiles text is white)
@@ -277,7 +262,7 @@ fun WishIOSTile(wish: WishResponse, onClick: () -> Unit) {
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                if (!hasImage && displayEmoji != null) {
+                if (displayEmoji != null) {
                     Text(
                         text = displayEmoji,
                         fontSize = 38.sp,

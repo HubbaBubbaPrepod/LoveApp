@@ -33,7 +33,7 @@ const upload = multer({
       cb(null, `${Date.now()}_${name}${ext}`);
     }
   }),
-  limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE || String(5 * 1024 * 1024)) }
+  limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE || String(20 * 1024 * 1024)) }
 });
 
 // PostgreSQL Connection Pool

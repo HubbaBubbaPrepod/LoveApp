@@ -416,12 +416,12 @@ app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
 // Create Wish (wishes_priority_check: priority обычно 1-5, 0 недопустим)
 app.post('/api/wishes', authenticateToken, async (req, res) => {
   try {
-    const { title, description, priority, category, is_completed, is_private, image_url, emoji } = req.body;
+    const { title, description, priority, category, is_completed, is_private, image_urls, emoji } = req.body;
     const validPriority = Math.min(5, Math.max(1, parseInt(priority, 10) || 1));
 
     const result = await pool.query(
-      'INSERT INTO wishes (user_id, title, description, priority, category, is_completed, is_private, image_url, emoji) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
-      [req.userId, title, description, validPriority, category || null, is_completed || false, is_private || false, image_url || null, emoji || '']
+      'INSERT INTO wishes (user_id, title, description, priority, category, is_completed, is_private, image_urls, emoji) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+      [req.userId, title, description, validPriority, category || null, is_completed || false, is_private || false, image_urls || '', emoji || '']
     );
 
     // Attach display_name
@@ -518,13 +518,13 @@ app.get('/api/wishes/:id', authenticateToken, async (req, res) => {
 // Update Wish
 app.put('/api/wishes/:id', authenticateToken, async (req, res) => {
   try {
-    const { title, description, priority, category, is_private, image_url, emoji } = req.body;
+    const { title, description, priority, category, is_private, image_urls, emoji } = req.body;
     const validPriority = Math.min(5, Math.max(1, parseInt(priority, 10) || 1));
     const result = await pool.query(
       `UPDATE wishes SET title = $1, description = $2, priority = $3, category = $4,
-       is_private = $5, image_url = $6, emoji = $7, updated_at = NOW()
+       is_private = $5, image_urls = $6, emoji = $7, updated_at = NOW()
        WHERE id = $8 AND user_id = $9 RETURNING *`,
-      [title, description, validPriority, category || null, is_private || false, image_url || null, emoji || '', req.params.id, req.userId]
+      [title, description, validPriority, category || null, is_private || false, image_urls || '', emoji || '', req.params.id, req.userId]
     );
     if (result.rows.length === 0) return sendResponse(res, false, 'Wish not found', null, 404);
     const userRes = await pool.query('SELECT display_name FROM users WHERE id = $1', [req.userId]);
@@ -967,6 +967,9 @@ pool.query(`ALTER TABLE wishes ADD COLUMN IF NOT EXISTS is_private BOOLEAN NOT N
 pool.query(`ALTER TABLE wishes ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT ''`)
   .then(() => console.log('wishes.emoji column ready'))
   .catch(err => console.error('Migration error (emoji):', err));
+pool.query(`ALTER TABLE wishes ADD COLUMN IF NOT EXISTS image_urls TEXT NOT NULL DEFAULT ''`)
+  .then(() => console.log('wishes.image_urls column ready'))
+  .catch(err => console.error('Migration error (image_urls):', err));
 
 app.listen(PORT, () => {
   console.log(`LoveApp API Server running on port ${PORT}`);

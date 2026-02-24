@@ -211,7 +211,8 @@ fun WishIOSTile(wish: WishResponse, onClick: () -> Unit) {
     val titleColor = if (isDark) Color(0xFFF2F2F7) else Color(0xFF1C1C1E)
     val subColor = if (isDark) Color(0xFF8E8E93) else Color(0xFF636366)
 
-    val hasImage = !wish.imageUrl.isNullOrBlank()
+    val hasImage = wish.imageUrls.isNotBlank()
+    val thumbUrl = wish.imageUrls.split(",").firstOrNull { it.isNotBlank() }
     val displayEmoji = wish.emoji.orEmpty().ifBlank { null }
 
     Box(
@@ -237,7 +238,7 @@ fun WishIOSTile(wish: WishResponse, onClick: () -> Unit) {
         if (hasImage) {
             // Image tile: photo + gradient overlay
             AsyncImage(
-                model = wish.imageUrl,
+                model = thumbUrl,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,11 +25,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
@@ -62,6 +64,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import com.example.loveapp.viewmodel.WishViewModel
 
 @androidx.compose.material3.ExperimentalMaterial3Api
@@ -80,7 +83,7 @@ fun WishDetailScreen(
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var imageUrl by remember { mutableStateOf<String?>(null) }
+    var imageUrls by remember { mutableStateOf<List<String>>(emptyList()) }
     var isPrivate by remember { mutableStateOf(false) }
     var isReadOnly by remember { mutableStateOf(false) }
     var isInitialized by remember { mutableStateOf(false) }
@@ -113,7 +116,7 @@ fun WishDetailScreen(
         if (wishId != -1 && currentWish != null && !isInitialized) {
             title = currentWish!!.title
             description = currentWish!!.description
-            imageUrl = currentWish!!.imageUrl
+            imageUrls = currentWish!!.imageUrls.split(",").filter { it.isNotBlank() }
             emoji = currentWish!!.emoji.orEmpty()
             isPrivate = currentWish!!.isPrivate
             if (currentUserId != null && currentWish!!.userId != currentUserId) {
@@ -126,7 +129,7 @@ fun WishDetailScreen(
     // Apply uploaded image URL when upload finishes
     LaunchedEffect(uploadedImageUrl) {
         uploadedImageUrl?.let {
-            imageUrl = it
+            imageUrls = imageUrls + it
             isUploading = false
         }
     }
@@ -155,10 +158,11 @@ fun WishDetailScreen(
         if (hasContent) {
             isSaving = true
             val finalTitle = title.ifBlank { "Untitled" }
+            val urlsJoined = imageUrls.joinToString(",")
             if (wishId == -1) {
-                viewModel.createWish(finalTitle, description, isPrivate = isPrivate, imageUrl = imageUrl, emoji = emoji.ifBlank { null })
+                viewModel.createWish(finalTitle, description, isPrivate = isPrivate, imageUrls = urlsJoined, emoji = emoji.ifBlank { null })
             } else {
-                viewModel.updateWish(wishId, finalTitle, description, isPrivate, imageUrl, emoji.ifBlank { null })
+                viewModel.updateWish(wishId, finalTitle, description, isPrivate, urlsJoined, emoji.ifBlank { null })
             }
         } else {
             onNavigateBack()
@@ -261,59 +265,89 @@ fun WishDetailScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Photo area — shrinks to a button bar if no image, expands to full image otherwise
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(if (!imageUrl.isNullOrBlank()) 220.dp else 52.dp)
-                    .background(
-                        if (!imageUrl.isNullOrBlank()) MaterialTheme.colorScheme.surfaceVariant
-                        else MaterialTheme.colorScheme.surface
-                    )
-            ) {
-                if (!imageUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = "Wish photo",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-                if (!isReadOnly) {
-                    if (isUploading) {
-                        CircularProgressIndicator(
+            // Photos strip
+            if (imageUrls.isNotEmpty() || !isReadOnly) {
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(if (imageUrls.isNotEmpty()) 180.dp else 52.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    itemsIndexed(imageUrls) { index, url ->
+                        Box(
                             modifier = Modifier
-                                .align(Alignment.Center)
-                                .size(28.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    } else {
-                        Button(
-                            onClick = { imagePicker.launch("image/*") },
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)
-                            ),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                .width(140.dp)
+                                .fillMaxHeight()
+                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Photo",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
+                            AsyncImage(
+                                model = url,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
                             )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = if (imageUrl.isNullOrBlank()) "Add photo" else "Change photo",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            if (!isReadOnly) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(6.dp)
+                                        .size(24.dp)
+                                        .background(
+                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                                            shape = androidx.compose.foundation.shape.CircleShape
+                                        )
+                                        .clickable { imageUrls = imageUrls.toMutableList().also { it.removeAt(index) } },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("✕", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
+                                }
+                            }
+                        }
+                    }
+                    if (!isReadOnly) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .width(if (imageUrls.isEmpty()) 120.dp else 64.dp)
+                                    .fillMaxHeight()
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .clickable { if (!isUploading) imagePicker.launch("image/*") },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isUploading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = "Add photo",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        if (imageUrls.isEmpty()) {
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                text = "Add photos",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+                Spacer(Modifier.height(8.dp))
             }
 
             Spacer(Modifier.height(16.dp))

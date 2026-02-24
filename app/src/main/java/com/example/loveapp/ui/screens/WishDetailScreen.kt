@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import com.example.loveapp.viewmodel.WishViewModel
 
 @androidx.compose.material3.ExperimentalMaterial3Api
@@ -84,6 +86,7 @@ fun WishDetailScreen(
     var isInitialized by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
     var isUploading by remember { mutableStateOf(false) }
+    var emoji by remember { mutableStateOf("") }
 
     val uriHandler = LocalUriHandler.current
 
@@ -111,6 +114,7 @@ fun WishDetailScreen(
             title = currentWish!!.title
             description = currentWish!!.description
             imageUrl = currentWish!!.imageUrl
+            emoji = currentWish!!.emoji.orEmpty()
             isPrivate = currentWish!!.isPrivate
             if (currentUserId != null && currentWish!!.userId != currentUserId) {
                 isReadOnly = true
@@ -152,9 +156,9 @@ fun WishDetailScreen(
             isSaving = true
             val finalTitle = title.ifBlank { "Untitled" }
             if (wishId == -1) {
-                viewModel.createWish(finalTitle, description, isPrivate = isPrivate, imageUrl = imageUrl)
+                viewModel.createWish(finalTitle, description, isPrivate = isPrivate, imageUrl = imageUrl, emoji = emoji.ifBlank { null })
             } else {
-                viewModel.updateWish(wishId, finalTitle, description, isPrivate, imageUrl)
+                viewModel.updateWish(wishId, finalTitle, description, isPrivate, imageUrl, emoji.ifBlank { null })
             }
         } else {
             onNavigateBack()
@@ -312,7 +316,77 @@ fun WishDetailScreen(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
+
+            // Emoji picker
+            val emojiOptions = listOf(
+                "🎁", "🎂", "🎉", "🎊", "❤️", "💕", "💍", "💎",
+                "🏠", "🚗", "✈️", "🏖️", "🏔️", "📱", "💻", "👗",
+                "👠", "👜", "🎮", "🎵", "📚", "🌸", "🌺", "🌟",
+                "⭐", "🌙", "☕", "🍰", "🍕", "🍣", "🐶", "🐱",
+                "🦋", "🌿", "🌊", "🎨", "🎤", "🛒", "💐", "🥂",
+                "🌹", "🔮", "🎯", "🏡", "🌈", "🎸", "⚽", "💪"
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 4.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Text(
+                        text = if (emoji.isNotBlank()) emoji else "✨",
+                        fontSize = 40.sp
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Emoji",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (emoji.isNotBlank() && !isReadOnly) {
+                            TextButton(
+                                onClick = { emoji = "" },
+                                contentPadding = PaddingValues(0.dp)
+                            ) {
+                                Text(
+                                    text = "Clear",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+                if (!isReadOnly) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(emojiOptions) { e ->
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        color = if (emoji == e)
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                        else
+                                            androidx.compose.ui.graphics.Color.Transparent,
+                                        shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+                                    )
+                                    .clickable { emoji = e },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(e, fontSize = 22.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
 
             // Title
             BasicTextField(

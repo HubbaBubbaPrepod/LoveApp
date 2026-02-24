@@ -73,7 +73,8 @@ data class WishRequest(
     @SerializedName("is_private")
     val isPrivate: Boolean = false,
     @SerializedName("image_url")
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val emoji: String? = null
 )
 
 data class WishResponse(
@@ -97,7 +98,8 @@ data class WishResponse(
     @SerializedName("image_url")
     val imageUrl: String? = null,
     @SerializedName("due_date")
-    val dueDate: String? = null
+    val dueDate: String? = null,
+    val emoji: String? = null
 )
 
 // Mood Models

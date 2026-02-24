@@ -24,7 +24,8 @@ class WishRepository @Inject constructor(
         priority: Int = 0,
         category: String = "",
         isPrivate: Boolean = false,
-        imageUrl: String? = null
+        imageUrl: String? = null,
+        emoji: String? = null
     ): Result<WishResponse> = try {
         val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
         val request = WishRequest(
@@ -33,7 +34,8 @@ class WishRepository @Inject constructor(
             priority = priority,
             category = category,
             isPrivate = isPrivate,
-            imageUrl = imageUrl
+            imageUrl = imageUrl,
+            emoji = emoji
         )
         val response = apiService.createWish("Bearer $token", request)
         

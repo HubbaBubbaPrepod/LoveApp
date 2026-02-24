@@ -89,12 +89,13 @@ class WishViewModel @Inject constructor(
         priority: Int = 1,
         category: String = "",
         isPrivate: Boolean = false,
-        imageUrl: String? = null
+        imageUrl: String? = null,
+        emoji: String? = null
     ) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
-            val result = wishRepository.createWish(title, description, priority, category, isPrivate, imageUrl)
+            val result = wishRepository.createWish(title, description, priority, category, isPrivate, imageUrl, emoji)
             result.onSuccess { wish ->
                 _wishes.value = listOf(wish) + _wishes.value
                 _successMessage.value = "Wish created"
@@ -111,7 +112,8 @@ class WishViewModel @Inject constructor(
         title: String,
         description: String,
         isPrivate: Boolean = false,
-        imageUrl: String? = null
+        imageUrl: String? = null,
+        emoji: String? = null
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -121,7 +123,8 @@ class WishViewModel @Inject constructor(
                 description = description,
                 priority = 1,
                 isPrivate = isPrivate,
-                imageUrl = imageUrl
+                imageUrl = imageUrl,
+                emoji = emoji
             )
             val result = wishRepository.updateWish(id, request)
             result.onSuccess { updated ->

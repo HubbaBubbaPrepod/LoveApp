@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,14 +44,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.R
-import androidx.navigation.NavHostController
 import com.example.loveapp.data.api.models.WishResponse
 import com.example.loveapp.viewmodel.WishViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WishesScreen(
-    navController: NavHostController,
+    onNavigateBack: () -> Unit,
     viewModel: WishViewModel = hiltViewModel()
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
@@ -76,6 +76,13 @@ fun WishesScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
+        topBar = {
+            IOSTopAppBar(
+                title = stringResource(R.string.wishes),
+                onBackClick = onNavigateBack
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },

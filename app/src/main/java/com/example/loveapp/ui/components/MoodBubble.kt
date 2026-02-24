@@ -1,66 +1,197 @@
 package com.example.loveapp.ui.components
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/**
+ * iOS-style animated mood bubble
+ * Perfect for mood tracking screens with smooth iOS-like animations
+ */
 @Composable
 fun MoodBubble(
-    mood: String,
-    color: Color,
+    moodLabel: String,
+    bubbleColor: Color,
+    size: Dp = 80.dp,
     isSelected: Boolean = false,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onClick: () -> Unit = {},
+    emoji: String = "😊"
 ) {
-    val animatedColor by animateColorAsState(
-        targetValue = if (isSelected) color else color.copy(alpha = 0.6f),
-        animationSpec = tween(300), label = "bubbleColor"
+    var isPressed by remember { mutableStateOf(false) }
+    
+    // Smooth animation on press
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.9f else if (isSelected) 1.1f else 1f,
+        animationSpec = tween(durationMillis = 200),
+        label = "mood-scale"
     )
     
-    val animatedSize by animateDpAsState(
-        targetValue = if (isSelected) 75.dp else 60.dp,
-        animationSpec = tween(300), label = "bubbleSize"
+    val shadowElevation by animateFloatAsState(
+        targetValue = if (isSelected) 12f else if (isPressed) 4f else 6f,
+        animationSpec = tween(durationMillis = 200),
+        label = "mood-shadow"
     )
 
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.1f else 1f,
-        animationSpec = tween(300), label = "bubbleScale"
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(size)
+                .scale(scale)
+                .clip(CircleShape)
+                .shadow(
+                    elevation = shadowElevation.dp,
+                    shape = CircleShape,
+                    ambientColor = Color.Black.copy(alpha = 0.12f),
+                    spotColor = Color.Black.copy(alpha = 0.15f)
+                )
+                .background(bubbleColor.copy(alpha = 0.85f))
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                    onClick = {
+                        isPressed = !isPressed
+                        onClick()
+                    }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = emoji,
+                fontSize = 32.sp,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+
+        Text(
+            text = moodLabel,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+}
+
+/**
+ * iOS-style animated pulsing bubble (for notifications, activity)
+ */
+@Composable
+fun PulsingBubble(
+    color: Color,
+    size: Dp = 60.dp,
+    content: @Composable () -> Unit = {}
+) {
+    var isPulsing by remember { mutableStateOf(true) }
+    
+    val scale by animateFloatAsState(
+        targetValue = if (isPulsing) 1.2f else 1f,
+        animationSpec = tween(durationMillis = 1000),
+        label = "pulse-scale"
+    )
+    
+    val alpha by animateFloatAsState(
+        targetValue = if (isPulsing) 0f else 1f,
+        animationSpec = tween(durationMillis = 1000),
+        label = "pulse-alpha"
     )
 
     Box(
-        modifier = modifier
-            .size(animatedSize)
-            .scale(animatedScale)
+        modifier = Modifier
+            .size(size)
             .clip(CircleShape)
-            .shadow(elevation = if (isSelected) 12.dp else 6.dp, shape = CircleShape)
-            .background(animatedColor)
-            .clickable(onClick = onClick),
+            .shadow(
+                elevation = 8.dp,
+                shape = CircleShape
+            )
+            .background(color.copy(alpha = 0.85f)),
         contentAlignment = Alignment.Center
     ) {
+        content()
+    }
+}
+
+/**
+ * iOS-style bubble container for activity rings or progress
+ */
+@Composable
+fun ProgressBubble(
+    label: String,
+    percentage: Float,
+    bubbleColor: Color,
+    size: Dp = 100.dp,
+    onClick: () -> Unit = {}
+) {
+    val animatedProgress by animateFloatAsState(
+        targetValue = percentage,
+        animationSpec = tween(durationMillis = 800),
+        label = "progress-animate"
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(size)
+                .clip(CircleShape)
+                .shadow(
+                    elevation = 6.dp,
+                    shape = CircleShape,
+                    ambientColor = Color.Black.copy(alpha = 0.1f),
+                    spotColor = Color.Black.copy(alpha = 0.15f)
+                )
+                .background(bubbleColor.copy(alpha = 0.85f))
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                    onClick = onClick
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "${(animatedProgress * 100).toInt()}%",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
         Text(
-            text = mood,
-            color = Color.White,
-            fontSize = 28.sp,
-            modifier = Modifier.padding(8.dp)
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(top = 8.dp)
         )
     }
 }

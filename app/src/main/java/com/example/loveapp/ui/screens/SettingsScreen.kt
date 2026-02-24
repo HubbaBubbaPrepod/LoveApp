@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,15 +35,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavHostController
 import com.example.loveapp.R
+import com.example.loveapp.ui.components.IOSTopAppBar
 import com.example.loveapp.ui.theme.PrimaryPink
 import com.example.loveapp.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    navController: NavHostController,
+    onNavigateBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val isDarkMode by viewModel.isDarkMode.collectAsState()
@@ -50,6 +51,13 @@ fun SettingsScreen(
     val remindersEnabled by viewModel.remindersEnabled.collectAsState()
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
+        topBar = {
+            IOSTopAppBar(
+                title = stringResource(R.string.settings),
+                onBackClick = onNavigateBack
+            )
+        }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier

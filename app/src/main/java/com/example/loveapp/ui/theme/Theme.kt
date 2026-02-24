@@ -8,74 +8,74 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// iOS Light theme - soft pastels & translucent glass effect
+// ============= iOS Light Theme - Glass Morphism Style =============
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryPink.copy(alpha = 0.9f),
+    primary = iOSPrimaryPink,
     onPrimary = Color.White,
-    primaryContainer = PastelPink,
-    onPrimaryContainer = TextDark,
+    primaryContainer = iOSPrimaryPinkVeryLight,
+    onPrimaryContainer = iOSTextPrimary,
     
-    secondary = SecondaryPeach.copy(alpha = 0.9f),
+    secondary = iOSSecondaryPeach,
     onSecondary = Color.White,
-    secondaryContainer = PastelPeach,
-    onSecondaryContainer = TextDark,
+    secondaryContainer = iOSSecondaryPeachLight,
+    onSecondaryContainer = iOSTextPrimary,
     
-    tertiary = TertiaryRose.copy(alpha = 0.9f),
+    tertiary = iOSTertiaryCoral,
     onTertiary = Color.White,
-    tertiaryContainer = PastelMint,
-    onTertiaryContainer = TextDark,
+    tertiaryContainer = iOSTerminaryCoralLight,
+    onTertiaryContainer = iOSTextPrimary,
     
-    error = Color(0xFFB3261E),
+    error = iOSButtonDanger,
     onError = Color.White,
-    errorContainer = Color(0xFFF9DEDC),
-    onErrorContainer = Color(0xFF410E0B),
+    errorContainer = Color(0xFFFFE4E2),
+    onErrorContainer = iOSButtonDanger,
     
-    background = PastelBackground,
-    onBackground = TextDark,
+    background = iOSBackgroundLight,
+    onBackground = iOSTextPrimary,
     
-    surface = GlassWhite.copy(alpha = 0.88f),
-    onSurface = TextDark,
-    surfaceVariant = PastelPink.copy(alpha = 0.5f),
-    onSurfaceVariant = TextMuted,
+    // iOS glass effect - semi-transparent white surface
+    surface = iOSCardBackground.copy(alpha = 0.88f),
+    onSurface = iOSTextPrimary,
+    surfaceVariant = iOSPrimaryPinkVeryLight.copy(alpha = 0.6f),
+    onSurfaceVariant = iOSTextSecondary,
     
-    outline = TextMuted,
+    outline = iOSBorder,
 )
 
-// iOS Dark theme - darker pastels
+// ============= iOS Dark Theme =============
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryPinkLight,
-    onPrimary = Color(0xFF1A0E12),
-    primaryContainer = Color(0xFF333333),
-    onPrimaryContainer = PrimaryPinkLight,
+    primary = iOSPrimaryPinkLight,
+    onPrimary = iOSDarkBackground,
+    primaryContainer = iOSDarkCardBg,
+    onPrimaryContainer = iOSPrimaryPinkLight,
     
-    secondary = SecondaryPeachDark.copy(alpha = 0.9f),
-    onSecondary = Color(0xFF1A0E12),
-    secondaryContainer = Color(0xFF333333),
-    onSecondaryContainer = SecondaryPeachDark,
+    secondary = iOSSecondaryPeach,
+    onSecondary = iOSDarkBackground,
+    secondaryContainer = iOSDarkCardBg,
+    onSecondaryContainer = iOSSecondaryPeach,
     
-    tertiary = TertiaryRoseDark.copy(alpha = 0.9f),
-    onTertiary = Color(0xFF1A0E12),
-    tertiaryContainer = Color(0xFF333333),
-    onTertiaryContainer = TertiaryRoseDark,
+    tertiary = iOSTertiaryCoral,
+    onTertiary = iOSDarkBackground,
+    tertiaryContainer = iOSDarkCardBg,
+    onTertiaryContainer = iOSTertiaryCoral,
     
-    error = Color(0xFFF2B8B5),
-    onError = Color(0xFF5F0E0A),
-    errorContainer = Color(0xFF740E0B),
-    onErrorContainer = Color(0xFFF9DEDC),
+    error = iOSButtonDanger,
+    onError = iOSDarkBackground,
+    errorContainer = Color(0xFF5A1A1A),
+    onErrorContainer = Color(0xFFFFB4AB),
     
-    background = Color(0xFF1A1A1A),
-    onBackground = TextLight,
+    background = iOSDarkBackground,
+    onBackground = iOSDarkTextWhite,
     
-    surface = Color(0xFF2A2A2A).copy(alpha = 0.9f),
-    onSurface = TextLight,
-    surfaceVariant = Color(0xFF333333),
-    onSurfaceVariant = TextMuted.copy(alpha = 0.7f),
+    surface = iOSDarkCardBg.copy(alpha = 0.88f),
+    onSurface = iOSDarkTextWhite,
+    surfaceVariant = iOSDarkCardBg.copy(alpha = 0.6f),
+    onSurfaceVariant = iOSDarkTextGray,
     
-    outline = TextMuted.copy(alpha = 0.7f),
+    outline = iOSBorderDark,
 )
 
 @Composable
@@ -89,14 +89,16 @@ fun LoveAppTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view)?.isAppearanceLightStatusBars = !darkTheme
+            // Edge-to-edge: status bar is transparent, background drawn by topBar composables
+            // Light theme → dark icons (on white/pink bg), dark theme → light icons
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = iOSTypography,
+        shapes = iOSShapes,
         content = content
     )
 }

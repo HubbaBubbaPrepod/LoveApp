@@ -87,6 +87,9 @@ dependencies {
     // Permissions
     implementation(libs.permissions)
     
+    // SplashScreen
+    implementation(libs.core.splashscreen)
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

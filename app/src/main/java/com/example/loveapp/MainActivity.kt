@@ -1,10 +1,19 @@
 package com.example.loveapp
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ObjectAnimator
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.splashscreen.SplashScreenViewProvider
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -27,6 +36,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.viewmodel.AuthViewModel
+import com.example.loveapp.viewmodel.SettingsViewModel
 import com.example.loveapp.navigation.Screen
 import com.example.loveapp.ui.screens.ActivityFeedScreen
 import com.example.loveapp.ui.screens.CustomCalendarsScreen
@@ -48,9 +58,30 @@ class MainActivity : ComponentActivity() {
         try {
             super.onCreate(savedInstanceState)
             Log.d("LoveApp", "MainActivity.onCreate started")
+
+            val splashScreen = installSplashScreen()
+            // Анимация как у веб-прелоадера: задержка, затем плавное исчезновение (fade-out 1s ease-in-out)
+            splashScreen.setOnExitAnimationListener { provider: SplashScreenViewProvider ->
+                val view = provider.view
+                val handler = Handler(Looper.getMainLooper())
+                handler.postDelayed({
+                    val fadeOut = ObjectAnimator.ofFloat(view, View.ALPHA, 1f, 0f)
+                    fadeOut.setDuration(1000L)
+                    fadeOut.setInterpolator(AccelerateDecelerateInterpolator())
+                    fadeOut.addListener(object : AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(animation: Animator) {
+                            provider.remove()
+                        }
+                    })
+                    fadeOut.start()
+                }, 6500L)
+            }
+
             enableEdgeToEdge()
             setContent {
-                LoveAppTheme {
+                val settingsViewModel: SettingsViewModel = hiltViewModel()
+                val isDarkMode by settingsViewModel.isDarkMode.collectAsState()
+                LoveAppTheme(darkTheme = isDarkMode) {
                     LoveAppNavigation()
                 }
             }
@@ -127,35 +158,38 @@ fun LoveAppNavigation(
         }
 
         composable(Screen.Notes.route) {
-            NotesScreen(navController)
+            NotesScreen(
+                navController = navController,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable(Screen.Wishes.route) {
-            WishesScreen(navController)
+            WishesScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Screen.MoodTracker.route) {
-            MoodTrackerScreen(navController)
+            MoodTrackerScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Screen.ActivityFeed.route) {
-            ActivityFeedScreen(navController)
+            ActivityFeedScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Screen.MenstrualCalendar.route) {
-            MenstrualCalendarScreen(navController)
+            MenstrualCalendarScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Screen.CustomCalendars.route) {
-            CustomCalendarsScreen(navController)
+            CustomCalendarsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Screen.RelationshipDashboard.route) {
-            RelationshipDashboardScreen(navController)
+            RelationshipDashboardScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Screen.Settings.route) {
-            SettingsScreen(navController)
+            SettingsScreen(onNavigateBack = { navController.popBackStack() })
         }
         }
     }

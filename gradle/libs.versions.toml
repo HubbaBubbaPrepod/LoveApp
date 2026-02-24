@@ -19,6 +19,7 @@ datastore = "1.0.0"
 workManager = "2.8.1"
 permissions = "0.37.0"
 okhttpLogging = "4.11.0"
+coroSplashscreen = "1.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -51,6 +52,7 @@ joda-time = { group = "joda-time", name = "joda-time", version.ref = "jodaTime" 
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 workmanager = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
 permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "permissions" }
+core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coroSplashscreen" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

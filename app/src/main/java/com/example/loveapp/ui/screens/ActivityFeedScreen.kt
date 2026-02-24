@@ -18,12 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.R
-import androidx.navigation.NavHostController
 import com.example.loveapp.data.api.models.ActivityResponse
+import com.example.loveapp.ui.components.IOSTopAppBar
 import com.example.loveapp.utils.DateUtils
 import com.example.loveapp.viewmodel.ActivityViewModel
 import java.util.*
@@ -31,7 +32,7 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityFeedScreen(
-    navController: NavHostController,
+    onNavigateBack: () -> Unit,
     viewModel: ActivityViewModel = hiltViewModel()
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
@@ -57,6 +58,13 @@ fun ActivityFeedScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
+        topBar = {
+            IOSTopAppBar(
+                title = stringResource(R.string.activities),
+                onBackClick = onNavigateBack
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },

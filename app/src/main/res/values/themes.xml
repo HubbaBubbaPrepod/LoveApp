@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.LoveApp" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.LoveApp" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Splash Screen: тёплый розовый фон, иконка с контрастным кругом -->
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_screen_icon_animated</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_icon_background</item>
+        <item name="android:windowSplashScreenAnimationDuration">2000</item>
+        <item name="android:windowSplashScreenBehavior">icon_preferred</item>
+    </style>
 </resources>

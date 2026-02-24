@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -53,9 +54,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavHostController
 import com.example.loveapp.R
 import com.example.loveapp.utils.DateUtils
+import com.example.loveapp.ui.components.IOSTopAppBar
 import com.example.loveapp.ui.theme.AccentPurple
 import com.example.loveapp.ui.theme.PrimaryPink
 import com.example.loveapp.viewmodel.RelationshipViewModel
@@ -63,7 +64,7 @@ import com.example.loveapp.viewmodel.RelationshipViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RelationshipDashboardScreen(
-    navController: NavHostController,
+    onNavigateBack: () -> Unit,
     viewModel: RelationshipViewModel = hiltViewModel()
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
@@ -90,6 +91,13 @@ fun RelationshipDashboardScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
+        topBar = {
+            IOSTopAppBar(
+                title = stringResource(R.string.relationship),
+                onBackClick = onNavigateBack
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Box(

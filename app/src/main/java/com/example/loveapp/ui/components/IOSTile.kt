@@ -5,13 +5,18 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +34,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/**
+ * iOS-style widget tile with glass morphism effect
+ * Used on main dashboard screen
+ */
 @Composable
 fun IOSTile(
     title: String,
@@ -36,48 +45,114 @@ fun IOSTile(
     backgroundColor: Color,
     modifier: Modifier = Modifier,
     size: Dp = 155.dp,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit = {}
 ) {
-    var pressed by remember { mutableStateOf(false) }
+    var isPressed by remember { mutableStateOf(false) }
+    
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.975f else 1f,
-        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+        label = "tile-scale"
+    )
+
+    val shadowElevation by animateFloatAsState(
+        targetValue = if (isPressed) 4f else 8f,
+        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+        label = "tile-shadow"
     )
 
     Box(
         modifier = modifier
-            .size(size)
+            .fillMaxWidth()
+            .height(size)
             .clip(RoundedCornerShape(20.dp))
-            .shadow(elevation = 8.dp, shape = RoundedCornerShape(20.dp))
+            .shadow(
+                elevation = shadowElevation.dp,
+                shape = RoundedCornerShape(20.dp),
+                ambientColor = Color.Black.copy(alpha = 0.1f),
+                spotColor = Color.Black.copy(alpha = 0.15f)
+            )
             .background(backgroundColor.copy(alpha = 0.88f))
-            .clickable(onClick = onClick)
-            .then(Modifier),
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = onClick,
+                onClickLabel = title
+            ),
         contentAlignment = Alignment.Center
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.Start,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
         ) {
+            // Icon at the top
             Icon(
                 imageVector = icon,
                 contentDescription = title,
                 tint = Color.Unspecified,
-                modifier = Modifier
-                    .size(36.dp)
-                    .align(Alignment.Start)
+                modifier = Modifier.size(32.dp)
             )
 
-            Box(modifier = Modifier.weight(1f))
-
+            // Title at the bottom
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 18.sp,
-                modifier = Modifier.align(Alignment.Start)
+                color = textColor,
+                fontSize = 16.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                maxLines = 2
             )
         }
+    }
+}
+
+/**
+ * iOS-style card container with glass morphism
+ * Suitable for content cards with padding and rounded corners
+ */
+@Composable
+fun IOSCard(
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
+    elevation: Dp = 8.dp,
+    shape: RoundedCornerShape = RoundedCornerShape(16.dp),
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .shadow(
+                elevation = elevation,
+                shape = shape,
+                ambientColor = Color.Black.copy(alpha = 0.1f),
+                spotColor = Color.Black.copy(alpha = 0.15f)
+            )
+            .background(backgroundColor.copy(alpha = 0.88f))
+    ) {
+        content()
+    }
+}
+
+/**
+ * iOS-style glass container (use with care - requires careful color management)
+ * Creates semi-transparent background for layered content
+ */
+@Composable
+fun IOSGlassContainer(
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = Color.White.copy(alpha = 0.2f),
+    shape: RoundedCornerShape = RoundedCornerShape(12.dp),
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(backgroundColor)
+    ) {
+        content()
     }
 }

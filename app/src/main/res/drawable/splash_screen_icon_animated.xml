@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/splash_screen_heart_vector">
+
+    <target android:name="letter1" android:animation="@animator/draw_heart_1" />
+    <target android:name="letter2" android:animation="@animator/draw_heart_2" />
+    <target android:name="letter3" android:animation="@animator/draw_heart_4" />
+    <target android:name="letter4" android:animation="@animator/draw_heart_5" />
+    <target android:name="letter5" android:animation="@animator/draw_heart_6" />
+    <target android:name="letter6" android:animation="@animator/draw_heart_7" />
+    <target android:name="letter7" android:animation="@animator/draw_heart_8" />
+    <target android:name="outline" android:animation="@animator/draw_heart_outline" />
+
+</animated-vector>

@@ -868,14 +868,30 @@ app.delete('/api/activities/:id', authenticateToken, async (req, res) => {
 
 // ==================== CYCLES ====================
 
+// helper – stringify only if the value is an object (so plain strings pass through as NULL)
+function cycleJsonParam(val) {
+  if (val === null || val === undefined) return JSON.stringify({});
+  if (typeof val === 'string') {
+    // already a JSON string from the client – just return it
+    return val;
+  }
+  return JSON.stringify(val);
+}
+
 // Create Cycle
 app.post('/api/cycles', authenticateToken, async (req, res) => {
   try {
-    const { cycle_start_date, cycle_duration, period_duration, symptoms, mood } = req.body;
+    const { cycle_start_date, cycle_duration, period_duration, symptoms, mood, notes } = req.body;
+    const symptomsJson = cycleJsonParam(symptoms);
+    const moodJson     = cycleJsonParam(mood);
 
     const result = await pool.query(
-      'INSERT INTO menstrual_cycles (user_id, cycle_start_date, cycle_duration, period_duration, symptoms, mood) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [req.userId, cycle_start_date, cycle_duration, period_duration, symptoms, mood]
+      `INSERT INTO menstrual_cycles
+         (user_id, cycle_start_date, cycle_duration, period_duration, symptoms, mood, notes)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7)
+       RETURNING *`,
+      [req.userId, cycle_start_date, cycle_duration || 28, period_duration || 5,
+       symptomsJson, moodJson, notes || '']
     );
 
     sendResponse(res, true, 'Cycle created', result.rows[0], 201);
@@ -885,12 +901,10 @@ app.post('/api/cycles', authenticateToken, async (req, res) => {
   }
 });
 
-// Get Cycles
+// Get Cycles (all, for calendar view)
 app.get('/api/cycles', authenticateToken, async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const pageSize = 20;
-    const offset = (page - 1) * pageSize;
+    const limit = parseInt(req.query.limit) || 100;
 
     const countResult = await pool.query(
       'SELECT COUNT(*) as total FROM menstrual_cycles WHERE user_id = $1',
@@ -898,15 +912,15 @@ app.get('/api/cycles', authenticateToken, async (req, res) => {
     );
 
     const result = await pool.query(
-      'SELECT * FROM menstrual_cycles WHERE user_id = $1 ORDER BY cycle_start_date DESC LIMIT $2 OFFSET $3',
-      [req.userId, pageSize, offset]
+      'SELECT * FROM menstrual_cycles WHERE user_id = $1 ORDER BY cycle_start_date DESC LIMIT $2',
+      [req.userId, limit]
     );
 
     sendResponse(res, true, 'Cycles retrieved', {
       items: result.rows,
       total: parseInt(countResult.rows[0].total),
-      page,
-      page_size: pageSize,
+      page: 1,
+      page_size: limit,
     });
   } catch (err) {
     console.error('Get cycles error:', err);
@@ -929,6 +943,141 @@ app.get('/api/cycles/latest', authenticateToken, async (req, res) => {
     sendResponse(res, true, 'Latest cycle retrieved', result.rows[0]);
   } catch (err) {
     console.error('Get latest cycle error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Get Partner Cycles (read-only – the second user views the girl's data)
+app.get('/api/cycles/partner', authenticateToken, async (req, res) => {
+  try {
+    // Find partner user_id via relationship_info
+    const relResult = await pool.query(
+      `SELECT partner_user_id FROM relationship_info WHERE user_id = $1
+       UNION
+       SELECT user_id FROM relationship_info WHERE partner_user_id = $1
+       LIMIT 1`,
+      [req.userId]
+    );
+
+    if (relResult.rows.length === 0) {
+      return sendResponse(res, true, 'No partner found', { items: [], total: 0, page: 1, page_size: 100 });
+    }
+
+    const partnerId = relResult.rows[0].partner_user_id || relResult.rows[0].user_id;
+    const limit = parseInt(req.query.limit) || 100;
+
+    const countResult = await pool.query(
+      'SELECT COUNT(*) as total FROM menstrual_cycles WHERE user_id = $1',
+      [partnerId]
+    );
+
+    const result = await pool.query(
+      'SELECT * FROM menstrual_cycles WHERE user_id = $1 ORDER BY cycle_start_date DESC LIMIT $2',
+      [partnerId, limit]
+    );
+
+    sendResponse(res, true, 'Partner cycles retrieved', {
+      items: result.rows,
+      total: parseInt(countResult.rows[0].total),
+      page: 1,
+      page_size: limit,
+    });
+  } catch (err) {
+    console.error('Get partner cycles error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Update Cycle (full update)
+app.put('/api/cycles/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cycle_start_date, cycle_duration, period_duration, symptoms, mood, notes } = req.body;
+    const symptomsJson = cycleJsonParam(symptoms);
+    const moodJson     = cycleJsonParam(mood);
+
+    const result = await pool.query(
+      `UPDATE menstrual_cycles
+       SET cycle_start_date = COALESCE($2, cycle_start_date),
+           cycle_duration   = COALESCE($3, cycle_duration),
+           period_duration  = COALESCE($4, period_duration),
+           symptoms         = COALESCE($5::jsonb, symptoms),
+           mood             = COALESCE($6::jsonb, mood),
+           notes            = COALESCE($7, notes)
+       WHERE id = $1 AND user_id = $8
+       RETURNING *`,
+      [id, cycle_start_date, cycle_duration, period_duration,
+       symptomsJson, moodJson, notes, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return sendResponse(res, false, 'Cycle not found or not authorised', null, 404);
+    }
+
+    sendResponse(res, true, 'Cycle updated', result.rows[0]);
+  } catch (err) {
+    console.error('Update cycle error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Patch Cycle symptoms/mood for a specific date
+app.patch('/api/cycles/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { date, symptoms_day, mood_day } = req.body;
+    // Merge the per-day data into the jsonb maps
+
+    if (symptoms_day !== undefined) {
+      await pool.query(
+        `UPDATE menstrual_cycles
+         SET symptoms = jsonb_set(COALESCE(symptoms,'{}'), $2::text[], $3::jsonb, true)
+         WHERE id = $1 AND user_id = $4`,
+        [id, `{${date}}`, JSON.stringify(symptoms_day), req.userId]
+      );
+    }
+
+    if (mood_day !== undefined) {
+      await pool.query(
+        `UPDATE menstrual_cycles
+         SET mood = jsonb_set(COALESCE(mood,'{}'), $2::text[], $3::jsonb, true)
+         WHERE id = $1 AND user_id = $4`,
+        [id, `{${date}}`, JSON.stringify(mood_day), req.userId]
+      );
+    }
+
+    const result = await pool.query(
+      'SELECT * FROM menstrual_cycles WHERE id = $1 AND user_id = $2',
+      [id, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return sendResponse(res, false, 'Cycle not found', null, 404);
+    }
+
+    sendResponse(res, true, 'Cycle day updated', result.rows[0]);
+  } catch (err) {
+    console.error('Patch cycle error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Delete Cycle
+app.delete('/api/cycles/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      'DELETE FROM menstrual_cycles WHERE id = $1 AND user_id = $2 RETURNING id',
+      [id, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return sendResponse(res, false, 'Cycle not found', null, 404);
+    }
+
+    sendResponse(res, true, 'Cycle deleted', null);
+  } catch (err) {
+    console.error('Delete cycle error:', err);
     sendResponse(res, false, 'Internal server error', null, 500);
   }
 });

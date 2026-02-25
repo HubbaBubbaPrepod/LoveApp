@@ -163,6 +163,8 @@ data class ActivityResponse(
 )
 
 // Cycle Models
+// symptoms: Map<"YYYY-MM-DD", List<"sex"|"pain_mild"|"pain_severe"|"medication"|...>>
+// mood:     Map<"YYYY-MM-DD", "happy"|"sad"|"tired"|"anxious">
 data class CycleRequest(
     @SerializedName("cycle_start_date")
     val cycleStartDate: String,
@@ -170,9 +172,17 @@ data class CycleRequest(
     val cycleDuration: Int = 28,
     @SerializedName("period_duration")
     val periodDuration: Int = 5,
-    val symptoms: String = "",
-    val mood: String = "",
+    val symptoms: Map<String, List<String>> = emptyMap(),
+    val mood: Map<String, String> = emptyMap(),
     val notes: String = ""
+)
+
+data class CyclePatchRequest(
+    val date: String,
+    @SerializedName("symptoms_day")
+    val symptomsDay: List<String>? = null,
+    @SerializedName("mood_day")
+    val moodDay: String? = null
 )
 
 data class CycleResponse(
@@ -182,13 +192,13 @@ data class CycleResponse(
     @SerializedName("cycle_start_date")
     val cycleStartDate: String,
     @SerializedName("cycle_duration")
-    val cycleDuration: Int,
+    val cycleDuration: Int = 28,
     @SerializedName("period_duration")
-    val periodDuration: Int,
-    @SerializedName("updated_at")
+    val periodDuration: Int = 5,
+    @SerializedName("created_at")
     val lastUpdated: String = "",
-    val symptoms: String = "",
-    val mood: String = "",
+    val symptoms: Map<String, List<String>> = emptyMap(),
+    val mood: Map<String, String> = emptyMap(),
     val notes: String = ""
 )
 

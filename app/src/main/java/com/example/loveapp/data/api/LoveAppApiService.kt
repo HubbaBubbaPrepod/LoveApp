@@ -26,6 +26,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Multipart
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Part
@@ -209,8 +210,7 @@ interface LoveAppApiService {
     @GET("cycles")
     suspend fun getCycles(
         @Header("Authorization") token: String,
-        @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 10
+        @Query("limit") limit: Int = 100
     ): ApiResponse<PaginatedResponse<CycleResponse>>
 
     @GET("cycles/latest")
@@ -218,11 +218,24 @@ interface LoveAppApiService {
         @Header("Authorization") token: String
     ): ApiResponse<CycleResponse>
 
+    @GET("cycles/partner")
+    suspend fun getPartnerCycles(
+        @Header("Authorization") token: String,
+        @Query("limit") limit: Int = 100
+    ): ApiResponse<PaginatedResponse<CycleResponse>>
+
     @PUT("cycles/{id}")
     suspend fun updateCycle(
         @Header("Authorization") token: String,
         @Path("id") id: Int,
         @Body request: CycleRequest
+    ): ApiResponse<CycleResponse>
+
+    @PATCH("cycles/{id}")
+    suspend fun patchCycle(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int,
+        @Body request: com.example.loveapp.data.api.models.CyclePatchRequest
     ): ApiResponse<CycleResponse>
 
     @DELETE("cycles/{id}")

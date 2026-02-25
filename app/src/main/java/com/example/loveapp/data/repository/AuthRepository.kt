@@ -122,4 +122,10 @@ class AuthRepository @Inject constructor(
     suspend fun getToken(): String? = tokenManager.getToken()
 
     suspend fun getUserId(): Int? = tokenManager.getUserId()?.toIntOrNull()
+
+    /** Returns the gender stored in the local user cache ("female" / "male" / "") */
+    suspend fun getGender(): String = userDao.getAllUsers()
+        .firstOrNull { it.isLoggedIn }?.gender
+        ?: userDao.getAllUsers().firstOrNull()?.gender
+        ?: ""
 }

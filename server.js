@@ -1155,6 +1155,31 @@ app.get('/api/calendars', authenticateToken, async (req, res) => {
   }
 });
 
+// Get Partner Calendars — must be declared BEFORE /:id to avoid Express matching 'partner' as id
+app.get('/api/calendars/partner', authenticateToken, async (req, res) => {
+  try {
+    const relResult = await pool.query(
+      `SELECT CASE WHEN user_id = $1 THEN partner_user_id ELSE user_id END AS partner_id
+         FROM relationship_info WHERE user_id = $1 OR partner_user_id = $1 LIMIT 1`,
+      [req.userId]
+    );
+    if (relResult.rows.length === 0) {
+      return sendResponse(res, true, 'No partner', { items: [], total: 0, page: 1, page_size: 100 });
+    }
+    const partnerId = relResult.rows[0].partner_id;
+    const result = await pool.query(
+      'SELECT * FROM custom_calendars WHERE user_id = $1 ORDER BY created_at DESC',
+      [partnerId]
+    );
+    sendResponse(res, true, 'Partner calendars retrieved', {
+      items: result.rows, total: result.rows.length, page: 1, page_size: 100
+    });
+  } catch (err) {
+    console.error('Get partner calendars error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
 // Get Calendar by ID
 app.get('/api/calendars/:id', authenticateToken, async (req, res) => {
   try {
@@ -1170,6 +1195,94 @@ app.get('/api/calendars/:id', authenticateToken, async (req, res) => {
     sendResponse(res, true, 'Calendar retrieved', result.rows[0]);
   } catch (err) {
     console.error('Get calendar error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Delete Calendar
+app.delete('/api/calendars/:id', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM custom_calendars WHERE id = $1 AND user_id = $2 RETURNING id',
+      [req.params.id, req.userId]
+    );
+    if (result.rows.length === 0) return sendResponse(res, false, 'Calendar not found', null, 404);
+    sendResponse(res, true, 'Calendar deleted', { id: result.rows[0].id });
+  } catch (err) {
+    console.error('Delete calendar error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Helper: check if user has access to a calendar (owns it or is partner of owner)
+async function checkCalendarAccess(calendarId, userId) {
+  const result = await pool.query(
+    `SELECT cc.id FROM custom_calendars cc
+     LEFT JOIN relationship_info ri
+       ON (ri.user_id = $2 AND ri.partner_user_id = cc.user_id)
+       OR (ri.partner_user_id = $2 AND ri.user_id = cc.user_id)
+     WHERE cc.id = $1 AND (cc.user_id = $2 OR ri.id IS NOT NULL)
+     LIMIT 1`,
+    [calendarId, userId]
+  );
+  return result.rows.length > 0;
+}
+
+// Get Events for Calendar
+app.get('/api/calendars/:id/events', authenticateToken, async (req, res) => {
+  try {
+    if (!(await checkCalendarAccess(req.params.id, req.userId)))
+      return sendResponse(res, false, 'Access denied', null, 403);
+    const result = await pool.query(
+      'SELECT * FROM custom_calendar_events WHERE calendar_id = $1 ORDER BY event_date ASC',
+      [req.params.id]
+    );
+    sendResponse(res, true, 'Events retrieved', {
+      items: result.rows, total: result.rows.length, page: 1, page_size: 1000
+    });
+  } catch (err) {
+    console.error('Get events error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Mark a Day (create event)
+app.post('/api/calendars/:id/events', authenticateToken, async (req, res) => {
+  try {
+    if (!(await checkCalendarAccess(req.params.id, req.userId)))
+      return sendResponse(res, false, 'Access denied', null, 403);
+    const { event_date, title, description } = req.body;
+    const result = await pool.query(
+      'INSERT INTO custom_calendar_events (calendar_id, event_date, title, description) VALUES ($1, $2, $3, $4) RETURNING *',
+      [req.params.id, event_date, title || '', description || '']
+    );
+    sendResponse(res, true, 'Event created', result.rows[0], 201);
+  } catch (err) {
+    console.error('Create event error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Delete Event (unmark a day) — must be declared BEFORE DELETE /:id to avoid conflict
+app.delete('/api/calendars/events/:eventId', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `DELETE FROM custom_calendar_events cce
+       USING custom_calendars cc
+       WHERE cce.id = $1 AND cce.calendar_id = cc.id
+         AND (cc.user_id = $2 OR EXISTS (
+           SELECT 1 FROM relationship_info ri
+           WHERE (ri.user_id = $2 AND ri.partner_user_id = cc.user_id)
+              OR (ri.partner_user_id = $2 AND ri.user_id = cc.user_id)
+         ))
+       RETURNING cce.id`,
+      [req.params.eventId, req.userId]
+    );
+    if (result.rows.length === 0)
+      return sendResponse(res, false, 'Event not found or access denied', null, 404);
+    sendResponse(res, true, 'Event deleted', { id: result.rows[0].id });
+  } catch (err) {
+    console.error('Delete event error:', err);
     sendResponse(res, false, 'Internal server error', null, 500);
   }
 });

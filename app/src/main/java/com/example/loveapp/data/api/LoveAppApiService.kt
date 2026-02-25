@@ -8,6 +8,8 @@ import com.example.loveapp.data.api.models.CycleRequest
 import com.example.loveapp.data.api.models.CycleResponse
 import com.example.loveapp.data.api.models.CustomCalendarRequest
 import com.example.loveapp.data.api.models.CustomCalendarResponse
+import com.example.loveapp.data.api.models.CalendarEventRequest
+import com.example.loveapp.data.api.models.CalendarEventResponse
 import com.example.loveapp.data.api.models.LoginRequest
 import com.example.loveapp.data.api.models.MoodRequest
 import com.example.loveapp.data.api.models.MoodResponse
@@ -276,6 +278,31 @@ interface LoveAppApiService {
     suspend fun deleteCalendar(
         @Header("Authorization") token: String,
         @Path("id") id: Int
+    ): ApiResponse<String>
+
+    @GET("calendars/partner")
+    suspend fun getPartnerCalendars(
+        @Header("Authorization") token: String,
+        @Query("limit") limit: Int = 100
+    ): ApiResponse<PaginatedResponse<CustomCalendarResponse>>
+
+    @GET("calendars/{id}/events")
+    suspend fun getCalendarEvents(
+        @Header("Authorization") token: String,
+        @Path("id") calendarId: Int
+    ): ApiResponse<PaginatedResponse<CalendarEventResponse>>
+
+    @POST("calendars/{id}/events")
+    suspend fun createCalendarEvent(
+        @Header("Authorization") token: String,
+        @Path("id") calendarId: Int,
+        @Body request: CalendarEventRequest
+    ): ApiResponse<CalendarEventResponse>
+
+    @DELETE("calendars/events/{eventId}")
+    suspend fun deleteCalendarEvent(
+        @Header("Authorization") token: String,
+        @Path("eventId") eventId: Int
     ): ApiResponse<String>
 
     // ==================== Relationship Endpoints ====================

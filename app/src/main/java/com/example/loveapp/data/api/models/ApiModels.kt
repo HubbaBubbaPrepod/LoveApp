@@ -225,6 +225,22 @@ data class CustomCalendarResponse(
     val userId: Int
 )
 
+// Custom Calendar Event Models
+data class CalendarEventRequest(
+    @SerializedName("event_date") val eventDate: String,
+    val title: String = "",
+    val description: String = ""
+)
+
+data class CalendarEventResponse(
+    val id: Int,
+    @SerializedName("calendar_id") val calendarId: Int,
+    @SerializedName("event_date") val eventDate: String,
+    val title: String = "",
+    val description: String = "",
+    @SerializedName("created_at") val createdAt: String = ""
+)
+
 // Relationship Info Models
 data class RelationshipRequest(
     @SerializedName("relationship_start_date")

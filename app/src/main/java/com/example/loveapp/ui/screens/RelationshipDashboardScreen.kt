@@ -285,17 +285,20 @@ fun EditRelationshipDialog(
     
     val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     
+    // DatePicker works in UTC milliseconds — always use UTC midnight to avoid
+    // timezone-induced off-by-one-day errors
     fun parseToMillis(dateString: String): Long {
         return try {
             val date = LocalDate.parse(dateString, dateFormatter)
-            date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            date.atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
         } catch (e: Exception) {
+            // For System.currentTimeMillis() the picker already handles UTC correctly
             System.currentTimeMillis()
         }
     }
     
     fun formatDate(millis: Long): String {
-        val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+        val date = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
         return date.format(dateFormatter)
     }
 

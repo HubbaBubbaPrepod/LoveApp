@@ -131,12 +131,29 @@ interface LoveAppApiService {
         @Body request: MoodRequest
     ): ApiResponse<MoodResponse>
 
+    @PUT("moods/{id}")
+    suspend fun updateMood(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int,
+        @Body request: MoodRequest
+    ): ApiResponse<MoodResponse>
+
     @GET("moods")
     suspend fun getMoods(
         @Header("Authorization") token: String,
         @Query("date") date: String? = null,
+        @Query("start_date") startDate: String? = null,
+        @Query("end_date") endDate: String? = null,
         @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 20
+        @Query("limit") limit: Int = 100
+    ): ApiResponse<PaginatedResponse<MoodResponse>>
+
+    @GET("moods/partner")
+    suspend fun getPartnerMoods(
+        @Header("Authorization") token: String,
+        @Query("date") date: String? = null,
+        @Query("start_date") startDate: String? = null,
+        @Query("end_date") endDate: String? = null
     ): ApiResponse<PaginatedResponse<MoodResponse>>
 
     @GET("moods/{id}")

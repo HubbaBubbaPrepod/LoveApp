@@ -12,6 +12,10 @@ const fs = require('fs');
 
 dotenv.config();
 
+// Force pg to return PostgreSQL `date` columns as plain 'YYYY-MM-DD' strings
+// instead of JavaScript Date objects (which cause timezone offset shifts)
+pg.types.setTypeParser(1082, val => val);
+
 const app = express();
 
 // Middleware
@@ -592,12 +596,12 @@ app.delete('/api/wishes/:id', authenticateToken, async (req, res) => {
 app.post('/api/moods', authenticateToken, async (req, res) => {
   try {
     const { mood_type, date, note } = req.body;
-
+    if (!mood_type) return sendResponse(res, false, 'mood_type is required', null, 400);
+    const today = new Date().toISOString().split('T')[0];
     const result = await pool.query(
       'INSERT INTO mood_entries (user_id, mood_type, date, note) VALUES ($1, $2, $3, $4) RETURNING *',
-      [req.userId, mood_type, date, note]
+      [req.userId, mood_type, date || today, note || '']
     );
-
     sendResponse(res, true, 'Mood created', result.rows[0], 201);
   } catch (err) {
     console.error('Create mood error:', err);
@@ -605,39 +609,93 @@ app.post('/api/moods', authenticateToken, async (req, res) => {
   }
 });
 
-// Get Moods
+// Update Mood
+app.put('/api/moods/:id', authenticateToken, async (req, res) => {
+  try {
+    const { mood_type, note } = req.body;
+    const result = await pool.query(
+      'UPDATE mood_entries SET mood_type = $1, note = $2 WHERE id = $3 AND user_id = $4 RETURNING *',
+      [mood_type, note || '', req.params.id, req.userId]
+    );
+    if (result.rows.length === 0) return sendResponse(res, false, 'Mood not found', null, 404);
+    sendResponse(res, true, 'Mood updated', result.rows[0]);
+  } catch (err) {
+    console.error('Update mood error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Get Partner Moods (must be before /:id to avoid route conflict)
+app.get('/api/moods/partner', authenticateToken, async (req, res) => {
+  try {
+    const relResult = await pool.query(
+      'SELECT partner_user_id FROM relationship_info WHERE user_id = $1 LIMIT 1',
+      [req.userId]
+    );
+    const partnerId = relResult.rows[0]?.partner_user_id;
+    if (!partnerId) {
+      return sendResponse(res, true, 'No partner', { items: [], total: 0, page: 1, page_size: 500 });
+    }
+    const { date, start_date, end_date } = req.query;
+    let query = `SELECT me.*, u.display_name FROM mood_entries me
+      JOIN users u ON me.user_id = u.id WHERE me.user_id = $1`;
+    const params = [partnerId];
+    let p = 2;
+    if (date) {
+      query += ` AND DATE(me.date) = $${p++}`;
+      params.push(date);
+    } else if (start_date && end_date) {
+      query += ` AND me.date >= $${p++} AND me.date <= $${p++}`;
+      params.push(start_date, end_date);
+    }
+    query += ' ORDER BY me.date DESC, me.created_at DESC LIMIT 500';
+    const result = await pool.query(query, params);
+    sendResponse(res, true, 'Partner moods retrieved', {
+      items: result.rows,
+      total: result.rows.length,
+      page: 1,
+      page_size: 500,
+    });
+  } catch (err) {
+    console.error('Get partner moods error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Get My Moods (supports date, start_date+end_date range)
 app.get('/api/moods', authenticateToken, async (req, res) => {
   try {
-    const { date } = req.query;
+    const { date, start_date, end_date } = req.query;
     const page = parseInt(req.query.page) || 1;
-    const pageSize = 20;
+    const pageSize = parseInt(req.query.limit) || 100;
     const offset = (page - 1) * pageSize;
 
-    let query = 'SELECT COUNT(*) as total FROM mood_entries WHERE user_id = $1';
-    let countParams = [req.userId];
-
+    let countQuery = 'SELECT COUNT(*) as total FROM mood_entries WHERE user_id = $1';
+    const countParams = [req.userId];
+    let p = 2;
     if (date) {
-      query += ' AND DATE(date) = $2';
+      countQuery += ` AND DATE(date) = $${p++}`;
       countParams.push(date);
+    } else if (start_date && end_date) {
+      countQuery += ` AND date >= $${p++} AND date <= $${p++}`;
+      countParams.push(start_date, end_date);
     }
+    const countResult = await pool.query(countQuery, countParams);
 
-    const countResult = await pool.query(query, countParams);
-
-    query = 'SELECT * FROM mood_entries WHERE user_id = $1';
-    let params = [req.userId];
-    let paramCount = 2;
-
+    let query = 'SELECT * FROM mood_entries WHERE user_id = $1';
+    const params = [req.userId];
+    p = 2;
     if (date) {
-      query += ` AND DATE(date) = $${paramCount}`;
+      query += ` AND DATE(date) = $${p++}`;
       params.push(date);
-      paramCount++;
+    } else if (start_date && end_date) {
+      query += ` AND date >= $${p++} AND date <= $${p++}`;
+      params.push(start_date, end_date);
     }
-
-    query += ` ORDER BY date DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    query += ` ORDER BY date DESC, created_at DESC LIMIT $${p++} OFFSET $${p++}`;
     params.push(pageSize, offset);
 
     const result = await pool.query(query, params);
-
     sendResponse(res, true, 'Moods retrieved', {
       items: result.rows,
       total: parseInt(countResult.rows[0].total),
@@ -657,11 +715,9 @@ app.delete('/api/moods/:id', authenticateToken, async (req, res) => {
       'DELETE FROM mood_entries WHERE id = $1 AND user_id = $2 RETURNING id',
       [req.params.id, req.userId]
     );
-
     if (result.rows.length === 0) {
       return sendResponse(res, false, 'Mood not found', null, 404);
     }
-
     sendResponse(res, true, 'Mood deleted');
   } catch (err) {
     console.error('Delete mood error:', err);

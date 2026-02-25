@@ -11,51 +11,48 @@ class MoodRepository @Inject constructor(
     private val moodEntryDao: MoodEntryDao,
     private val authRepository: AuthRepository
 ) {
-    suspend fun createMood(
-        moodType: String,
-        date: String,
-        note: String = ""
-    ): Result<MoodResponse> = try {
+    suspend fun createMood(moodType: String, date: String, note: String = ""): Result<MoodResponse> = try {
         val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
-        val request = MoodRequest(
-            moodType = moodType,
-            date = date,
-            note = note
-        )
-        val response = apiService.createMood("Bearer $token", request)
-        
-        if (response.success && response.data != null) {
-            Result.success(response.data)
-        } else {
-            Result.failure(Exception(response.message ?: "Failed to create mood"))
-        }
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
+        val response = apiService.createMood("Bearer $token", MoodRequest(moodType, date, note))
+        if (response.success && response.data != null) Result.success(response.data)
+        else Result.failure(Exception(response.message ?: "Failed to create mood"))
+    } catch (e: Exception) { Result.failure(e) }
 
-    suspend fun getMoods(date: String? = null, page: Int = 1): Result<List<MoodResponse>> = try {
+    suspend fun updateMood(id: Int, moodType: String, note: String = ""): Result<MoodResponse> = try {
         val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
-        val response = apiService.getMoods("Bearer $token", date, page)
-        
-        if (response.success && response.data != null) {
-            Result.success(response.data.items)
-        } else {
-            Result.failure(Exception(response.message ?: "Failed to get moods"))
-        }
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
+        val response = apiService.updateMood("Bearer $token", id, MoodRequest(moodType, "", note))
+        if (response.success && response.data != null) Result.success(response.data)
+        else Result.failure(Exception(response.message ?: "Failed to update mood"))
+    } catch (e: Exception) { Result.failure(e) }
+
+    suspend fun getMoods(
+        date: String? = null,
+        startDate: String? = null,
+        endDate: String? = null,
+        page: Int = 1
+    ): Result<List<MoodResponse>> = try {
+        val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
+        val response = apiService.getMoods("Bearer $token", date, startDate, endDate, page, 500)
+        if (response.success && response.data != null) Result.success(response.data.items)
+        else Result.failure(Exception(response.message ?: "Failed to get moods"))
+    } catch (e: Exception) { Result.failure(e) }
+
+    suspend fun getPartnerMoods(
+        date: String? = null,
+        startDate: String? = null,
+        endDate: String? = null
+    ): Result<List<MoodResponse>> = try {
+        val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
+        val response = apiService.getPartnerMoods("Bearer $token", date, startDate, endDate)
+        if (response.success && response.data != null) Result.success(response.data.items)
+        else Result.failure(Exception(response.message ?: "Failed to get partner moods"))
+    } catch (e: Exception) { Result.failure(e) }
 
     suspend fun deleteMood(id: Int): Result<Unit> = try {
         val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
         val response = apiService.deleteMood("Bearer $token", id)
-        
-        if (response.success) {
-            Result.success(Unit)
-        } else {
-            Result.failure(Exception(response.message ?: "Failed to delete mood"))
-        }
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
+        if (response.success) Result.success(Unit)
+        else Result.failure(Exception(response.message ?: "Failed to delete mood"))
+    } catch (e: Exception) { Result.failure(e) }
 }
+

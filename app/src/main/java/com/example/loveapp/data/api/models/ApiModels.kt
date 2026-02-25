@@ -118,9 +118,11 @@ data class MoodResponse(
     val moodType: String,
     @SerializedName("created_at")
     val timestamp: String = "",
-    val date: String,
+    val date: String = "",
     val note: String = "",
-    val color: String? = null
+    val color: String? = null,
+    @SerializedName("display_name")
+    val displayName: String? = null
 )
 
 // Activity Models

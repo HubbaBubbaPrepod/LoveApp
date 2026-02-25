@@ -179,22 +179,19 @@ interface LoveAppApiService {
     suspend fun getActivities(
         @Header("Authorization") token: String,
         @Query("date") date: String? = null,
+        @Query("start_date") startDate: String? = null,
+        @Query("end_date") endDate: String? = null,
         @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 20
+        @Query("limit") limit: Int = 500
     ): ApiResponse<PaginatedResponse<ActivityResponse>>
 
-    @GET("activities/{id}")
-    suspend fun getActivity(
+    @GET("activities/partner")
+    suspend fun getPartnerActivities(
         @Header("Authorization") token: String,
-        @Path("id") id: Int
-    ): ApiResponse<ActivityResponse>
-
-    @PUT("activities/{id}")
-    suspend fun updateActivity(
-        @Header("Authorization") token: String,
-        @Path("id") id: Int,
-        @Body request: ActivityRequest
-    ): ApiResponse<ActivityResponse>
+        @Query("date") date: String? = null,
+        @Query("start_date") startDate: String? = null,
+        @Query("end_date") endDate: String? = null
+    ): ApiResponse<PaginatedResponse<ActivityResponse>>
 
     @DELETE("activities/{id}")
     suspend fun deleteActivity(

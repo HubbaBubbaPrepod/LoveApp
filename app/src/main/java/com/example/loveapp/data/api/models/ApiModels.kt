@@ -130,7 +130,14 @@ data class ActivityRequest(
     val title: String,
     val description: String,
     val date: String,
-    val category: String = ""
+    val category: String = "",
+    @SerializedName("activity_type")
+    val activityType: String = "",
+    @SerializedName("duration_minutes")
+    val durationMinutes: Int = 0,
+    @SerializedName("start_time")
+    val startTime: String = "",
+    val note: String = ""
 )
 
 data class ActivityResponse(
@@ -139,11 +146,20 @@ data class ActivityResponse(
     val userId: Int,
     val title: String,
     val description: String,
-    val timestamp: String,
-    val date: String,
+    val timestamp: String = "",
+    val date: String = "",
     @SerializedName("image_urls")
     val imageUrls: String = "",
-    val category: String
+    val category: String = "",
+    @SerializedName("activity_type")
+    val activityType: String = "",
+    @SerializedName("duration_minutes")
+    val durationMinutes: Int = 0,
+    @SerializedName("start_time")
+    val startTime: String = "",
+    val note: String = "",
+    @SerializedName("display_name")
+    val displayName: String? = null
 )
 
 // Cycle Models

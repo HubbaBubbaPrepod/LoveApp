@@ -727,58 +727,116 @@ app.delete('/api/moods/:id', authenticateToken, async (req, res) => {
 
 // ==================== ACTIVITIES ====================
 
-// Create Activity (в схеме БД колонка называется event_date, не date)
+// Create Activity
 app.post('/api/activities', authenticateToken, async (req, res) => {
   try {
-    const { title, description, date, category } = req.body;
+    const { title, description, date, category, activity_type, duration_minutes, start_time, note } = req.body;
+    const actType = activity_type || category || title || 'other';
+    const durMins = parseInt(duration_minutes, 10) || 0;
+    const sTime   = start_time || '';
+    const noteVal = note || description || '';
+    const label   = title || actType;
 
     const result = await pool.query(
-      'INSERT INTO activity_logs (user_id, title, description, event_date, category) VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, title, description, event_date AS date, category, created_at, image_urls',
-      [req.userId, title, description, date, category]
+      `INSERT INTO activity_logs
+         (user_id, title, description, event_date, category, activity_type, duration_minutes, start_time, note)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id, user_id, title, description, event_date AS date, category,
+                 activity_type, duration_minutes, start_time, note, created_at`,
+      [req.userId, label, noteVal, date, actType, actType, durMins, sTime, noteVal]
     );
 
-    sendResponse(res, true, 'Activity created', result.rows[0], 201);
+    const userRes = await pool.query('SELECT display_name FROM users WHERE id = $1', [req.userId]);
+    const row = { ...result.rows[0], display_name: userRes.rows[0]?.display_name || '' };
+    sendResponse(res, true, 'Activity created', row, 201);
   } catch (err) {
     console.error('Create activity error:', err);
     sendResponse(res, false, 'Internal server error', null, 500);
   }
 });
 
-// Get Activities (колонка в БД: event_date)
+// Get Partner Activities — must be before /:id
+app.get('/api/activities/partner', authenticateToken, async (req, res) => {
+  try {
+    const relResult = await pool.query(
+      'SELECT partner_user_id FROM relationship_info WHERE user_id = $1 LIMIT 1',
+      [req.userId]
+    );
+    const partnerId = relResult.rows[0]?.partner_user_id;
+    if (!partnerId) {
+      return sendResponse(res, true, 'No partner', { items: [], total: 0, page: 1, page_size: 500 });
+    }
+    const { date, start_date, end_date } = req.query;
+    let query = `SELECT al.id, al.user_id, al.title, al.description,
+                        al.event_date AS date, al.category,
+                        al.activity_type, al.duration_minutes, al.start_time, al.note,
+                        al.created_at, u.display_name
+                 FROM activity_logs al
+                 JOIN users u ON al.user_id = u.id
+                 WHERE al.user_id = $1`;
+    const params = [partnerId];
+    let p = 2;
+    if (date) {
+      query += ` AND DATE(al.event_date) = $${p++}`;
+      params.push(date);
+    } else if (start_date && end_date) {
+      query += ` AND al.event_date >= $${p++} AND al.event_date <= $${p++}`;
+      params.push(start_date, end_date);
+    }
+    query += ' ORDER BY al.event_date DESC, al.created_at DESC LIMIT 500';
+    const result = await pool.query(query, params);
+    sendResponse(res, true, 'Partner activities retrieved', {
+      items: result.rows,
+      total: result.rows.length,
+      page: 1,
+      page_size: 500,
+    });
+  } catch (err) {
+    console.error('Get partner activities error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Get My Activities
 app.get('/api/activities', authenticateToken, async (req, res) => {
   try {
-    const { date } = req.query;
+    const { date, start_date, end_date } = req.query;
     const page = parseInt(req.query.page) || 1;
-    const pageSize = 20;
+    const pageSize = parseInt(req.query.limit) || 100;
     const offset = (page - 1) * pageSize;
 
-    let query = 'SELECT COUNT(*) as total FROM activity_logs WHERE user_id = $1';
-    let countParams = [req.userId];
-
+    let countQuery = 'SELECT COUNT(*) as total FROM activity_logs WHERE user_id = $1';
+    const countParams = [req.userId];
+    let p = 2;
     if (date) {
-      query += ' AND DATE(event_date) = $2';
+      countQuery += ` AND DATE(event_date) = $${p++}`;
       countParams.push(date);
+    } else if (start_date && end_date) {
+      countQuery += ` AND event_date >= $${p++} AND event_date <= $${p++}`;
+      countParams.push(start_date, end_date);
     }
+    const countResult = await pool.query(countQuery, countParams);
 
-    const countResult = await pool.query(query, countParams);
-
-    query = 'SELECT * FROM activity_logs WHERE user_id = $1';
-    let params = [req.userId];
-    let paramCount = 2;
-
+    let query = `SELECT al.id, al.user_id, al.title, al.description,
+                        al.event_date AS date, al.category,
+                        al.activity_type, al.duration_minutes, al.start_time, al.note,
+                        al.created_at, u.display_name
+                 FROM activity_logs al
+                 JOIN users u ON al.user_id = u.id
+                 WHERE al.user_id = $1`;
+    const params = [req.userId];
+    p = 2;
     if (date) {
-      query += ` AND DATE(event_date) = $${paramCount}`;
+      query += ` AND DATE(al.event_date) = $${p++}`;
       params.push(date);
-      paramCount++;
+    } else if (start_date && end_date) {
+      query += ` AND al.event_date >= $${p++} AND al.event_date <= $${p++}`;
+      params.push(start_date, end_date);
     }
-
-    query = 'SELECT id, user_id, title, description, event_date AS date, category, created_at, image_urls FROM activity_logs WHERE user_id = $1';
-    if (date) query += ` AND DATE(event_date) = $${paramCount}`;
-    query += ` ORDER BY event_date DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    query += ` ORDER BY al.event_date DESC, al.created_at DESC LIMIT $${p++} OFFSET $${p++}`;
     params.push(pageSize, offset);
 
     const result = await pool.query(query, params);
-
     sendResponse(res, true, 'Activities retrieved', {
       items: result.rows,
       total: parseInt(countResult.rows[0].total),
@@ -798,11 +856,9 @@ app.delete('/api/activities/:id', authenticateToken, async (req, res) => {
       'DELETE FROM activity_logs WHERE id = $1 AND user_id = $2 RETURNING id',
       [req.params.id, req.userId]
     );
-
     if (result.rows.length === 0) {
       return sendResponse(res, false, 'Activity not found', null, 404);
     }
-
     sendResponse(res, true, 'Activity deleted');
   } catch (err) {
     console.error('Delete activity error:', err);
@@ -1036,6 +1092,18 @@ pool.query(`ALTER TABLE wishes ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFA
 pool.query(`ALTER TABLE wishes ADD COLUMN IF NOT EXISTS image_urls TEXT NOT NULL DEFAULT ''`)
   .then(() => console.log('wishes.image_urls column ready'))
   .catch(err => console.error('Migration error (image_urls):', err));
+pool.query(`ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS activity_type VARCHAR(50) NOT NULL DEFAULT ''`)
+  .then(() => console.log('activity_logs.activity_type column ready'))
+  .catch(err => console.error('Migration error (activity_type):', err));
+pool.query(`ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS duration_minutes INTEGER NOT NULL DEFAULT 0`)
+  .then(() => console.log('activity_logs.duration_minutes column ready'))
+  .catch(err => console.error('Migration error (duration_minutes):', err));
+pool.query(`ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS start_time VARCHAR(5) NOT NULL DEFAULT ''`)
+  .then(() => console.log('activity_logs.start_time column ready'))
+  .catch(err => console.error('Migration error (start_time):', err));
+pool.query(`ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT ''`)
+  .then(() => console.log('activity_logs.note column ready'))
+  .catch(err => console.error('Migration error (note):', err));
 
 app.listen(PORT, () => {
   console.log(`LoveApp API Server running on port ${PORT}`);

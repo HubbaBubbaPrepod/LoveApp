@@ -14,55 +14,74 @@ class ActivityRepository @Inject constructor(
     private val activityLogDao: ActivityLogDao,
     private val authRepository: AuthRepository
 ) {
+    private val dateFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+
     suspend fun createActivity(
-        title: String,
-        description: String,
-        category: String = ""
+        activityType: String,
+        durationMinutes: Int,
+        startTime: String,
+        note: String,
+        date: String = dateFmt.format(Date())
     ): Result<ActivityResponse> = try {
         val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", java.util.Locale("ru", "RU"))
-        val date = dateFormat.format(Date())
-        
         val request = ActivityRequest(
-            title = title,
-            description = description,
-            date = date,
-            category = category
+            title           = activityType,
+            description     = note,
+            date            = date,
+            category        = activityType,
+            activityType    = activityType,
+            durationMinutes = durationMinutes,
+            startTime       = startTime,
+            note            = note
         )
         val response = apiService.createActivity("Bearer $token", request)
-        
-        if (response.success && response.data != null) {
+        if (response.success && response.data != null)
             Result.success(response.data)
-        } else {
+        else
             Result.failure(Exception(response.message ?: "Failed to create activity"))
-        }
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
+    } catch (e: Exception) { Result.failure(e) }
 
-    suspend fun getActivities(page: Int = 1): Result<List<ActivityResponse>> = try {
+    suspend fun getActivities(
+        date: String? = null,
+        startDate: String? = null,
+        endDate: String? = null
+    ): Result<List<ActivityResponse>> = try {
         val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
-        val response = apiService.getActivities("Bearer $token", null, page)
-        
-        if (response.success && response.data != null) {
+        val response = apiService.getActivities(
+            "Bearer $token",
+            date      = date,
+            startDate = startDate,
+            endDate   = endDate,
+            limit     = 500
+        )
+        if (response.success && response.data != null)
             Result.success(response.data.items)
-        } else {
+        else
             Result.failure(Exception(response.message ?: "Failed to get activities"))
-        }
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
+    } catch (e: Exception) { Result.failure(e) }
+
+    suspend fun getPartnerActivities(
+        date: String? = null,
+        startDate: String? = null,
+        endDate: String? = null
+    ): Result<List<ActivityResponse>> = try {
+        val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
+        val response = apiService.getPartnerActivities(
+            "Bearer $token",
+            date      = date,
+            startDate = startDate,
+            endDate   = endDate
+        )
+        if (response.success && response.data != null)
+            Result.success(response.data.items)
+        else
+            Result.failure(Exception(response.message ?: "Failed to get partner activities"))
+    } catch (e: Exception) { Result.failure(e) }
 
     suspend fun deleteActivity(id: Int): Result<Unit> = try {
         val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
         val response = apiService.deleteActivity("Bearer $token", id)
-        
-        if (response.success) {
-            Result.success(Unit)
-        } else {
-            Result.failure(Exception(response.message ?: "Failed to delete activity"))
-        }
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
+        if (response.success) Result.success(Unit)
+        else Result.failure(Exception(response.message ?: "Failed to delete activity"))
+    } catch (e: Exception) { Result.failure(e) }
 }

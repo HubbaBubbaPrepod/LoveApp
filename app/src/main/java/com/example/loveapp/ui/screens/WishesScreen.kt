@@ -24,6 +24,31 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.BeachAccess
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Celebration
+import androidx.compose.material.icons.filled.Diamond
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.FlightTakeoff
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocalCafe
+import androidx.compose.material.icons.filled.LocalFlorist
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Theaters
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -61,6 +86,32 @@ import com.example.loveapp.data.api.models.WishResponse
 import com.example.loveapp.navigation.Screen
 import com.example.loveapp.ui.components.IOSTopAppBar
 import com.example.loveapp.viewmodel.WishViewModel
+
+private val WISH_ICON_MAP: Map<String, ImageVector> = mapOf(
+    "gift"      to Icons.Default.CardGiftcard,
+    "heart"     to Icons.Default.Favorite,
+    "star"      to Icons.Default.Star,
+    "home"      to Icons.Default.Home,
+    "phone"     to Icons.Default.Smartphone,
+    "music"     to Icons.Default.MusicNote,
+    "book"      to Icons.Default.AutoStories,
+    "travel"    to Icons.Default.FlightTakeoff,
+    "games"     to Icons.Default.SportsEsports,
+    "cart"      to Icons.Default.ShoppingCart,
+    "art"       to Icons.Default.Palette,
+    "mic"       to Icons.Default.Mic,
+    "camera"    to Icons.Default.PhotoCamera,
+    "diamond"   to Icons.Default.Diamond,
+    "sparkle"   to Icons.Default.AutoAwesome,
+    "fitness"   to Icons.Default.FitnessCenter,
+    "car"       to Icons.Default.DirectionsCar,
+    "celebrate" to Icons.Default.Celebration,
+    "beach"     to Icons.Default.BeachAccess,
+    "flowers"   to Icons.Default.LocalFlorist,
+    "spa"       to Icons.Default.Spa,
+    "movie"     to Icons.Default.Theaters,
+    "cafe"      to Icons.Default.LocalCafe,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,10 +173,11 @@ fun WishesScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = "✨",
-                            fontSize = 52.sp,
-                            modifier = Modifier.padding(bottom = 16.dp)
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            modifier = Modifier.padding(bottom = 16.dp).size(52.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                         )
                         Text(
                             text = stringResource(R.string.no_wishes),
@@ -263,11 +315,21 @@ fun WishIOSTile(wish: WishResponse, onClick: () -> Unit) {
         ) {
             Column {
                 if (displayEmoji != null) {
-                    Text(
-                        text = displayEmoji,
-                        fontSize = 38.sp,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
+                    val wishIcon = WISH_ICON_MAP[displayEmoji]
+                    if (wishIcon != null) {
+                        Icon(
+                            imageVector = wishIcon,
+                            contentDescription = null,
+                            modifier = Modifier.size(38.dp).padding(bottom = 6.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Text(
+                            text = displayEmoji,
+                            fontSize = 38.sp,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+                    }
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -285,10 +347,11 @@ fun WishIOSTile(wish: WishResponse, onClick: () -> Unit) {
                         lineHeight = 18.sp
                     )
                     if (wish.isPrivate) {
-                        Text(
-                            text = "🔒",
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(start = 4.dp, top = 1.dp)
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.padding(start = 4.dp, top = 1.dp).size(13.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }

@@ -85,209 +85,79 @@ Large: 329x345 dp
 
 
 
+1. Общее описание
+Раздел «Активности» (Activities) должен позволять мне и моей девушке отслеживать, чем мы занимаемся в течение дня: работа, спорт, отдых, еда и т.д. Функциональность аналогична экрану настроения, но вместо эмоций — список повседневных действий с возможностью указания времени и текстового комментария. Интерфейс сохраняет общую iOS-стилистику приложения: две персонализированные карточки (моя и партнёра), отображающие активности за сегодня, а также календарь и статистика.
 
-Раздел «Настроение» (Mood) должен позволять мне и моей девушке отмечать своё эмоциональное состояние в течение дня. Интерфейс вдохновлён iOS и состоит из двух стилизованных колбочек (моя и партнёра), которые визуально отражают текущее настроение цветом «жидкости» внутри. Дизайн колбочек должен соответствовать общей iOS-стилистике приложения: полупрозрачные, с мягкими тенями, скруглёнными формами.
+Основные возможности:
 
-Основные функции:
+Выбор активности из фиксированного списка (например: «за компьютером», «спорт», «работа», «еда», «прогулка», «сон», «чтение», «другое»).
 
-Выбор настроения из 5 фиксированных эмоций: rad, good, meh, bad, awful (каждая эмоция имеет свой цвет и иконку).
+Указание продолжительности (в минутах) и текстовой заметки (необязательно).
 
-Возможность добавить текстовый комментарий к выбранному настроению (например, «мне грустно, потому что я упал»).
+Просмотр истории активностей по дням (календарь с цветовыми метками или иконками).
 
-История настроений сохраняется по дням и доступна для просмотра в календаре.
+Статистика по времени, потраченному на разные активности (за день/неделю/месяц).
 
-Статистика по настроениям (например, график или сводка за месяц).
+Разделение данных для двух пользователей: я и партнёр(по display_name).
 
 2. Детали интерфейса
-2.1. Главный экран настроения
-Две колбочки расположены горизонтально  рядом. Каждая колбочка занимает половину экрана.
+2.1. Главный экран активностей
+Две карточки (моя и партнёра), расположенные вертикально или горизонтально (предпочтительно вертикально для удобства).
 
-Колбочка визуально представляет собой ёмкость с жидкостью. Цвет жидкости соответствует смешению всех цветов настроения пользователя за сегодняшний день. Если сегодня ещё не было записи, колбочка может быть пустой (прозрачной или серой).
+Каждая карточка содержит:
 
-Под каждой колбочкой подпись: «Я» и «[Имя партнёра]» .
+Иконку последней активности за сегодня (или иконку по умолчанию, если активности нет).
 
-2.2. Взаимодействие с колбочками
-Моя колбочка (текущий пользователь):
+Название активности (например, «Работа»).
 
-При нажатии открывается выбор эмоции – отдельный экран.
+Время начала или продолжительность (например, «2 часа» или «14:30»).
 
-После выбора эмоции появляется экран/диалог «Добавить запись», где можно ввести текст (необязательно) и подтвердить сохранение.
+Фон карточки полупрозрачный, с закруглёнными углами, как в iOS.
+
+Под карточками могут быть кнопки «Календарь» и «Статистика» (или вынесены в навигацию).
+
+2.2. Взаимодействие
+Моя карточка (текущий пользователь):
+
+При нажатии открывается выбор типа активности – сетка или список с иконками и названиями (например, в виде BottomSheet).
+
+После выбора активности появляется экран «Добавить запись», где можно:
+
+Указать время начала (по умолчанию текущее, но можно изменить через TimePicker).
+
+Указать продолжительность (опционально, можно ввести в минутах или выбрать из готовых интервалов).
+
+Добавить текстовый комментарий.
+
+Кнопка «Сохранить».
 
 После сохранения:
 
-Цвет жидкости в моей колбочке обновляется (плавно «переливается» в новый цвет).
+Запись сохраняется в базу данных (Room) с меткой пользователя, временем, длительностью и заметкой.
 
-Запись сохраняется в базу данных с текущей датой и временем.
+Карточка на главном экране обновляется, отображая последнюю активность сегодня.
 
-При повторном нажатии на мою колбочку в тот же день должно открываться окно редактирования или добавления новой записи, за день может быть несколько записей.
+Если за день уже есть несколько активностей, карточка показывает последнюю добавленную.
 
-Колбочка партнёра:
+Карточка партнёра:
 
-При нажатии открывается история настроений партнёра – экран со списком всех записей партнёра по датам (только просмотр, без возможности добавления/редактирования).
+При нажатии открывается история активностей партнёра – экран со списком всех его записей по датам (только просмотр, без редактирования).
 
-Цвет колбочки партнёра также отображает смешение цветов настроения за сегодня (данные партнёра берутся из той же таблицы, но с другим идентификатором пользователя).
+Карточка партнёра автоматически обновляется, когда партнёр (второй пользователь) добавляет активность.
 
-2.3. Календарь настроений
-На экране настроения должна быть кнопка или вкладка «Календарь», которая открывает календарную сетку в iOS-стиле (скруглённые ячейки, крупные цифры).
+2.3. Календарь активностей
+Экран с календарной сеткой (iOS-стиль: скруглённые ячейки, крупные цифры).
 
-Каждый день в календаре отмечен маленьким кружком или иконкой, цвет которой соответствует доминирующему настроению этого дня.
+Каждый день может отображать маленькие иконки или цветные точки, соответствующие активностям этого дня (например, если было несколько активностей, можно показать несколько точек).
 
-При нажатии на день открывается подробный просмотр всех записей за этот день (с комментариями) для обоих пользователей.
+При нажатии на день открывается подробный список всех активностей за этот день для обоих пользователей (с группировкой по пользователям).
 
 2.4. Статистика
-Отдельный экран или раздел со статистикой:
+Отдельный экран, показывающий:
 
-Количество дней с каждым настроением за месяц.
+Круговую диаграмму или столбчатую гистограмму распределения времени по типам активностей за выбранный период (день/неделя/месяц).
 
-График (линейный или столбчатый) изменения настроения во времени.
+Сравнение с партнёром (например, общее время на спорт у меня и у неё).
 
-Сравнение настроений с партнёром (например, совпадения или различия).
+Возможность переключения между пользователями или просмотр вместе.
 
-Вот тебе все таблицы из бд с ключами и индексами чтобы ты не забывал:
-"activity_logs"	"activity_logs_user_id_fkey"	"FOREIGN KEY"	"user_id"
-"activity_logs"	"activity_logs_pkey"	"PRIMARY KEY"	"id"
-"activity_logs"	"category"	"column"	"character varying"
-"activity_logs"	"created_at"	"column"	"timestamp with time zone"
-"activity_logs"	"description"	"column"	"text"
-"activity_logs"	"event_date"	"column"	"timestamp with time zone"
-"activity_logs"	"id"	"column"	"bigint"
-"activity_logs"	"image_urls"	"column"	"ARRAY"
-"activity_logs"	"title"	"column"	"character varying"
-"activity_logs"	"user_id"	"column"	"bigint"
-"activity_logs"	"activity_logs_pkey"	"index"	"CREATE UNIQUE INDEX activity_logs_pkey ON public.activity_logs "
-"activity_logs"	"idx_activity_ft"	"index"	"CREATE INDEX idx_activity_ft ON public.activity_logs USING gin "
-"activity_logs"	"idx_activity_images"	"index"	"CREATE INDEX idx_activity_images ON public.activity_logs USING "
-"activity_logs"	"idx_activity_user_date"	"index"	"CREATE INDEX idx_activity_user_date ON public.activity_logs USI"
-"audit_logs"	"audit_logs_user_id_fkey"	"FOREIGN KEY"	"user_id"
-"audit_logs"	"audit_logs_pkey"	"PRIMARY KEY"	"id"
-"audit_logs"	"action"	"column"	"character varying"
-"audit_logs"	"created_at"	"column"	"timestamp with time zone"
-"audit_logs"	"details"	"column"	"jsonb"
-"audit_logs"	"id"	"column"	"bigint"
-"audit_logs"	"user_id"	"column"	"bigint"
-"audit_logs"	"audit_logs_pkey"	"index"	"CREATE UNIQUE INDEX audit_logs_pkey ON public.audit_logs USING "
-"audit_logs"	"idx_audit_action"	"index"	"CREATE INDEX idx_audit_action ON public.audit_logs USING btree "
-"audit_logs"	"idx_audit_user"	"index"	"CREATE INDEX idx_audit_user ON public.audit_logs USING btree (u"
-"custom_calendar_events"	"custom_calendar_events_calendar_id_fkey"	"FOREIGN KEY"	"calendar_id"
-"custom_calendar_events"	"custom_calendar_events_pkey"	"PRIMARY KEY"	"id"
-"custom_calendar_events"	"calendar_id"	"column"	"bigint"
-"custom_calendar_events"	"created_at"	"column"	"timestamp with time zone"
-"custom_calendar_events"	"description"	"column"	"text"
-"custom_calendar_events"	"event_date"	"column"	"date"
-"custom_calendar_events"	"event_type"	"column"	"character varying"
-"custom_calendar_events"	"id"	"column"	"bigint"
-"custom_calendar_events"	"image_url"	"column"	"text"
-"custom_calendar_events"	"marked_date"	"column"	"timestamp with time zone"
-"custom_calendar_events"	"title"	"column"	"character varying"
-"custom_calendar_events"	"custom_calendar_events_pkey"	"index"	"CREATE UNIQUE INDEX custom_calendar_events_pkey ON public.custo"
-"custom_calendar_events"	"idx_events_calendar"	"index"	"CREATE INDEX idx_events_calendar ON public.custom_calendar_even"
-"custom_calendar_events"	"idx_events_date"	"index"	"CREATE INDEX idx_events_date ON public.custom_calendar_events U"
-"custom_calendars"	"custom_calendars_user_id_fkey"	"FOREIGN KEY"	"user_id"
-"custom_calendars"	"custom_calendars_pkey"	"PRIMARY KEY"	"id"
-"custom_calendars"	"color_hex"	"column"	"character varying"
-"custom_calendars"	"created_at"	"column"	"timestamp with time zone"
-"custom_calendars"	"description"	"column"	"text"
-"custom_calendars"	"icon"	"column"	"character varying"
-"custom_calendars"	"id"	"column"	"bigint"
-"custom_calendars"	"name"	"column"	"character varying"
-"custom_calendars"	"type"	"column"	"character varying"
-"custom_calendars"	"updated_at"	"column"	"timestamp with time zone"
-"custom_calendars"	"user_id"	"column"	"bigint"
-"custom_calendars"	"custom_calendars_pkey"	"index"	"CREATE UNIQUE INDEX custom_calendars_pkey ON public.custom_cale"
-"custom_calendars"	"idx_calendars_user"	"index"	"CREATE INDEX idx_calendars_user ON public.custom_calendars USIN"
-"menstrual_cycles"	"menstrual_cycles_user_id_fkey"	"FOREIGN KEY"	"user_id"
-"menstrual_cycles"	"menstrual_cycles_pkey"	"PRIMARY KEY"	"id"
-"menstrual_cycles"	"created_at"	"column"	"timestamp with time zone"
-"menstrual_cycles"	"cycle_duration"	"column"	"smallint"
-"menstrual_cycles"	"cycle_start_date"	"column"	"date"
-"menstrual_cycles"	"id"	"column"	"bigint"
-"menstrual_cycles"	"mood"	"column"	"jsonb"
-"menstrual_cycles"	"notes"	"column"	"text"
-"menstrual_cycles"	"period_duration"	"column"	"smallint"
-"menstrual_cycles"	"symptoms"	"column"	"jsonb"
-"menstrual_cycles"	"user_id"	"column"	"bigint"
-"menstrual_cycles"	"idx_cycles_symptoms"	"index"	"CREATE INDEX idx_cycles_symptoms ON public.menstrual_cycles USI"
-"menstrual_cycles"	"idx_cycles_user_start"	"index"	"CREATE INDEX idx_cycles_user_start ON public.menstrual_cycles U"
-"menstrual_cycles"	"menstrual_cycles_pkey"	"index"	"CREATE UNIQUE INDEX menstrual_cycles_pkey ON public.menstrual_c"
-"mood_entries"	"mood_entries_user_id_fkey"	"FOREIGN KEY"	"user_id"
-"mood_entries"	"mood_entries_pkey"	"PRIMARY KEY"	"id"
-"mood_entries"	"created_at"	"column"	"timestamp with time zone"
-"mood_entries"	"date"	"column"	"date"
-"mood_entries"	"id"	"column"	"bigint"
-"mood_entries"	"metadata"	"column"	"jsonb"
-"mood_entries"	"mood_type"	"column"	"character varying"
-"mood_entries"	"note"	"column"	"text"
-"mood_entries"	"user_id"	"column"	"bigint"
-"mood_entries"	"idx_mood_metadata"	"index"	"CREATE INDEX idx_mood_metadata ON public.mood_entries USING gin"
-"mood_entries"	"idx_mood_user_date"	"index"	"CREATE INDEX idx_mood_user_date ON public.mood_entries USING bt"
-"mood_entries"	"mood_entries_pkey"	"index"	"CREATE UNIQUE INDEX mood_entries_pkey ON public.mood_entries US"
-"notes"	"notes_user_id_fkey"	"FOREIGN KEY"	"user_id"
-"notes"	"notes_pkey"	"PRIMARY KEY"	"id"
-"notes"	"content"	"column"	"text"
-"notes"	"created_at"	"column"	"timestamp with time zone"
-"notes"	"due_date"	"column"	"date"
-"notes"	"id"	"column"	"bigint"
-"notes"	"image_url"	"column"	"text"
-"notes"	"is_private"	"column"	"boolean"
-"notes"	"tags"	"column"	"ARRAY"
-"notes"	"title"	"column"	"character varying"
-"notes"	"updated_at"	"column"	"timestamp with time zone"
-"notes"	"user_id"	"column"	"bigint"
-"notes"	"idx_notes_ft"	"index"	"CREATE INDEX idx_notes_ft ON public.notes USING gin (to_tsvecto"
-"notes"	"idx_notes_tags"	"index"	"CREATE INDEX idx_notes_tags ON public.notes USING gin (tags)"
-"notes"	"idx_notes_user_created"	"index"	"CREATE INDEX idx_notes_user_created ON public.notes USING btree"
-"notes"	"notes_pkey"	"index"	"CREATE UNIQUE INDEX notes_pkey ON public.notes USING btree (id)"
-"relationship_info"	"relationship_info_partner_user_id_fkey"	"FOREIGN KEY"	"partner_user_id"
-"relationship_info"	"relationship_info_user_id_fkey"	"FOREIGN KEY"	"user_id"
-"relationship_info"	"relationship_info_pkey"	"PRIMARY KEY"	"id"
-"relationship_info"	"relationship_info_user_id_key"	"UNIQUE"	"user_id"
-"relationship_info"	"anniversary_date"	"column"	"date"
-"relationship_info"	"created_at"	"column"	"timestamp with time zone"
-"relationship_info"	"first_kiss_date"	"column"	"date"
-"relationship_info"	"id"	"column"	"bigint"
-"relationship_info"	"nickname1"	"column"	"character varying"
-"relationship_info"	"nickname2"	"column"	"character varying"
-"relationship_info"	"notes"	"column"	"text"
-"relationship_info"	"partner_user_id"	"column"	"bigint"
-"relationship_info"	"relationship_start_date"	"column"	"date"
-"relationship_info"	"updated_at"	"column"	"timestamp with time zone"
-"relationship_info"	"user_id"	"column"	"bigint"
-"relationship_info"	"idx_relationship_user"	"index"	"CREATE INDEX idx_relationship_user ON public.relationship_info "
-"relationship_info"	"relationship_info_pkey"	"index"	"CREATE UNIQUE INDEX relationship_info_pkey ON public.relationsh"
-"relationship_info"	"relationship_info_user_id_key"	"index"	"CREATE UNIQUE INDEX relationship_info_user_id_key ON public.rel"
-"users"	"users_pkey"	"PRIMARY KEY"	"id"
-"users"	"users_email_key"	"UNIQUE"	"email"
-"users"	"users_username_key"	"UNIQUE"	"username"
-"users"	"created_at"	"column"	"timestamp with time zone"
-"users"	"display_name"	"column"	"character varying"
-"users"	"email"	"column"	"character varying"
-"users"	"gender"	"column"	"character varying"
-"users"	"id"	"column"	"bigint"
-"users"	"password_hash"	"column"	"text"
-"users"	"profile_image"	"column"	"text"
-"users"	"updated_at"	"column"	"timestamp with time zone"
-"users"	"username"	"column"	"character varying"
-"users"	"idx_users_email"	"index"	"CREATE INDEX idx_users_email ON public.users USING btree (email"
-"users"	"users_email_key"	"index"	"CREATE UNIQUE INDEX users_email_key ON public.users USING btree"
-"users"	"users_pkey"	"index"	"CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)"
-"users"	"users_username_key"	"index"	"CREATE UNIQUE INDEX users_username_key ON public.users USING bt"
-"wishes"	"wishes_user_id_fkey"	"FOREIGN KEY"	"user_id"
-"wishes"	"wishes_pkey"	"PRIMARY KEY"	"id"
-"wishes"	"category"	"column"	"character varying"
-"wishes"	"completed_at"	"column"	"timestamp with time zone"
-"wishes"	"created_at"	"column"	"timestamp with time zone"
-"wishes"	"description"	"column"	"text"
-"wishes"	"due_date"	"column"	"date"
-"wishes"	"emoji"	"column"	"text"
-"wishes"	"id"	"column"	"bigint"
-"wishes"	"image_url"	"column"	"text"
-"wishes"	"image_urls"	"column"	"text"
-"wishes"	"is_completed"	"column"	"boolean"
-"wishes"	"is_private"	"column"	"boolean"
-"wishes"	"priority"	"column"	"smallint"
-"wishes"	"title"	"column"	"character varying"
-"wishes"	"updated_at"	"column"	"timestamp with time zone"
-"wishes"	"user_id"	"column"	"bigint"
-"wishes"	"idx_wishes_status"	"index"	"CREATE INDEX idx_wishes_status ON public.wishes USING btree (us"
-"wishes"	"idx_wishes_user"	"index"	"CREATE INDEX idx_wishes_user ON public.wishes USING btree (user"
-"wishes"	"wishes_pkey"	"index"	"CREATE UNIQUE INDEX wishes_pkey ON public.wishes USING btree (i"

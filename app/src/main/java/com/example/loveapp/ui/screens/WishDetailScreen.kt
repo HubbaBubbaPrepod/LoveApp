@@ -31,6 +31,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.BeachAccess
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Celebration
+import androidx.compose.material.icons.filled.Diamond
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.FlightTakeoff
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocalCafe
+import androidx.compose.material.icons.filled.LocalFlorist
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Theaters
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
@@ -352,15 +376,34 @@ fun WishDetailScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Emoji picker
-            val emojiOptions = listOf(
-                "🎁", "🎂", "🎉", "🎊", "❤️", "💕", "💍", "💎",
-                "🏠", "🚗", "✈️", "🏖️", "🏔️", "📱", "💻", "👗",
-                "👠", "👜", "🎮", "🎵", "📚", "🌸", "🌺", "🌟",
-                "⭐", "🌙", "☕", "🍰", "🍕", "🍣", "🐶", "🐱",
-                "🦋", "🌿", "🌊", "🎨", "🎤", "🛒", "💐", "🥂",
-                "🌹", "🔮", "🎯", "🏡", "🌈", "🎸", "⚽", "💪"
+            // Icon picker
+            val wishIconOptions: List<Pair<String, ImageVector>> = listOf(
+                "gift"      to Icons.Default.CardGiftcard,
+                "heart"     to Icons.Default.Favorite,
+                "star"      to Icons.Default.Star,
+                "home"      to Icons.Default.Home,
+                "phone"     to Icons.Default.Smartphone,
+                "music"     to Icons.Default.MusicNote,
+                "book"      to Icons.Default.AutoStories,
+                "travel"    to Icons.Default.FlightTakeoff,
+                "games"     to Icons.Default.SportsEsports,
+                "cart"      to Icons.Default.ShoppingCart,
+                "art"       to Icons.Default.Palette,
+                "mic"       to Icons.Default.Mic,
+                "camera"    to Icons.Default.PhotoCamera,
+                "diamond"   to Icons.Default.Diamond,
+                "sparkle"   to Icons.Default.AutoAwesome,
+                "fitness"   to Icons.Default.FitnessCenter,
+                "car"       to Icons.Default.DirectionsCar,
+                "celebrate" to Icons.Default.Celebration,
+                "beach"     to Icons.Default.BeachAccess,
+                "flowers"   to Icons.Default.LocalFlorist,
+                "spa"       to Icons.Default.Spa,
+                "movie"     to Icons.Default.Theaters,
+                "cafe"      to Icons.Default.LocalCafe,
             )
+            val selectedIconVector = wishIconOptions.find { it.first == emoji }?.second
+                ?: Icons.Default.AutoAwesome
 
             Column(
                 modifier = Modifier
@@ -372,14 +415,16 @@ fun WishDetailScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 8.dp)
                 ) {
-                    Text(
-                        text = if (emoji.isNotBlank()) emoji else "✨",
-                        fontSize = 40.sp
+                    Icon(
+                        imageVector = selectedIconVector,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Emoji",
+                            text = "Иконка",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -389,7 +434,7 @@ fun WishDetailScreen(
                                 contentPadding = PaddingValues(0.dp)
                             ) {
                                 Text(
-                                    text = "Clear",
+                                    text = "Сбросить",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -399,21 +444,29 @@ fun WishDetailScreen(
                 }
                 if (!isReadOnly) {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(emojiOptions) { e ->
+                        items(wishIconOptions) { (key, icon) ->
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(
-                                        color = if (emoji == e)
+                                        color = if (emoji == key)
                                             MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                         else
                                             androidx.compose.ui.graphics.Color.Transparent,
                                         shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
                                     )
-                                    .clickable { emoji = e },
+                                    .clickable { emoji = key },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(e, fontSize = 22.sp)
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = key,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = if (emoji == key)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }

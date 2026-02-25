@@ -26,9 +26,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.SentimentDissatisfied
+import androidx.compose.material.icons.filled.SentimentNeutral
+import androidx.compose.material.icons.filled.SentimentSatisfied
+import androidx.compose.material.icons.filled.SentimentVeryDissatisfied
+import androidx.compose.material.icons.filled.SentimentVerySatisfied
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
@@ -44,7 +51,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -67,6 +73,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -81,16 +88,21 @@ import java.util.Calendar
 import java.util.Locale
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mood definitions (rad / good / meh / bad / awful)
+// Mood definitions — icons from Material Icons Extended (consistent style)
 // ─────────────────────────────────────────────────────────────────────────────
-internal data class MoodDef(val key: String, val label: String, val emoji: String, val color: Color)
+internal data class MoodDef(
+    val key: String,
+    val label: String,
+    val icon: ImageVector,
+    val color: Color
+)
 
 internal val MOODS = listOf(
-    MoodDef("rad",   "Отлично",     "🤩", Color(0xFFFF375F)),
-    MoodDef("good",  "Хорошо",      "😊", Color(0xFF30D158)),
-    MoodDef("meh",   "Нейтрально",  "😐", Color(0xFFFFD60A)),
-    MoodDef("bad",   "Плохо",       "😕", Color(0xFFFF9F0A)),
-    MoodDef("awful", "Ужасно",      "😢", Color(0xFF5E5CE6)),
+    MoodDef("rad",   "Отлично",    Icons.Default.SentimentVerySatisfied,    Color(0xFFFF375F)),
+    MoodDef("good",  "Хорошо",     Icons.Default.SentimentSatisfied,        Color(0xFF30D158)),
+    MoodDef("meh",   "Нейтрально", Icons.Default.SentimentNeutral,          Color(0xFFFFD60A)),
+    MoodDef("bad",   "Плохо",      Icons.Default.SentimentDissatisfied,     Color(0xFFFF9F0A)),
+    MoodDef("awful", "Ужасно",     Icons.Default.SentimentVeryDissatisfied, Color(0xFF5E5CE6)),
 )
 
 fun moodColor(type: String): Color =
@@ -103,14 +115,14 @@ fun moodColor(type: String): Color =
         else                     -> Color(0xFF8E8E93)
     }
 
-fun moodEmoji(type: String): String =
-    MOODS.find { it.key.equals(type, true) }?.emoji ?: when (type.lowercase()) {
-        "very good", "excellent" -> "🤩"
-        "good"                   -> "😊"
-        "neutral", "meh"         -> "😐"
-        "bad"                    -> "😕"
-        "very bad", "awful"      -> "😢"
-        else                     -> "😊"
+fun moodIcon(type: String): ImageVector =
+    MOODS.find { it.key.equals(type, true) }?.icon ?: when (type.lowercase()) {
+        "very good", "excellent" -> Icons.Default.SentimentVerySatisfied
+        "good"                   -> Icons.Default.SentimentSatisfied
+        "neutral", "meh"         -> Icons.Default.SentimentNeutral
+        "bad"                    -> Icons.Default.SentimentDissatisfied
+        "very bad", "awful"      -> Icons.Default.SentimentVeryDissatisfied
+        else                     -> Icons.Default.SentimentNeutral
     }
 
 fun moodLabel(type: String): String =
@@ -150,6 +162,7 @@ fun MoodTrackerScreen(
     val myToday          by viewModel.myTodayMoods.collectAsState()
     val partnerToday     by viewModel.partnerTodayMoods.collectAsState()
     val partnerName      by viewModel.partnerName.collectAsState()
+    val myName           by viewModel.myName.collectAsState()
     val isLoading        by viewModel.isLoading.collectAsState()
     val errorMessage     by viewModel.errorMessage.collectAsState()
     val successMessage   by viewModel.successMessage.collectAsState()
@@ -175,8 +188,14 @@ fun MoodTrackerScreen(
                 title = "Настроение",
                 onBackClick = onNavigateBack,
                 actions = {
-                    TextButton(onClick = { showCalendar = true }) { Text("📅") }
-                    TextButton(onClick = { showStats = true })    { Text("📊") }
+                    IconButton(onClick = { showCalendar = true }) {
+                        Icon(Icons.Default.CalendarToday, contentDescription = "Календарь",
+                            tint = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = { showStats = true }) {
+                        Icon(Icons.Default.BarChart, contentDescription = "Статистика",
+                            tint = MaterialTheme.colorScheme.primary)
+                    }
                 }
             )
         },
@@ -193,7 +212,6 @@ fun MoodTrackerScreen(
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
             ) {
-                // Flask panel
                 item {
                     Row(
                         modifier = Modifier
@@ -202,7 +220,7 @@ fun MoodTrackerScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         MoodFlask(
-                            moods = myToday, label = "Я",
+                            moods = myToday, label = myName ?: "Я",
                             isMyFlask = true, onClick = { showPicker = true },
                             modifier = Modifier.weight(1f)
                         )
@@ -214,7 +232,6 @@ fun MoodTrackerScreen(
                     }
                 }
 
-                // Hint when empty
                 if (myToday.isEmpty()) {
                     item {
                         Box(
@@ -222,6 +239,12 @@ fun MoodTrackerScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Default.SentimentNeutral,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp).padding(bottom = 8.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                )
                                 Text("Как ты сегодня?",
                                     style = MaterialTheme.typography.titleMedium)
                                 Spacer(Modifier.height(4.dp))
@@ -260,7 +283,6 @@ fun MoodTrackerScreen(
         }
     }
 
-    // Mood Picker Sheet
     if (showPicker) {
         ModalBottomSheet(
             onDismissRequest = { showPicker = false; selectedMoodKey = null; pickerNote = "" },
@@ -283,7 +305,6 @@ fun MoodTrackerScreen(
         }
     }
 
-    // Partner History Sheet
     if (showPartnerHistory) {
         ModalBottomSheet(
             onDismissRequest = { showPartnerHistory = false },
@@ -296,7 +317,6 @@ fun MoodTrackerScreen(
         }
     }
 
-    // Calendar Sheet
     if (showCalendar) {
         val calYear           by viewModel.calendarYear.collectAsState()
         val calMonth          by viewModel.calendarMonth.collectAsState()
@@ -313,6 +333,7 @@ fun MoodTrackerScreen(
                 month         = calMonth,
                 myMoods       = myMonthMoods,
                 partnerMoods  = partnerMonthMoods,
+                myName        = myName ?: "Я",
                 partnerName   = partnerName ?: "Партнёр",
                 isLoading     = isCalLoading,
                 onMonthChange = { y, m -> viewModel.loadCalendarMonth(y, m) }
@@ -320,7 +341,6 @@ fun MoodTrackerScreen(
         }
     }
 
-    // Stats Sheet
     if (showStats) {
         val calYear           by viewModel.calendarYear.collectAsState()
         val calMonth          by viewModel.calendarMonth.collectAsState()
@@ -335,6 +355,7 @@ fun MoodTrackerScreen(
             StatsContent(
                 myMoods      = myMonthMoods,
                 partnerMoods = partnerMonthMoods,
+                myName       = myName ?: "Я",
                 partnerName  = partnerName ?: "Партнёр",
                 isLoading    = isCalLoading
             )
@@ -343,7 +364,7 @@ fun MoodTrackerScreen(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Flask composable — animated liquid-fill test-tube style
+// Flask composable — animated liquid-fill
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun MoodFlask(
@@ -451,8 +472,21 @@ private fun MoodFlask(
             }
 
             Spacer(Modifier.height(8.dp))
-            if (dominant != null) Text(moodEmoji(dominant), fontSize = 24.sp)
-            else Text("·", fontSize = 24.sp, color = subColor)
+            if (dominant != null) {
+                Icon(
+                    imageVector = moodIcon(dominant),
+                    contentDescription = moodLabel(dominant),
+                    modifier = Modifier.size(28.dp),
+                    tint = moodColor(dominant)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.SentimentNeutral,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = subColor
+                )
+            }
             Spacer(Modifier.height(2.dp))
             Text(
                 text      = if (moods.isEmpty()) "Нет записей"
@@ -485,7 +519,12 @@ private fun MoodEntryRow(mood: MoodResponse, onDelete: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).background(accent.copy(alpha = 0.15f), CircleShape),
                 contentAlignment = Alignment.Center) {
-                Text(moodEmoji(mood.moodType), fontSize = 22.sp)
+                Icon(
+                    imageVector = moodIcon(mood.moodType),
+                    contentDescription = moodLabel(mood.moodType),
+                    modifier = Modifier.size(26.dp),
+                    tint = accent
+                )
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -557,7 +596,14 @@ private fun MoodPickerContent(
                                 CircleShape
                             ),
                         contentAlignment = Alignment.Center
-                    ) { Text(mood.emoji, fontSize = 20.sp) }
+                    ) {
+                        Icon(
+                            imageVector = mood.icon,
+                            contentDescription = mood.label,
+                            modifier = Modifier.size(26.dp),
+                            tint = if (isSelected) Color.White else mood.color
+                        )
+                    }
                     Spacer(Modifier.height(4.dp))
                     Text(
                         mood.label,
@@ -621,8 +667,13 @@ private fun PartnerHistoryContent(partnerName: String, moods: List<MoodResponse>
                         modifier = Modifier.fillMaxWidth()) {
                         Row(modifier = Modifier.padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            Text(moodEmoji(mood.moodType), fontSize = 26.sp,
-                                modifier = Modifier.padding(end = 12.dp))
+                            Icon(
+                                imageVector = moodIcon(mood.moodType),
+                                contentDescription = moodLabel(mood.moodType),
+                                modifier = Modifier.size(28.dp).padding(end = 0.dp),
+                                tint = moodColor(mood.moodType)
+                            )
+                            Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(moodLabel(mood.moodType),
                                     style = MaterialTheme.typography.bodyMedium,
@@ -650,6 +701,7 @@ private fun CalendarContent(
     year: Int, month: Int,
     myMoods: Map<String, List<MoodResponse>>,
     partnerMoods: Map<String, List<MoodResponse>>,
+    myName: String,
     partnerName: String,
     isLoading: Boolean,
     onMonthChange: (Int, Int) -> Unit
@@ -672,7 +724,6 @@ private fun CalendarContent(
             .navigationBarsPadding()
             .padding(bottom = 16.dp)
     ) {
-        // Month navigation
         item {
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -697,7 +748,6 @@ private fun CalendarContent(
                 }
             }
         } else {
-            // Day headers
             item {
                 Row(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
                     listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс").forEach { d ->
@@ -708,7 +758,6 @@ private fun CalendarContent(
                 }
             }
 
-            // Grid rows
             val rowCount = (firstDayOfWeek + daysInMonth + 6) / 7
             items(rowCount) { row ->
                 Row(Modifier.fillMaxWidth()) {
@@ -755,7 +804,6 @@ private fun CalendarContent(
                 }
             }
 
-            // Day detail
             item {
                 selectedDay?.let { day ->
                     val myDay = myMoods[day] ?: emptyList()
@@ -769,13 +817,22 @@ private fun CalendarContent(
                     if (myDay.isEmpty() && pDay.isEmpty())
                         Text("Нет записей", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (myDay.isNotEmpty()) {
-                        Text("Я:", style = MaterialTheme.typography.labelMedium,
+                        Text("$myName:", style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         myDay.forEach { m ->
-                            Text("${moodEmoji(m.moodType)} ${moodLabel(m.moodType)}" +
-                                    if (m.note.isNotBlank()) " — ${m.note}" else "",
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(start = 8.dp, top = 2.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                            ) {
+                                Icon(moodIcon(m.moodType), contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = moodColor(m.moodType))
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    moodLabel(m.moodType) + if (m.note.isNotBlank()) " — ${m.note}" else "",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
                     if (pDay.isNotEmpty()) {
@@ -783,10 +840,19 @@ private fun CalendarContent(
                         Text("$partnerName:", style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         pDay.forEach { m ->
-                            Text("${moodEmoji(m.moodType)} ${moodLabel(m.moodType)}" +
-                                    if (m.note.isNotBlank()) " — ${m.note}" else "",
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(start = 8.dp, top = 2.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                            ) {
+                                Icon(moodIcon(m.moodType), contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = moodColor(m.moodType))
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    moodLabel(m.moodType) + if (m.note.isNotBlank()) " — ${m.note}" else "",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -803,6 +869,7 @@ private fun CalendarContent(
 private fun StatsContent(
     myMoods: Map<String, List<MoodResponse>>,
     partnerMoods: Map<String, List<MoodResponse>>,
+    myName: String,
     partnerName: String,
     isLoading: Boolean
 ) {
@@ -830,16 +897,21 @@ private fun StatsContent(
                 if (myCount == 0 && pCount == 0) return@forEach
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    Text(mood.emoji, fontSize = 22.sp, modifier = Modifier.width(32.dp))
+                    Icon(
+                        imageVector = mood.icon,
+                        contentDescription = mood.label,
+                        modifier = Modifier.size(24.dp).padding(end = 0.dp),
+                        tint = mood.color
+                    )
                     Spacer(Modifier.width(6.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(mood.label, style = MaterialTheme.typography.labelMedium)
                         if (myCount > 0) {
                             Row(verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(top = 3.dp)) {
-                                Text("Я  ", style = MaterialTheme.typography.labelSmall,
+                                Text(myName.take(4).padEnd(4), style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.width(30.dp))
+                                    modifier = Modifier.width(36.dp))
                                 Box(Modifier
                                     .height(8.dp)
                                     .fillMaxWidth((myCount.toFloat() / myTotal * 0.85f + 0.10f).coerceAtMost(1f))
@@ -879,6 +951,5 @@ private fun StatsContent(
     }
 }
 
-// Compatibility shims
-fun getMoodEmoji(moodType: String): String = moodEmoji(moodType)
-fun getMoodColor(moodType: String): Color  = moodColor(moodType)
+// Compatibility shim (color only — emoji shim removed, use moodIcon() instead)
+fun getMoodColor(moodType: String): Color = moodColor(moodType)

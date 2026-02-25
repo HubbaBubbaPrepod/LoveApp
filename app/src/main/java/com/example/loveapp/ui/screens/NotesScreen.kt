@@ -25,6 +25,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -119,10 +121,11 @@ fun NotesScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = "📝",
-                            fontSize = 52.sp,
-                            modifier = Modifier.padding(bottom = 16.dp)
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = null,
+                            modifier = Modifier.padding(bottom = 16.dp).size(52.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                         )
                         Text(
                             text = stringResource(R.string.no_notes),
@@ -264,10 +267,11 @@ fun NoteIOSTile(
                         lineHeight = 20.sp
                     )
                     if (note.isPrivate) {
-                        Text(
-                            text = "🔒",
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(start = 4.dp, top = 1.dp)
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.padding(start = 4.dp, top = 1.dp).size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

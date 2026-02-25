@@ -682,7 +682,7 @@ app.get('/api/moods', authenticateToken, async (req, res) => {
     }
     const countResult = await pool.query(countQuery, countParams);
 
-    let query = 'SELECT * FROM mood_entries WHERE user_id = $1';
+    let query = 'SELECT me.*, u.display_name FROM mood_entries me JOIN users u ON me.user_id = u.id WHERE me.user_id = $1';
     const params = [req.userId];
     p = 2;
     if (date) {

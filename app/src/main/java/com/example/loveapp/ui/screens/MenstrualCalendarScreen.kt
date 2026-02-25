@@ -13,6 +13,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -122,10 +125,11 @@ fun MenstrualCalendarScreen(
                                             .padding(32.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        Text(
-                                            "📅",
-                                            fontSize = 48.sp,
-                                            modifier = Modifier.padding(bottom = 12.dp)
+                                        Icon(
+                                            imageVector = Icons.Default.CalendarToday,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(48.dp).padding(bottom = 12.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         Text(
                                             stringResource(R.string.no_cycle_entries),

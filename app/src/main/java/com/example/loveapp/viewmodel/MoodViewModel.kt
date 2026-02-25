@@ -30,6 +30,9 @@ class MoodViewModel @Inject constructor(
     private val _partnerName = MutableStateFlow<String?>(null)
     val partnerName: StateFlow<String?> = _partnerName.asStateFlow()
 
+    private val _myName = MutableStateFlow<String?>(null)
+    val myName: StateFlow<String?> = _myName.asStateFlow()
+
     // Maps: date "yyyy-MM-dd" -> list of moods for calendar view
     private val _myMonthMoods = MutableStateFlow<Map<String, List<MoodResponse>>>(emptyMap())
     val myMonthMoods: StateFlow<Map<String, List<MoodResponse>>> = _myMonthMoods.asStateFlow()
@@ -68,7 +71,12 @@ class MoodViewModel @Inject constructor(
             val today = DateUtils.getTodayDateString()
             val myDef = async { moodRepository.getMoods(date = today) }
             val partnerDef = async { moodRepository.getPartnerMoods(date = today) }
-            myDef.await().onSuccess { _myTodayMoods.value = it }
+            myDef.await().onSuccess {
+                _myTodayMoods.value = it
+                if (_myName.value == null) {
+                    _myName.value = it.firstOrNull()?.displayName
+                }
+            }
             partnerDef.await().onSuccess { moods ->
                 _partnerTodayMoods.value = moods
                 if (_partnerName.value == null) {
@@ -115,6 +123,9 @@ class MoodViewModel @Inject constructor(
             val partnerDef = async { moodRepository.getPartnerMoods(startDate = firstDay, endDate = lastDay) }
             myDef.await().onSuccess { list ->
                 _myMonthMoods.value = list.groupBy { it.date.take(10) }
+                if (_myName.value == null) {
+                    _myName.value = list.firstOrNull()?.displayName
+                }
             }
             partnerDef.await().onSuccess { list ->
                 _partnerMonthMoods.value = list.groupBy { it.date.take(10) }

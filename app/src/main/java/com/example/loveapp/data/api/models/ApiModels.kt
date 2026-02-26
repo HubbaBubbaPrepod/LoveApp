@@ -281,11 +281,13 @@ data class UploadResponse(
 )
 
 // Generic Response Wrapper (matches server sendResponse)
+// errors typed as Any? to avoid Gson ClassCastException (Map<K,V> loses
+// its ParameterizedType after R8 optimisation → Class cast error)
 data class ApiResponse<T>(
     val success: Boolean,
     val message: String? = null,
     val data: T? = null,
-    val errors: Map<String, String>? = null
+    val errors: Any? = null
 )
 
 data class PaginatedResponse<T>(

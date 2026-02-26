@@ -31,7 +31,21 @@
 -dontwarn sun.misc.**
 
 # ─── Retrofit interface ───────────────────────────────────────────────────────
--keep,allowobfuscation interface com.example.loveapp.data.api.LoveAppApiService
+-keep interface com.example.loveapp.data.api.LoveAppApiService { *; }
+
+# ─── Retrofit core ────────────────────────────────────────────────────────────
+-keep class retrofit2.** { *; }
+-keepclasseswithmembers class * {
+    @retrofit2.http.* <methods>;
+}
+
+# ─── Gson generics / TypeToken ────────────────────────────────────────────────
+# These three lines are the critical ones for ApiResponse<T> deserialization:
+# Without them R8 strips generic signatures → Class cast to ParameterizedType
+-keepattributes InnerClasses
+-keep class com.google.gson.reflect.TypeToken { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
+-keep class com.google.gson.** { *; }
 
 # ─── Hilt ─────────────────────────────────────────────────────────────────────
 -keep class dagger.hilt.** { *; }

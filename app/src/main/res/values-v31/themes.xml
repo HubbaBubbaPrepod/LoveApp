@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        API 31+ (Android 12+): нативная система Splash Screen читает
+        android:-атрибуты из темы Activity напрямую.
+    -->
+    <style name="Theme.LoveApp.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_screen_icon_animated</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_icon_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.LoveApp</item>
+        <!-- Нативный атрибут длительности доступен с API 31 -->
+        <item name="android:windowSplashScreenAnimationDuration">2000</item>
+    </style>
+</resources>

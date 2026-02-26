@@ -108,18 +108,16 @@ fun MenstrualCalendarScreen(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             IOSTopAppBar(
-                title = "Цикл",
+                title = if (isGirl) "Цикл" else "Цикл партнёра",
                 onBackClick = onNavigateBack,
                 actions = {
                     IconButton(onClick = { showStats = true }) {
                         Icon(Icons.Default.BarChart, contentDescription = "Статистика",
                             tint = MaterialTheme.colorScheme.primary)
                     }
-                    if (isGirl) {
-                        IconButton(onClick = { viewModel.loadAll() }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Обновить",
-                                tint = MaterialTheme.colorScheme.primary)
-                        }
+                    IconButton(onClick = { viewModel.loadAll() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Обновить",
+                            tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             )
@@ -189,9 +187,10 @@ fun MenstrualCalendarScreen(
 
     //  Day Detail Sheet 
     selectedDate?.let { date ->
+        val dayType = cycleDayMap[date]
         DayDetailSheet(
             date       = date,
-            dayType    = cycleDayMap[date],
+            dayType    = dayType,
             symptoms   = viewModel.getSymptomsForDate(date),
             mood       = viewModel.getMoodForDate(date),
             isGirl     = isGirl,
@@ -203,7 +202,13 @@ fun MenstrualCalendarScreen(
             onMarkPeriodStart = {
                 viewModel.markPeriodStart(date)
                 viewModel.selectDate(null)
-            }
+            },
+            onDeleteCycle = if (isGirl && dayType == CycleDayType.PERIOD_ACTUAL) {
+                {
+                    viewModel.deleteCycleForDate(date)
+                    viewModel.selectDate(null)
+                }
+            } else null
         )
     }
 
@@ -477,7 +482,8 @@ private fun DayDetailSheet(
     isGirl: Boolean,
     onDismiss: () -> Unit,
     onSave: (List<String>, String) -> Unit,
-    onMarkPeriodStart: () -> Unit
+    onMarkPeriodStart: () -> Unit,
+    onDeleteCycle: (() -> Unit)? = null
 ) {
     val parsedDate = remember(date) { runCatching { LocalDate.parse(date, CYCLE_CAL_FMT) }.getOrNull() }
     val displayDate = remember(parsedDate) {
@@ -487,6 +493,7 @@ private fun DayDetailSheet(
     var selectedSymptoms by remember(date) { mutableStateOf(symptoms.toMutableList()) }
     var selectedMood     by remember(date) { mutableStateOf(mood) }
     var edited           by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
@@ -521,6 +528,35 @@ private fun DayDetailSheet(
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("Отметить начало цикла")
+                }
+            }
+
+            // Delete cycle (girl only, on actual period days  deletes the whole cycle entry)
+            if (isGirl && onDeleteCycle != null) {
+                OutlinedButton(
+                    onClick = { showDeleteConfirm = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE53935))
+                ) {
+                    Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Отменить/удалить начало цикла")
+                }
+                if (showDeleteConfirm) {
+                    AlertDialog(
+                        onDismissRequest = { showDeleteConfirm = false },
+                        confirmButton = {
+                            TextButton(onClick = { showDeleteConfirm = false; onDeleteCycle() }) {
+                                Text("Удалить", color = Color(0xFFE53935))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDeleteConfirm = false }) { Text("Отмена") }
+                        },
+                        title = { Text("Удалить запись?") },
+                        text = { Text("Это удалит весь цикл для этой даты, включая все симптомы и настроение. Продолжить?")
+                        }
+                    )
                 }
             }
 

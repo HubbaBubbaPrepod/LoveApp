@@ -26,7 +26,7 @@ data class MilestoneEvent(
     val isToday: Boolean get() = daysRelative == 0L
 }
 
-enum class MilestoneType { DAY_COUNT, ANNIVERSARY, HOLIDAY }
+enum class MilestoneType { DAY_COUNT, ANNIVERSARY, HOLIDAY, BIRTHDAY }
 
 @HiltViewModel
 class RelationshipViewModel @Inject constructor(
@@ -35,6 +35,9 @@ class RelationshipViewModel @Inject constructor(
 
     private val _relationship = MutableStateFlow<RelationshipResponse?>(null)
     val relationship: StateFlow<RelationshipResponse?> = _relationship.asStateFlow()
+
+    private val _partnerDisplayName = MutableStateFlow<String?>(null)
+    val partnerDisplayName: StateFlow<String?> = _partnerDisplayName.asStateFlow()
 
     private val _daysSinceStart = MutableStateFlow(0L)
     val daysSinceStart: StateFlow<Long> = _daysSinceStart.asStateFlow()
@@ -70,11 +73,17 @@ class RelationshipViewModel @Inject constructor(
             val result = relationshipRepository.getRelationship()
             result.onSuccess { rel ->
                 _relationship.value = rel
+                _partnerDisplayName.value = rel.partnerDisplayName
                 val days = calculateDaysSinceStart(rel)
                 _daysSinceStart.value = days
                 val startDate = parseDate(rel.relationshipStartDate)
                 if (startDate != null) {
-                    _milestones.value = generateMilestones(startDate)
+                    _milestones.value = generateMilestones(
+                        startDate = startDate,
+                        myBirthday = parseDate(rel.myBirthday),
+                        partnerBirthday = parseDate(rel.partnerBirthday),
+                        partnerName = rel.partnerDisplayName
+                    )
                 }
                 _isLoading.value = false
             }.onFailure { error ->
@@ -84,18 +93,32 @@ class RelationshipViewModel @Inject constructor(
         }
     }
 
-    fun updateRelationship(startDate: String, firstKissDate: String? = null, anniversaryDate: String? = null) {
+    fun updateRelationship(
+        startDate: String,
+        firstKissDate: String? = null,
+        anniversaryDate: String? = null,
+        myBirthday: String? = null,
+        partnerBirthday: String? = null
+    ) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
-            val result = relationshipRepository.updateRelationship(startDate, firstKissDate, anniversaryDate)
+            val result = relationshipRepository.updateRelationship(
+                startDate, firstKissDate, anniversaryDate, myBirthday, partnerBirthday
+            )
             result.onSuccess { rel ->
                 _relationship.value = rel
+                _partnerDisplayName.value = rel.partnerDisplayName
                 val days = calculateDaysSinceStart(rel)
                 _daysSinceStart.value = days
                 val start = parseDate(rel.relationshipStartDate)
                 if (start != null) {
-                    _milestones.value = generateMilestones(start)
+                    _milestones.value = generateMilestones(
+                        startDate = start,
+                        myBirthday = parseDate(rel.myBirthday),
+                        partnerBirthday = parseDate(rel.partnerBirthday),
+                        partnerName = rel.partnerDisplayName
+                    )
                 }
                 _successMessage.value = "Данные обновлены"
                 _isLoading.value = false
@@ -122,7 +145,12 @@ class RelationshipViewModel @Inject constructor(
         return ChronoUnit.DAYS.between(start, LocalDate.now())
     }
 
-    private fun generateMilestones(startDate: LocalDate): List<MilestoneEvent> {
+    private fun generateMilestones(
+        startDate: LocalDate,
+        myBirthday: LocalDate? = null,
+        partnerBirthday: LocalDate? = null,
+        partnerName: String? = null
+    ): List<MilestoneEvent> {
         val today = LocalDate.now()
         val milestones = mutableListOf<MilestoneEvent>()
 
@@ -171,6 +199,27 @@ class RelationshipViewModel @Inject constructor(
                         date = date,
                         dayNumber = dayNumber,
                         type = MilestoneType.HOLIDAY,
+                        daysRelative = ChronoUnit.DAYS.between(today, date)
+                    ))
+                }
+            }
+        }
+
+        // ── Birthday milestones ───────────────────────────────────────────
+        val birthdayEntries = listOfNotNull(
+            myBirthday?.let { it to "\uD83C\uDF82 Мой день рождения" },
+            partnerBirthday?.let { it to "\uD83C\uDF82 День рождения ${partnerName ?: "партнёра"}" }
+        )
+        for ((bday, bdayTitle) in birthdayEntries) {
+            for (year in today.year - 1..today.year + 2) {
+                val date = bday.withYear(year)
+                val dayNumber = ChronoUnit.DAYS.between(startDate, date)
+                if (dayNumber >= 0) {
+                    milestones.add(MilestoneEvent(
+                        title = bdayTitle,
+                        date = date,
+                        dayNumber = dayNumber,
+                        type = MilestoneType.BIRTHDAY,
                         daysRelative = ChronoUnit.DAYS.between(today, date)
                     ))
                 }

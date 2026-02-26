@@ -1404,7 +1404,10 @@ app.delete('/api/calendars/events/:eventId', authenticateToken, async (req, res)
 app.get('/api/relationship', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT * FROM relationship_info WHERE user_id = $1 LIMIT 1',
+      `SELECT ri.*, u.display_name AS partner_display_name
+       FROM relationship_info ri
+       LEFT JOIN users u ON u.id = ri.partner_user_id
+       WHERE ri.user_id = $1 LIMIT 1`,
       [req.userId]
     );
 
@@ -1422,23 +1425,36 @@ app.get('/api/relationship', authenticateToken, async (req, res) => {
 // Update Relationship
 app.put('/api/relationship', authenticateToken, async (req, res) => {
   try {
-    const { relationship_start_date, first_kiss_date, anniversary_date } = req.body;
+    const { relationship_start_date, first_kiss_date, anniversary_date, my_birthday, partner_birthday } = req.body;
 
     // Try to update existing
     let result = await pool.query(
-      'UPDATE relationship_info SET relationship_start_date = $1, first_kiss_date = $2, anniversary_date = $3, updated_at = NOW() WHERE user_id = $4 RETURNING *',
-      [relationship_start_date, first_kiss_date, anniversary_date, req.userId]
+      `UPDATE relationship_info
+       SET relationship_start_date = $1, first_kiss_date = $2, anniversary_date = $3,
+           my_birthday = $4, partner_birthday = $5, updated_at = NOW()
+       WHERE user_id = $6 RETURNING *`,
+      [relationship_start_date, first_kiss_date, anniversary_date, my_birthday || null, partner_birthday || null, req.userId]
     );
 
     // If no rows updated, create new
     if (result.rows.length === 0) {
       result = await pool.query(
-        'INSERT INTO relationship_info (user_id, relationship_start_date, first_kiss_date, anniversary_date) VALUES ($1, $2, $3, $4) RETURNING *',
-        [req.userId, relationship_start_date, first_kiss_date, anniversary_date]
+        `INSERT INTO relationship_info (user_id, relationship_start_date, first_kiss_date, anniversary_date, my_birthday, partner_birthday)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [req.userId, relationship_start_date, first_kiss_date, anniversary_date, my_birthday || null, partner_birthday || null]
       );
     }
 
-    sendResponse(res, true, 'Relationship updated', result.rows[0]);
+    // Re-fetch with partner display_name joined
+    const full = await pool.query(
+      `SELECT ri.*, u.display_name AS partner_display_name
+       FROM relationship_info ri
+       LEFT JOIN users u ON u.id = ri.partner_user_id
+       WHERE ri.user_id = $1 LIMIT 1`,
+      [req.userId]
+    );
+
+    sendResponse(res, true, 'Relationship updated', full.rows[0] || result.rows[0]);
   } catch (err) {
     console.error('Update relationship error:', err);
     sendResponse(res, false, 'Internal server error', null, 500);
@@ -1572,6 +1588,12 @@ pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pairing_code_expires_at T
 pool.query(`ALTER TABLE relationship_info ADD COLUMN IF NOT EXISTS partner_user_id INTEGER REFERENCES users(id)`)
   .then(() => console.log('relationship_info.partner_user_id column ready'))
   .catch(err => console.error('Migration error (partner_user_id):', err));
+pool.query(`ALTER TABLE relationship_info ADD COLUMN IF NOT EXISTS my_birthday DATE`)
+  .then(() => console.log('relationship_info.my_birthday column ready'))
+  .catch(err => console.error('Migration error (my_birthday):', err));
+pool.query(`ALTER TABLE relationship_info ADD COLUMN IF NOT EXISTS partner_birthday DATE`)
+  .then(() => console.log('relationship_info.partner_birthday column ready'))
+  .catch(err => console.error('Migration error (partner_birthday):', err));
 pool.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'relationship_info_user_id_key') THEN ALTER TABLE relationship_info ADD CONSTRAINT relationship_info_user_id_key UNIQUE (user_id); END IF; END $$`)
   .then(() => console.log('relationship_info unique user_id constraint ready'))
   .catch(err => console.error('Migration error (relationship_info unique):', err));

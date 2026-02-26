@@ -58,9 +58,31 @@
 -keep @androidx.room.Entity class * { *; }
 -keep @androidx.room.Dao interface * { *; }
 
+# ─── WorkManager workers ──────────────────────────────────────────────────────
+# WorkManager создаёт воркеры по имени класса из базы данных.
+# Если R8 переименует классы — при перезапуске приложения будет ClassNotFoundException.
+-keep class * extends androidx.work.Worker
+-keep class * extends androidx.work.CoroutineWorker
+-keep class * extends androidx.work.ListenableWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+
+# ─── Glance AppWidget ─────────────────────────────────────────────────────────
+# Аналогично: система запускает Receiver по имени из манифеста
+-keep class * extends androidx.glance.appwidget.GlanceAppWidget
+-keep class * extends androidx.glance.appwidget.GlanceAppWidgetReceiver
+
+# ─── Hilt EntryPoint ─────────────────────────────────────────────────────────
+# EntryPointAccessors.fromApplication() ищет реализации по рефлексии
+-keep @dagger.hilt.EntryPoint interface *
+-keep @dagger.hilt.InstallIn @dagger.hilt.EntryPoint interface * { *; }
+
+# ─── Firebase Messaging ───────────────────────────────────────────────────────
+-keep class * extends com.google.firebase.messaging.FirebaseMessagingService
+
 # ─── Kotlin coroutines ────────────────────────────────────────────────────────
 -keepclassmembernames class kotlinx.** { volatile <fields>; }
 
-# ─── Preserve line numbers for crash stack traces ─────────────────────────────
+# Preserve line numbers for crash stack traces
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile

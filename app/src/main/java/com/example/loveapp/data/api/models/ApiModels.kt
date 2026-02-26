@@ -249,6 +249,10 @@ data class RelationshipRequest(
     val firstKissDate: String? = null,
     @SerializedName("anniversary_date")
     val anniversaryDate: String? = null,
+    @SerializedName("my_birthday")
+    val myBirthday: String? = null,
+    @SerializedName("partner_birthday")
+    val partnerBirthday: String? = null,
     @SerializedName("nickname_1")
     val nickname1: String = "",
     @SerializedName("nickname_2")
@@ -263,16 +267,22 @@ data class RelationshipResponse(
     val firstKissDate: String? = null,
     @SerializedName("anniversary_date")
     val anniversaryDate: String? = null,
-    @SerializedName("user_id_1")
-    val userId1: Int,
-    @SerializedName("user_id_2")
-    val userId2: Int,
+    @SerializedName("my_birthday")
+    val myBirthday: String? = null,
+    @SerializedName("partner_birthday")
+    val partnerBirthday: String? = null,
+    @SerializedName("partner_display_name")
+    val partnerDisplayName: String? = null,
+    @SerializedName("user_id")
+    val userId1: Int = 0,
+    @SerializedName("partner_user_id")
+    val userId2: Int = 0,
     @SerializedName("nickname_1")
-    val nickname1: String,
+    val nickname1: String = "",
     @SerializedName("nickname_2")
-    val nickname2: String,
+    val nickname2: String = "",
     @SerializedName("created_at")
-    val createdAt: String
+    val createdAt: String = ""
 )
 
 // Upload Response

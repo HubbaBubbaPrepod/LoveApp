@@ -89,12 +89,26 @@ class CycleViewModel @Inject constructor(
             val gender = authRepository.getGender()
             _isGirl.value = gender.equals("female", ignoreCase = true)
 
-            val myCycles = async { cycleRepository.getCycles() }
-            myCycles.await().onSuccess { list ->
-                val sorted = list.sortedByDescending { it.cycleStartDate }
-                _cycles.value = sorted
-                recompute(sorted)
-            }.onFailure { _errorMessage.value = it.message }
+            if (_isGirl.value) {
+                // Female: load own cycles
+                val myCycles = async { cycleRepository.getCycles() }
+                myCycles.await().onSuccess { list ->
+                    val sorted = list.sortedByDescending { it.cycleStartDate }
+                    _cycles.value = sorted
+                    recompute(sorted)
+                }.onFailure { _errorMessage.value = it.message }
+            } else {
+                // Male partner: load partner's cycles in read-only mode
+                cycleRepository.getPartnerCycles().onSuccess { list ->
+                    val sorted = list.sortedByDescending { it.cycleStartDate }
+                    _cycles.value = sorted
+                    recompute(sorted)
+                }.onFailure {
+                    // No partner data yet — not an error shown to user
+                    _cycles.value = emptyList()
+                    recompute(emptyList())
+                }
+            }
             _isLoading.value = false
         }
     }
@@ -174,6 +188,22 @@ class CycleViewModel @Inject constructor(
             }.onFailure { _errorMessage.value = it.message }
         }
     }
+
+    /** Delete the cycle whose cycleStartDate matches the given date string */
+    fun deleteCycleForDate(dateStr: String) {
+        // First try exact cycle start match, then fall back to any cycle containing the date
+        val cycle = _cycles.value.firstOrNull { it.cycleStartDate.startsWith(dateStr) }
+            ?: findCycleForDate(dateStr)
+            ?: run {
+                _errorMessage.value = "Запись для этой даты не найдена"
+                return
+            }
+        deleteCycleEntry(cycle.id)
+    }
+
+    /** Returns true if a cycle starts exactly on this date */
+    fun isCycleStartDate(dateStr: String): Boolean =
+        _cycles.value.any { it.cycleStartDate.startsWith(dateStr) }
 
     fun clearMessages() {
         _errorMessage.value = null

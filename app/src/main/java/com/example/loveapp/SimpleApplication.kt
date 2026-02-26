@@ -16,26 +16,43 @@ class SimpleApplication : Application() {
 
     override fun onCreate() {
         Log.d("LoveApp", "SimpleApplication.onCreate() START")
+
+        // super.onCreate() инициализирует Hilt — без неё приложение не запустится
+        super.onCreate()
+        Log.d("LoveApp", "SimpleApplication.onCreate() Hilt OK")
+
+        // Остальные шаги инициализации не должны крашить приложение.
+        // На MIUI/Android 10 WorkManager или каналы могут бросить исключение
+        // при первом запуске — изолируем каждый шаг отдельно.
+
         try {
-            super.onCreate()
-            Log.d("LoveApp", "SimpleApplication.onCreate() SUCCESS - Hilt initialized")
-
-            // Widget background sync every 30 min
             WidgetSyncWorker.schedulePeriodicSync(this)
-
-            // Notification channels (must be created before any notification is posted)
-            notificationHelper.createChannels()
-
-            // Partner-activity polling every 15 min
-            NotificationWorker.schedule(this)
-
-            // Daily reminder at 20:00 local time
-            ReminderWorker.schedule(this)
-
+            Log.d("LoveApp", "WidgetSyncWorker scheduled")
         } catch (e: Exception) {
-            Log.e("LoveApp", "SimpleApplication.onCreate() FAILED", e)
-            e.printStackTrace()
-            throw e
+            Log.e("LoveApp", "WidgetSyncWorker schedule failed", e)
         }
+
+        try {
+            notificationHelper.createChannels()
+            Log.d("LoveApp", "Notification channels created")
+        } catch (e: Exception) {
+            Log.e("LoveApp", "createChannels failed", e)
+        }
+
+        try {
+            NotificationWorker.schedule(this)
+            Log.d("LoveApp", "NotificationWorker scheduled")
+        } catch (e: Exception) {
+            Log.e("LoveApp", "NotificationWorker schedule failed", e)
+        }
+
+        try {
+            ReminderWorker.schedule(this)
+            Log.d("LoveApp", "ReminderWorker scheduled")
+        } catch (e: Exception) {
+            Log.e("LoveApp", "ReminderWorker schedule failed", e)
+        }
+
+        Log.d("LoveApp", "SimpleApplication.onCreate() DONE")
     }
 }

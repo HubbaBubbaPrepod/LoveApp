@@ -14,10 +14,12 @@ class RelationshipRepository @Inject constructor(
     suspend fun createRelationship(
         relationshipStartDate: String,
         firstKissDate: String? = null,
-        anniversaryDate: String? = null
+        anniversaryDate: String? = null,
+        myBirthday: String? = null,
+        partnerBirthday: String? = null
     ): Result<RelationshipResponse> = try {
         // Server has no POST /relationship; PUT does upsert (create or update)
-        updateRelationship(relationshipStartDate, firstKissDate, anniversaryDate)
+        updateRelationship(relationshipStartDate, firstKissDate, anniversaryDate, myBirthday, partnerBirthday)
     } catch (e: Exception) {
         Result.failure(e)
     }
@@ -38,13 +40,17 @@ class RelationshipRepository @Inject constructor(
     suspend fun updateRelationship(
         relationshipStartDate: String,
         firstKissDate: String? = null,
-        anniversaryDate: String? = null
+        anniversaryDate: String? = null,
+        myBirthday: String? = null,
+        partnerBirthday: String? = null
     ): Result<RelationshipResponse> = try {
         val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
         val request = RelationshipRequest(
             relationshipStartDate = relationshipStartDate,
             firstKissDate = firstKissDate,
-            anniversaryDate = anniversaryDate
+            anniversaryDate = anniversaryDate,
+            myBirthday = myBirthday,
+            partnerBirthday = partnerBirthday
         )
         val response = apiService.updateRelationship("Bearer $token", request)
         

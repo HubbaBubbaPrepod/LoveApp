@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.LoveApp" parent="android:Theme.Material.Light.NoActionBar">
-        <!-- Splash Screen: тёплый розовый фон, иконка с контрастным кругом -->
-        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_screen_icon_animated</item>
-        <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_icon_background</item>
-        <item name="android:windowSplashScreenAnimationDuration">2000</item>
-        <item name="android:windowSplashScreenBehavior">icon_preferred</item>
+    <!--
+        Стартовая тема Activity: ДОЛЖНА наследовать Theme.SplashScreen, иначе
+        installSplashScreen() не работает на API < 31 (Android 10 и ниже).
+        После скрытия сплэша Compose рендерит поверх неё — отдельная тема не нужна.
+    -->
+    <style name="Theme.LoveApp.Starting" parent="Theme.SplashScreen">
+        <!-- Compat-атрибуты (без android:-префикса) — работают на API 23+ -->
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_screen_icon_animated</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_icon_background</item>
+        <!-- После сплэша Activity переключается на основную тему -->
+        <item name="postSplashScreenTheme">@style/Theme.LoveApp</item>
     </style>
+
+    <!-- Основная тема приложения (без splash screen атрибутов) -->
+    <style name="Theme.LoveApp" parent="android:Theme.Material.Light.NoActionBar" />
+
 </resources>

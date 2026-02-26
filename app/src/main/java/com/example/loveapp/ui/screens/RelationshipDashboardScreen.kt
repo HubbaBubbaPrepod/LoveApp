@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
@@ -93,6 +94,7 @@ fun RelationshipDashboardScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val relationship      by viewModel.relationship.collectAsState()
+    val partnerDisplayName by viewModel.partnerDisplayName.collectAsState()
     val daysSinceStart    by viewModel.daysSinceStart.collectAsState()
     val milestones        by viewModel.milestones.collectAsState()
     val selectedTab       by viewModel.selectedTab.collectAsState()
@@ -181,6 +183,7 @@ fun RelationshipDashboardScreen(
                             RelationshipHeaderCard(
                                 daysSinceStart = daysSinceStart,
                                 startDate = startDate,
+                                partnerDisplayName = partnerDisplayName,
                                 onEditClick = { showEditDialog = true }
                             )
                         }
@@ -268,8 +271,8 @@ fun RelationshipDashboardScreen(
             EditRelationshipDialog(
                 relationship = relationship,
                 onDismiss = { showEditDialog = false },
-                onUpdate = { sDate, kissDate, anniversaryDate ->
-                    viewModel.updateRelationship(sDate, kissDate, anniversaryDate)
+                onUpdate = { sDate, kissDate, anniversaryDate, myBirthday, partnerBirthday ->
+                    viewModel.updateRelationship(sDate, kissDate, anniversaryDate, myBirthday, partnerBirthday)
                     showEditDialog = false
                 }
             )
@@ -283,6 +286,7 @@ fun RelationshipDashboardScreen(
 private fun RelationshipHeaderCard(
     daysSinceStart: Long,
     startDate: LocalDate?,
+    partnerDisplayName: String?,
     onEditClick: () -> Unit
 ) {
     val gradient = remember { Brush.linearGradient(listOf(PrimaryPink, AccentPurple)) }
@@ -318,6 +322,15 @@ private fun RelationshipHeaderCard(
                 .padding(top = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            if (!partnerDisplayName.isNullOrBlank()) {
+                Text(
+                    text = "❤️ $partnerDisplayName",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.95f),
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+            }
             Text(
                 text = "Мы вместе",
                 style = MaterialTheme.typography.titleMedium,
@@ -371,11 +384,13 @@ private fun MilestoneRow(milestone: MilestoneEvent) {
         MilestoneType.DAY_COUNT   -> PrimaryPink
         MilestoneType.ANNIVERSARY -> Color(0xFFFFC107)
         MilestoneType.HOLIDAY     -> AccentPurple
+        MilestoneType.BIRTHDAY    -> Color(0xFFFF9800)
     }
     val icon = when (milestone.type) {
         MilestoneType.DAY_COUNT   -> Icons.Default.Favorite
         MilestoneType.ANNIVERSARY -> Icons.Default.Star
         MilestoneType.HOLIDAY     -> Icons.Default.DateRange
+        MilestoneType.BIRTHDAY    -> Icons.Default.Cake
     }
     val dateStr = remember(milestone.date) { milestone.date.format(MILESTONE_DATE_FMT) }
     val relLabel = remember(milestone.isToday, milestone.daysRelative) {
@@ -603,7 +618,7 @@ private fun RelCalendarDayCell(
 fun EditRelationshipDialog(
     relationship: com.example.loveapp.data.api.models.RelationshipResponse?,
     onDismiss: () -> Unit,
-    onUpdate: (String, String?, String?) -> Unit
+    onUpdate: (String, String?, String?, String?, String?) -> Unit
 ) {
     val dateFormatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd") }
 
@@ -616,10 +631,18 @@ fun EditRelationshipDialog(
     var anniversaryDate by remember {
         mutableStateOf(relationship?.anniversaryDate?.split("T")?.get(0) ?: "")
     }
+    var myBirthday by remember {
+        mutableStateOf(relationship?.myBirthday?.split("T")?.get(0) ?: "")
+    }
+    var partnerBirthday by remember {
+        mutableStateOf(relationship?.partnerBirthday?.split("T")?.get(0) ?: "")
+    }
 
-    var showStartDatePicker       by remember { mutableStateOf(false) }
-    var showKissDatePicker        by remember { mutableStateOf(false) }
-    var showAnniversaryDatePicker by remember { mutableStateOf(false) }
+    var showStartDatePicker         by remember { mutableStateOf(false) }
+    var showKissDatePicker          by remember { mutableStateOf(false) }
+    var showAnniversaryDatePicker   by remember { mutableStateOf(false) }
+    var showMyBirthdayPicker        by remember { mutableStateOf(false) }
+    var showPartnerBirthdayPicker   by remember { mutableStateOf(false) }
 
     fun parseToMillis(dateString: String): Long = try {
         LocalDate.parse(dateString, dateFormatter)
@@ -635,7 +658,13 @@ fun EditRelationshipDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    onUpdate(startDate, kissDate.ifEmpty { null }, anniversaryDate.ifEmpty { null })
+                    onUpdate(
+                        startDate,
+                        kissDate.ifEmpty { null },
+                        anniversaryDate.ifEmpty { null },
+                        myBirthday.ifEmpty { null },
+                        partnerBirthday.ifEmpty { null }
+                    )
                 },
                 enabled = startDate.isNotEmpty()
             ) { Text("Сохранить") }
@@ -646,9 +675,10 @@ fun EditRelationshipDialog(
         title = { Text("Информация об отношениях") },
         text = {
             Column {
+                // Start date
                 Button(
                     onClick = { showStartDatePicker = true },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                 ) {
                     Text(if (startDate.isEmpty()) "Дата начала отношений" else startDate)
                 }
@@ -660,9 +690,10 @@ fun EditRelationshipDialog(
                     )
                 }
 
+                // First kiss date
                 Button(
                     onClick = { showKissDatePicker = true },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                 ) {
                     Text(if (kissDate.isEmpty()) "Первый поцелуй (необязательно)" else kissDate)
                 }
@@ -674,9 +705,10 @@ fun EditRelationshipDialog(
                     )
                 }
 
+                // Anniversary date
                 Button(
                     onClick = { showAnniversaryDatePicker = true },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                 ) {
                     Text(if (anniversaryDate.isEmpty()) "Годовщина (необязательно)" else anniversaryDate)
                 }
@@ -685,6 +717,38 @@ fun EditRelationshipDialog(
                         initialDateMillis = if (anniversaryDate.isEmpty()) System.currentTimeMillis() else parseToMillis(anniversaryDate),
                         onDateSelected = { millis -> anniversaryDate = formatDate(millis); showAnniversaryDatePicker = false },
                         onDismiss = { showAnniversaryDatePicker = false }
+                    )
+                }
+
+                // My birthday
+                Button(
+                    onClick = { showMyBirthdayPicker = true },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                ) {
+                    Icon(Icons.Default.Cake, null, modifier = Modifier.size(16.dp).padding(end = 4.dp))
+                    Text(if (myBirthday.isEmpty()) "🎂 Мой день рождения (необязательно)" else "🎂 Я: $myBirthday")
+                }
+                if (showMyBirthdayPicker) {
+                    DatePickerDialogWrapper(
+                        initialDateMillis = if (myBirthday.isEmpty()) System.currentTimeMillis() else parseToMillis(myBirthday),
+                        onDateSelected = { millis -> myBirthday = formatDate(millis); showMyBirthdayPicker = false },
+                        onDismiss = { showMyBirthdayPicker = false }
+                    )
+                }
+
+                // Partner birthday
+                Button(
+                    onClick = { showPartnerBirthdayPicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Cake, null, modifier = Modifier.size(16.dp).padding(end = 4.dp))
+                    Text(if (partnerBirthday.isEmpty()) "🎂 День рождения партнёра (необязательно)" else "🎂 Партнёр: $partnerBirthday")
+                }
+                if (showPartnerBirthdayPicker) {
+                    DatePickerDialogWrapper(
+                        initialDateMillis = if (partnerBirthday.isEmpty()) System.currentTimeMillis() else parseToMillis(partnerBirthday),
+                        onDateSelected = { millis -> partnerBirthday = formatDate(millis); showPartnerBirthdayPicker = false },
+                        onDismiss = { showPartnerBirthdayPicker = false }
                     )
                 }
             }

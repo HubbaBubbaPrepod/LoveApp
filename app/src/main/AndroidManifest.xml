@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Required to post notifications on Android 13+ (API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Required for WorkManager to run as a foreground service (API 28+, Xiaomi MIUI) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Allows WorkManager to re-schedule workers after device reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".SimpleApplication"
@@ -21,7 +25,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.LoveApp">
+            android:theme="@style/Theme.LoveApp.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

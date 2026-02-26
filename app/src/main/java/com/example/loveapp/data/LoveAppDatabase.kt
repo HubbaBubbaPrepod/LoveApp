@@ -35,7 +35,7 @@ import com.example.loveapp.data.entity.Wish
         CustomCalendarEvent::class,
         RelationshipInfo::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class LoveAppDatabase : RoomDatabase() {
@@ -59,7 +59,8 @@ abstract class LoveAppDatabase : RoomDatabase() {
                     context.applicationContext,
                     LoveAppDatabase::class.java,
                     "loveapp_database"
-                ).build().also { Instance = it }
+                ).fallbackToDestructiveMigration()
+                    .build().also { Instance = it }
             }
         }
     }

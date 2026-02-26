@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Required to post notifications on Android 13+ (API 33+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".SimpleApplication"
@@ -30,6 +32,94 @@
             android:exported="false"
             android:label="@string/app_name"
             android:theme="@style/Theme.LoveApp" />
+
+        <!-- Mood day widget – Small (2×1) -->
+        <receiver
+            android:name=".widget.MoodWidgetSmallReceiver"
+            android:exported="true"
+            android:label="@string/widget_mood_small_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mood_widget_small_info" />
+        </receiver>
+
+        <!-- Mood day widget – Medium (3×2) -->
+        <receiver
+            android:name=".widget.MoodDayWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_mood_medium_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mood_day_widget_info" />
+        </receiver>
+
+        <!-- Mood day widget – Large (4×3) -->
+        <receiver
+            android:name=".widget.MoodWidgetLargeReceiver"
+            android:exported="true"
+            android:label="@string/widget_mood_large_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mood_widget_large_info" />
+        </receiver>
+
+        <!-- Activity day widget – Small (2×1) -->
+        <receiver
+            android:name=".widget.ActivityWidgetSmallReceiver"
+            android:exported="true"
+            android:label="@string/widget_activity_small_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/activity_widget_small_info" />
+        </receiver>
+
+        <!-- Activity day widget – Medium (3×2) -->
+        <receiver
+            android:name=".widget.ActivityDayWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_activity_medium_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/activity_day_widget_info" />
+        </receiver>
+
+        <!-- Activity day widget – Large (4×3) -->
+        <receiver
+            android:name=".widget.ActivityWidgetLargeReceiver"
+            android:exported="true"
+            android:label="@string/widget_activity_large_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/activity_widget_large_info" />
+        </receiver>
+
+        <!-- Firebase Cloud Messaging -->
+        <service
+            android:name=".notifications.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>

@@ -3,6 +3,7 @@ package com.example.loveapp
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -29,6 +30,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import android.content.Intent
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -49,16 +54,22 @@ import com.example.loveapp.ui.screens.MenstrualCalendarScreen
 import com.example.loveapp.ui.screens.MoodTrackerScreen
 import com.example.loveapp.ui.screens.NoteDetailScreen
 import com.example.loveapp.ui.screens.NotesScreen
+import com.example.loveapp.ui.screens.PairingScreen
 import com.example.loveapp.ui.screens.RelationshipDashboardScreen
 import com.example.loveapp.ui.screens.SettingsScreen
 import com.example.loveapp.ui.screens.SignupScreen
 import com.example.loveapp.ui.screens.WishDetailScreen
 import com.example.loveapp.ui.screens.WishesScreen
 import com.example.loveapp.ui.theme.LoveAppTheme
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private var widgetDestination by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
             super.onCreate(savedInstanceState)
@@ -79,15 +90,16 @@ class MainActivity : ComponentActivity() {
                         }
                     })
                     fadeOut.start()
-                }, 6500L)
+                }, 800L)
             }
 
+            widgetDestination = intent.getStringExtra("destination")
             enableEdgeToEdge()
             setContent {
                 val settingsViewModel: SettingsViewModel = hiltViewModel()
                 val isDarkMode by settingsViewModel.isDarkMode.collectAsState()
                 LoveAppTheme(darkTheme = isDarkMode) {
-                    LoveAppNavigation()
+                    LoveAppNavigation(widgetDestination = widgetDestination)
                 }
             }
             Log.d("LoveApp", "MainActivity.onCreate completed")
@@ -96,14 +108,33 @@ class MainActivity : ComponentActivity() {
             throw e
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        widgetDestination = intent.getStringExtra("destination")
+    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun LoveAppNavigation(
-    authViewModel: AuthViewModel = hiltViewModel()
+    authViewModel: AuthViewModel = hiltViewModel(),
+    widgetDestination: String? = null
 ) {
     val isLoggedIn by authViewModel.isLoggedIn.collectAsState(initial = null)
+
+    // ── Android 13+ notification permission ───────────────────────────────
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val notifPermission = rememberPermissionState(
+            android.Manifest.permission.POST_NOTIFICATIONS
+        )
+        LaunchedEffect(notifPermission.status.isGranted) {
+            if (!notifPermission.status.isGranted) {
+                notifPermission.launchPermissionRequest()
+            }
+        }
+    }
+    // ─────────────────────────────────────────────────────────────────────
 
     val startDestination = when (isLoggedIn) {
         true -> Screen.Dashboard.route
@@ -120,6 +151,12 @@ fun LoveAppNavigation(
 
     key(startDestination) {
         val navController = rememberNavController()
+        // Navigate to the screen requested by a home-screen widget tap
+        LaunchedEffect(widgetDestination) {
+            if (widgetDestination != null) {
+                navController.navigate(widgetDestination!!) { launchSingleTop = true }
+            }
+        }
         NavHost(
             navController = navController,
             startDestination = startDestination
@@ -226,7 +263,14 @@ fun LoveAppNavigation(
         }
 
         composable(Screen.Settings.route) {
-            SettingsScreen(onNavigateBack = { navController.popBackStack() })
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToPairing = { navController.navigate(Screen.Pairing.route) }
+            )
+        }
+
+        composable(Screen.Pairing.route) {
+            PairingScreen(onNavigateBack = { navController.popBackStack() })
         }
         }
     }

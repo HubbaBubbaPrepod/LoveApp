@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple heart / notification icon for the status bar.
+     Uses a filled heart path scaled to fit the 24×24 dp grid. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M12,21.593c-5.63-5.539-11-10.297-11-14.402
+            C1,3.335,4.1,1,7,1c1.742,0,3.506,0.87,5,2.619
+            C13.494,1.87,15.258,1,17,1
+            c2.9,0,6,2.335,6,6.191
+            C23,11.296,17.63,16.054,12,21.593z" />
+</vector>

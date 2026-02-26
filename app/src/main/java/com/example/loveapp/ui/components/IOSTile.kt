@@ -6,7 +6,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,27 +17,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+private val TileShape = RoundedCornerShape(20.dp)
+
 /**
- * iOS-style widget tile with glass morphism effect
- * Used on main dashboard screen
+ * iOS-style widget tile – press scales down via graphicsLayer (no shadow animation).
  */
 @Composable
 fun IOSTile(
@@ -48,37 +49,38 @@ fun IOSTile(
     textColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit = {}
 ) {
-    var isPressed by remember { mutableStateOf(false) }
-    
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing),
         label = "tile-scale"
-    )
-
-    val shadowElevation by animateFloatAsState(
-        targetValue = if (isPressed) 4f else 8f,
-        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
-        label = "tile-shadow"
     )
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(size)
-            .clip(RoundedCornerShape(20.dp))
+            // scale via graphicsLayer – cheapest path, no modifier rebuild
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                shape = TileShape
+                clip = true
+            }
             .shadow(
-                elevation = shadowElevation.dp,
-                shape = RoundedCornerShape(20.dp),
-                ambientColor = Color.Black.copy(alpha = 0.1f),
-                spotColor = Color.Black.copy(alpha = 0.15f)
+                elevation = 6.dp,
+                shape = TileShape,
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor   = Color.Black.copy(alpha = 0.12f)
             )
-            .background(backgroundColor.copy(alpha = 0.88f))
+            .clip(TileShape)
+            .background(backgroundColor)
             .clickable(
+                interactionSource = interactionSource,
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onClick,
-                onClickLabel = title
+                onClick = onClick
             ),
         contentAlignment = Alignment.Center
     ) {
@@ -87,23 +89,20 @@ fun IOSTile(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Icon at the top
             Icon(
                 imageVector = icon,
                 contentDescription = title,
                 tint = Color.Unspecified,
                 modifier = Modifier.size(32.dp)
             )
-
-            // Title at the bottom
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
                 color = textColor,
                 fontSize = 16.sp,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 2
             )
         }

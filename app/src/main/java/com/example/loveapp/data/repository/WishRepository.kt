@@ -14,6 +14,8 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class WishRepository @Inject constructor(
     private val apiService: LoveAppApiService,
@@ -131,7 +133,7 @@ class WishRepository @Inject constructor(
 
     suspend fun uploadImage(uri: Uri): Result<String> = try {
         val token = authRepository.getToken() ?: return Result.failure(Exception("No token"))
-        val bytes = compressImage(uri)
+        val bytes = withContext(Dispatchers.IO) { compressImage(uri) }
         val requestBody = bytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
         val part = MultipartBody.Part.createFormData("file", "wish.jpg", requestBody)
         val response = apiService.uploadImage("Bearer $token", part)

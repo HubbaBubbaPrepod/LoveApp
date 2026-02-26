@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Preview for MoodWidgetSmall (2×1) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="@drawable/widget_bg_mood"
+    android:padding="10dp"
+    android:gravity="center">
+
+    <!-- My badge -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:background="@drawable/widget_row_pink"
+        android:gravity="center"
+        android:padding="6dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="😊"
+            android:textSize="22sp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Я"
+            android:textSize="9sp"
+            android:textColor="#FFFF6B9D"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+    <Space
+        android:layout_width="6dp"
+        android:layout_height="wrap_content"/>
+
+    <!-- Partner badge -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:background="@drawable/widget_row_gray"
+        android:gravity="center"
+        android:padding="6dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="😄"
+            android:textSize="22sp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Партнёр"
+            android:textSize="9sp"
+            android:textColor="#FF636366"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+</LinearLayout>

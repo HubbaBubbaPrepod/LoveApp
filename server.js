@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const admin = require('firebase-admin');
 
 dotenv.config();
 
@@ -101,6 +102,90 @@ const sendResponse = (res, success, message, data = null, statusCode = 200) => {
   if (data) response.data = data;
   res.status(statusCode).json(response);
 };
+
+// ── Firebase Admin SDK init ─────────────────────────────────────────────────
+// Set the FIREBASE_SERVICE_ACCOUNT env var to the full JSON of your service-account key,
+// OR place service-account.json next to server.js.
+try {
+  let serviceAccount;
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } else {
+    const saPath = path.join(__dirname, 'service-account.json');
+    serviceAccount = JSON.parse(fs.readFileSync(saPath, 'utf8'));
+  }
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  console.log('Firebase Admin SDK initialised — push notifications enabled');
+} catch (e) {
+  console.warn('Firebase Admin SDK NOT initialised:', e.message);
+  console.warn('Push notifications disabled. Add service-account.json to enable them.');
+}
+
+// ── FCM helpers ──────────────────────────────────────────────────────────────
+function moodToEmoji(type) {
+  const map = { great:'😄', отлично:'😄', good:'🙂', хорошо:'🙂',
+                okay:'😐', нормально:'😐', bad:'😔', плохо:'😔',
+                terrible:'😢', ужасно:'😢' };
+  return map[(type||'').toLowerCase()] || '💬';
+}
+
+async function sendPushToPartner(userId, data) {
+  if (!admin.apps.length) return;
+  try {
+    // 1. Find partner id
+    const relRes = await pool.query(
+      'SELECT partner_user_id FROM relationship_info WHERE user_id = $1 LIMIT 1',
+      [userId]
+    );
+    const partnerId = relRes.rows[0]?.partner_user_id;
+    if (!partnerId) return;
+
+    // 2. Get sender display name
+    const userRes = await pool.query('SELECT display_name FROM users WHERE id = $1', [userId]);
+    const senderName = userRes.rows[0]?.display_name || 'Партнёр';
+
+    // 3. Get partner FCM token
+    const tokenRes = await pool.query('SELECT fcm_token FROM fcm_tokens WHERE user_id = $1', [partnerId]);
+    const fcmToken = tokenRes.rows[0]?.fcm_token;
+    if (!fcmToken) return;
+
+    // 4. Build message
+    let title, body;
+    if (data.type === 'partner_mood') {
+      const emoji = moodToEmoji(data.moodType);
+      title = `${senderName} поделился(ась) настроением ${emoji}`;
+      body  = 'Открой приложение, чтобы увидеть как дела';
+    } else if (data.type === 'partner_cycle') {
+      title = data.isNewCycle === true || data.isNewCycle === 'true'
+        ? `${senderName} начал(а) новый цикл 🌸`
+        : `${senderName} обновил(а) данные цикла 🌸`;
+      body  = 'Открой приложение, чтобы посмотреть';
+    } else {
+      const c = data.count || 1;
+      title = `${senderName} добавил(а) ${c === 1 ? '1 активность' : c + ' активностей'} 🏃`;
+      body  = 'Посмотри, чем занимался(ась) партнёр';
+    }
+
+    // 5. Send via FCM (data-only — no `notification` block so onMessageReceived fires
+    //    even in background, letting the device respect the user's toggle)
+    await admin.messaging().send({
+      token: fcmToken,
+      data: {
+        type:        data.type,
+        partnerName: senderName,
+        title,
+        body,
+        destination: data.destination || '',
+        ...(data.moodType ? { moodType: data.moodType, moodEmoji: moodToEmoji(data.moodType) } : {}),
+        ...(data.count != null ? { count: String(data.count) } : {}),
+        ...(data.isNewCycle != null ? { isNewCycle: String(data.isNewCycle) } : {}),
+      },
+      android: { priority: 'high' },
+    });
+  } catch (e) {
+    console.error('FCM send error:', e.message);
+  }
+}
 
 // ==================== HEALTH CHECK ====================
 app.get('/api/health', (req, res) => {
@@ -590,6 +675,24 @@ app.delete('/api/wishes/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== FCM TOKEN ====================
+app.post('/api/fcm-token', authenticateToken, async (req, res) => {
+  try {
+    const { fcm_token } = req.body;
+    if (!fcm_token) return sendResponse(res, false, 'fcm_token required', null, 400);
+    await pool.query(
+      `INSERT INTO fcm_tokens (user_id, fcm_token, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET fcm_token = $2, updated_at = NOW()`,
+      [req.userId, fcm_token]
+    );
+    sendResponse(res, true, 'FCM token registered', null);
+  } catch (err) {
+    console.error('Register FCM token error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
 // ==================== MOODS ====================
 
 // Create Mood
@@ -602,6 +705,8 @@ app.post('/api/moods', authenticateToken, async (req, res) => {
       'INSERT INTO mood_entries (user_id, mood_type, date, note) VALUES ($1, $2, $3, $4) RETURNING *',
       [req.userId, mood_type, date || today, note || '']
     );
+    // Fire-and-forget push to partner
+    sendPushToPartner(req.userId, { type: 'partner_mood', moodType: mood_type, destination: 'mood_tracker' }).catch(() => {});
     sendResponse(res, true, 'Mood created', result.rows[0], 201);
   } catch (err) {
     console.error('Create mood error:', err);
@@ -748,6 +853,8 @@ app.post('/api/activities', authenticateToken, async (req, res) => {
 
     const userRes = await pool.query('SELECT display_name FROM users WHERE id = $1', [req.userId]);
     const row = { ...result.rows[0], display_name: userRes.rows[0]?.display_name || '' };
+    // Fire-and-forget push to partner
+    sendPushToPartner(req.userId, { type: 'partner_activity', count: 1, destination: 'activity_feed' }).catch(() => {});
     sendResponse(res, true, 'Activity created', row, 201);
   } catch (err) {
     console.error('Create activity error:', err);
@@ -893,7 +1000,8 @@ app.post('/api/cycles', authenticateToken, async (req, res) => {
       [req.userId, cycle_start_date, cycle_duration || 28, period_duration || 5,
        symptomsJson, moodJson, notes || '']
     );
-
+    // Fire-and-forget push to partner
+    sendPushToPartner(req.userId, { type: 'partner_cycle', isNewCycle: true, destination: 'menstrual_calendar' }).catch(() => {});
     sendResponse(res, true, 'Cycle created', result.rows[0], 201);
   } catch (err) {
     console.error('Create cycle error:', err);
@@ -1054,7 +1162,10 @@ app.patch('/api/cycles/:id', authenticateToken, async (req, res) => {
     if (result.rows.length === 0) {
       return sendResponse(res, false, 'Cycle not found', null, 404);
     }
-
+    // Fire-and-forget push to partner (only when actual data was logged)
+    if (symptoms_day !== undefined || mood_day !== undefined) {
+      sendPushToPartner(req.userId, { type: 'partner_cycle', isNewCycle: false, destination: 'menstrual_calendar' }).catch(() => {});
+    }
     sendResponse(res, true, 'Cycle day updated', result.rows[0]);
   } catch (err) {
     console.error('Patch cycle error:', err);
@@ -1334,6 +1445,82 @@ app.put('/api/relationship', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== PARTNER PAIRING ====================
+
+// Generate a 6-char alphanumeric pairing code (valid 30 min)
+app.post('/api/partner/generate-code', authenticateToken, async (req, res) => {
+  try {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+
+    await pool.query(
+      `UPDATE users SET pairing_code = $1, pairing_code_expires_at = NOW() + INTERVAL '30 minutes' WHERE id = $2`,
+      [code, req.userId]
+    );
+
+    sendResponse(res, true, 'Code generated', { code, expires_minutes: 30 });
+  } catch (err) {
+    console.error('Generate code error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Link to a partner using their code — creates bidirectional relationship_info entries
+app.post('/api/partner/link', authenticateToken, async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return sendResponse(res, false, 'Code is required', null, 400);
+
+    // Find the user who generated this code
+    const codeResult = await pool.query(
+      `SELECT id, display_name, username FROM users
+       WHERE pairing_code = $1 AND pairing_code_expires_at > NOW()`,
+      [code.toUpperCase().trim()]
+    );
+
+    if (codeResult.rows.length === 0) {
+      return sendResponse(res, false, 'Code is invalid or expired', null, 404);
+    }
+
+    const partner = codeResult.rows[0];
+    if (partner.id === req.userId) {
+      return sendResponse(res, false, 'Cannot pair with yourself', null, 400);
+    }
+
+    // Create/update relationship_info for current user → partner
+    await pool.query(
+      `INSERT INTO relationship_info (user_id, partner_user_id)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id) DO UPDATE SET partner_user_id = $2`,
+      [req.userId, partner.id]
+    );
+
+    // Create/update relationship_info for partner → current user (bidirectional)
+    await pool.query(
+      `INSERT INTO relationship_info (user_id, partner_user_id)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id) DO UPDATE SET partner_user_id = $2`,
+      [partner.id, req.userId]
+    );
+
+    // Invalidate the used code
+    await pool.query(
+      `UPDATE users SET pairing_code = NULL, pairing_code_expires_at = NULL WHERE id = $1`,
+      [partner.id]
+    );
+
+    sendResponse(res, true, 'Partner linked successfully', {
+      partner_id: partner.id,
+      partner_name: partner.display_name,
+      partner_username: partner.username
+    });
+  } catch (err) {
+    console.error('Link partner error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
 // ==================== ERROR HANDLING ====================
 
 app.use((req, res) => {
@@ -1366,6 +1553,28 @@ pool.query(`ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS start_time VARCHA
 pool.query(`ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT ''`)
   .then(() => console.log('activity_logs.note column ready'))
   .catch(err => console.error('Migration error (note):', err));
+
+pool.query(`
+  CREATE TABLE IF NOT EXISTS fcm_tokens (
+    user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    fcm_token  TEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT NOW()
+  )
+`).then(() => console.log('fcm_tokens table ready'))
+  .catch(err => console.error('Migration error (fcm_tokens):', err));
+
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pairing_code VARCHAR(6)`)
+  .then(() => console.log('users.pairing_code column ready'))
+  .catch(err => console.error('Migration error (pairing_code):', err));
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pairing_code_expires_at TIMESTAMPTZ`)
+  .then(() => console.log('users.pairing_code_expires_at column ready'))
+  .catch(err => console.error('Migration error (pairing_code_expires_at):', err));
+pool.query(`ALTER TABLE relationship_info ADD COLUMN IF NOT EXISTS partner_user_id INTEGER REFERENCES users(id)`)
+  .then(() => console.log('relationship_info.partner_user_id column ready'))
+  .catch(err => console.error('Migration error (partner_user_id):', err));
+pool.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'relationship_info_user_id_key') THEN ALTER TABLE relationship_info ADD CONSTRAINT relationship_info_user_id_key UNIQUE (user_id); END IF; END $$`)
+  .then(() => console.log('relationship_info unique user_id constraint ready'))
+  .catch(err => console.error('Migration error (relationship_info unique):', err));
 
 app.listen(PORT, () => {
   console.log(`LoveApp API Server running on port ${PORT}`);

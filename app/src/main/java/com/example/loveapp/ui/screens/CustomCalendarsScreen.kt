@@ -59,7 +59,8 @@ private fun parseHexColor(hex: String): Color {
 
 private fun calendarAccentColor(colorHex: String): Color = parseHexColor(colorHex)
 
-private fun calendarSurfaceColor(colorHex: String): Color = parseHexColor(colorHex).copy(alpha = 0.15f)
+private val CUSTOM_CAL_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+private val CAL_DOW_LABELS = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
 
 //  Entry composable 
 
@@ -204,8 +205,8 @@ private fun CalendarListScreen(
     if (showDialog) {
         CreateCalendarDialog(
             onDismiss = { showDialog = false },
-            onCreate  = { name ->
-                viewModel.createCalendar(name)
+            onCreate  = { name, color ->
+                viewModel.createCalendar(name, color)
                 showDialog = false
             }
         )
@@ -224,7 +225,14 @@ private fun CalendarTile(
     onDelete: () -> Unit
 ) {
     val accent  = calendarAccentColor(colorHex)
-    val surface = calendarSurfaceColor(colorHex)
+    // Blend accent 20% with the theme surface color (white in light, dark in dark)
+    val base    = MaterialTheme.colorScheme.surface
+    val surface = Color(
+        red   = accent.red   * 0.20f + base.red   * 0.80f,
+        green = accent.green * 0.20f + base.green * 0.80f,
+        blue  = accent.blue  * 0.20f + base.blue  * 0.80f,
+        alpha = 1f
+    )
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Card(
@@ -234,53 +242,59 @@ private fun CalendarTile(
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
+            hoveredElevation = 0.dp
+        )
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Header: colour dot + name + delete
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Colour dot + name — top-left, no outer padding
             Row(
-                verticalAlignment = Alignment.Top,
-                modifier = Modifier.fillMaxWidth()
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 10.dp, top = 10.dp, end = 36.dp)
             ) {
                 Box(
                     Modifier
-                        .size(12.dp)
+                        .size(10.dp)
                         .clip(CircleShape)
                         .background(accent)
-                        .align(Alignment.CenterVertically)
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = name,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    modifier = Modifier.weight(1f)
+                    maxLines = 2
                 )
-                IconButton(
-                    onClick = { showDeleteConfirm = true },
-                    modifier = Modifier.size(20.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Удалить",
-                        tint = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
             }
 
-            // Mini-week
+            // Delete button — top-right corner, no outer padding
+            IconButton(
+                onClick = { showDeleteConfirm = true },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(32.dp)
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Удалить",
+                    tint = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            // Mini-week — pinned to the bottom, no outer padding
             MiniWeekView(
                 today       = today,
                 markedDates = markedDates,
-                accent      = accent
+                accent      = accent,
+                modifier    = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
             )
         }
     }
@@ -308,18 +322,18 @@ private fun CalendarTile(
 private fun MiniWeekView(
     today: LocalDate,
     markedDates: Set<String>,
-    accent: Color
+    accent: Color,
+    modifier: Modifier = Modifier
 ) {
-    val fmt   = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    // Start of current week (Monday)
-    val monday = today.with(DayOfWeek.MONDAY)
-    val week   = (0..6).map { monday.plusDays(it.toLong()) }
-    val dayLabels = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
+    val (monday, week) = remember(today) {
+        val mon = today.with(DayOfWeek.MONDAY)
+        mon to (0..6).map { mon.plusDays(it.toLong()) }
+    }
 
-    Column(Modifier.fillMaxWidth()) {
+    Column(modifier) {
         // Day labels
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            dayLabels.forEach { label ->
+            CAL_DOW_LABELS.forEach { label ->
                 Text(
                     text  = label,
                     fontSize = 8.sp,
@@ -333,7 +347,7 @@ private fun MiniWeekView(
         // Day circles
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             week.forEach { day ->
-                val dateStr  = day.format(fmt)
+                val dateStr  = day.format(CUSTOM_CAL_FMT)
                 val isMarked = dateStr in markedDates
                 val isToday  = day == today
 
@@ -382,28 +396,71 @@ private fun MiniWeekView(
 @Composable
 private fun CreateCalendarDialog(
     onDismiss: () -> Unit,
-    onCreate: (String) -> Unit
+    onCreate: (String, String) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
+    val palette = listOf(
+        "#FF4D6D", "#FF9F0A", "#30D158", "#4D7FFF",
+        "#BF5AF2", "#FF6B6B", "#00C9C9", "#A0522D"
+    )
+    var name        by remember { mutableStateOf("") }
+    var selectedHex by remember { mutableStateOf(palette[0]) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Новый календарь", fontWeight = FontWeight.Bold) },
         text  = {
-            OutlinedTextField(
-                value        = name,
-                onValueChange = { name = it },
-                label        = { Text("Название") },
-                modifier     = Modifier.fillMaxWidth(),
-                singleLine   = true,
-                shape        = RoundedCornerShape(12.dp)
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                OutlinedTextField(
+                    value         = name,
+                    onValueChange = { name = it },
+                    label         = { Text("Название") },
+                    modifier      = Modifier.fillMaxWidth(),
+                    singleLine    = true,
+                    shape         = RoundedCornerShape(12.dp)
+                )
+                Text(
+                    text  = "Цвет",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.outline
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    palette.forEach { hex ->
+                        val color   = parseHexColor(hex)
+                        val selected = hex == selectedHex
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .then(
+                                    if (selected) Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                                    else Modifier.border(1.dp, color.copy(alpha = 0.3f), CircleShape)
+                                )
+                                .clickable { selectedHex = hex },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (selected) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint     = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         },
         confirmButton = {
             Button(
-                onClick  = { if (name.isNotBlank()) onCreate(name.trim()) },
+                onClick  = { if (name.isNotBlank()) onCreate(name.trim(), selectedHex) },
                 enabled  = name.isNotBlank(),
-                shape    = RoundedCornerShape(10.dp)
+                shape    = RoundedCornerShape(10.dp),
+                colors   = ButtonDefaults.buttonColors(containerColor = parseHexColor(selectedHex))
             ) { Text("Создать") }
         },
         dismissButton = {
@@ -543,13 +600,12 @@ private fun MonthNavigationRow(
 
 @Composable
 private fun DayHeaders() {
-    val headers = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        headers.forEach { label ->
+        CAL_DOW_LABELS.forEach { label ->
             Text(
                 text      = label,
                 modifier  = Modifier.weight(1f),
@@ -570,13 +626,12 @@ private fun MonthDayGrid(
     accent: Color,
     onDayClick: (LocalDate) -> Unit
 ) {
-    val fmt       = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    val firstDay  = month.atDay(1)
-    // Monday-based offset (Mon=0  Sun=6)
-    val startOffset = (firstDay.dayOfWeek.value - 1)
-    val daysInMonth = month.lengthOfMonth()
-    val totalCells  = startOffset + daysInMonth
-    val gridRows    = (totalCells + 6) / 7
+    val (startOffset, daysInMonth, gridRows) = remember(month) {
+        val firstDay  = month.atDay(1)
+        val so = (firstDay.dayOfWeek.value - 1)
+        val dim = month.lengthOfMonth()
+        Triple(so, dim, (so + dim + 6) / 7)
+    }
 
     Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
         for (row in 0 until gridRows) {
@@ -589,7 +644,7 @@ private fun MonthDayGrid(
                         Box(Modifier.weight(1f).aspectRatio(1f))
                     } else {
                         val day      = month.atDay(dayNumber)
-                        val dateStr  = day.format(fmt)
+                        val dateStr  = day.format(CUSTOM_CAL_FMT)
                         val isMarked = dateStr in markedDates
                         val isToday  = day == today
 

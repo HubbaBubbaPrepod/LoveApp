@@ -3,9 +3,9 @@ package com.example.loveapp.viewmodel
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.loveapp.utils.settingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,8 +14,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-private val Context.settingsDataStore by preferencesDataStore("settings")
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -42,18 +40,22 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun loadSettings() {
+        // Each collector must live in its own coroutine — Flow.collect() suspends indefinitely
+        // and would block the subsequent lines if they shared one coroutine.
         viewModelScope.launch {
-            context.settingsDataStore.data.map { preferences ->
-                preferences[DARK_MODE_KEY] ?: false
-            }.collect { _isDarkMode.value = it }
-
-            context.settingsDataStore.data.map { preferences ->
-                preferences[NOTIFICATIONS_ENABLED_KEY] ?: true
-            }.collect { _notificationsEnabled.value = it }
-
-            context.settingsDataStore.data.map { preferences ->
-                preferences[REMINDERS_ENABLED_KEY] ?: true
-            }.collect { _remindersEnabled.value = it }
+            context.settingsDataStore.data
+                .map { it[DARK_MODE_KEY] ?: false }
+                .collect { _isDarkMode.value = it }
+        }
+        viewModelScope.launch {
+            context.settingsDataStore.data
+                .map { it[NOTIFICATIONS_ENABLED_KEY] ?: true }
+                .collect { _notificationsEnabled.value = it }
+        }
+        viewModelScope.launch {
+            context.settingsDataStore.data
+                .map { it[REMINDERS_ENABLED_KEY] ?: true }
+                .collect { _remindersEnabled.value = it }
         }
     }
 

@@ -18,5 +18,5 @@ sealed class Screen(val route: String) {
     object CustomCalendars : Screen("custom_calendars")
     object RelationshipDashboard : Screen("relationship_dashboard")
     object Settings : Screen("settings")
-    object Profile : Screen("profile")
+    object Pairing : Screen("pairing")
 }

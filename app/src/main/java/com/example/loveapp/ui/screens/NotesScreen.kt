@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
@@ -190,42 +192,49 @@ fun NoteIOSTile(
     note: NoteResponse,
     onClick: () -> Unit
 ) {
-    var isPressed by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing),
         label = "note-tile-scale"
     )
 
-    val shadowElevation by animateFloatAsState(
-        targetValue = if (isPressed) 4f else 8f,
-        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
-        label = "note-tile-shadow"
-    )
+    // Compute isDark once when the theme background changes – not every recomposition
+    val background = MaterialTheme.colorScheme.background
+    val isDark = remember(background) { background.luminance() < 0.5f }
+    val tileBackground = if (isDark) Color(0xFF2C2C2E) else Color(0xFFFFFDE7)
+    val lineColor  = remember(isDark) { if (isDark) Color(0xFF48484A).copy(alpha = 0.8f) else Color(0xFFB0BEC5).copy(alpha = 0.4f) }
+    val titleColor = remember(isDark) { if (isDark) Color(0xFFF2F2F7) else Color(0xFF37474F) }
+    val contentColor = remember(isDark) { if (isDark) Color(0xFF8E8E93) else Color(0xFF546E7A) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(155.dp)
-            .clip(RoundedCornerShape(20.dp))
+            // Scale applied via graphicsLayer (no modifier chain rebuild per frame)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                shadowElevation = 18f
+                shape = RoundedCornerShape(20.dp)
+                clip = true
+            }
             .shadow(
-                elevation = shadowElevation.dp,
+                elevation = 5.dp,
                 shape = RoundedCornerShape(20.dp),
-                ambientColor = Color.Black.copy(alpha = 0.1f),
-                spotColor = Color.Black.copy(alpha = 0.15f)
+                ambientColor = Color.Black.copy(alpha = 0.08f),
+                spotColor   = Color.Black.copy(alpha = 0.10f)
             )
-            .background(if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFF2C2C2E) else Color(0xFFFFFDE7))
+            .clip(RoundedCornerShape(20.dp))
+            .background(tileBackground)
             .clickable(
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 onClick = onClick
             )
     ) {
-        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-        val lineColor = if (isDark) Color(0xFF48484A).copy(alpha = 0.8f) else Color(0xFFB0BEC5).copy(alpha = 0.4f)
-        val titleColor = if (isDark) Color(0xFFF2F2F7) else Color(0xFF37474F)
-        val contentColor = if (isDark) Color(0xFF8E8E93) else Color(0xFF546E7A)
 
         // Ruled lines background
         Canvas(modifier = Modifier.fillMaxSize()) {

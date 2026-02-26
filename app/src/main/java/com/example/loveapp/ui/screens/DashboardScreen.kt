@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -27,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -35,7 +37,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.ui.components.IOSTile
 import com.example.loveapp.ui.theme.iOSActivityBlue
 import com.example.loveapp.ui.theme.iOSActivityGreen
@@ -45,7 +46,6 @@ import com.example.loveapp.ui.theme.iOSPrimaryPink
 import com.example.loveapp.ui.theme.iOSSecondaryPeach
 import com.example.loveapp.ui.theme.iOSTertiaryCoral
 import com.example.loveapp.R
-import com.example.loveapp.viewmodel.AuthViewModel
 
 data class MenutileData(
     val title: String,
@@ -64,19 +64,35 @@ fun DashboardScreen(
     onNavigateToMenstrual: () -> Unit,
     onNavigateToCalendars: () -> Unit,
     onNavigateToRelationship: () -> Unit,
-    onNavigateToSettings: () -> Unit,
-    viewModel: AuthViewModel = hiltViewModel()
+    onNavigateToSettings: () -> Unit
 ) {
-    val tiles = listOf(
-        MenutileData(stringResource(R.string.notes), Icons.Default.Description, iOSPrimaryPink, onNavigateToNotes),
-        MenutileData(stringResource(R.string.wishes), Icons.Default.CardGiftcard, iOSSecondaryPeach, onNavigateToWishes),
-        MenutileData(stringResource(R.string.mood), Icons.Default.SentimentSatisfied, iOSActivityBlue, onNavigateToMood),
-        MenutileData(stringResource(R.string.activities), Icons.Default.SportsScore, iOSActivityOrange, onNavigateToActivity),
-        MenutileData(stringResource(R.string.cycle), Icons.Default.AutoGraph, iOSActivityPurple, onNavigateToMenstrual),
-        MenutileData(stringResource(R.string.calendars), Icons.Default.CalendarMonth, iOSTertiaryCoral, onNavigateToCalendars),
-        MenutileData(stringResource(R.string.relationship), Icons.Default.People, iOSActivityGreen, onNavigateToRelationship),
-        MenutileData(stringResource(R.string.settings), Icons.Default.Settings, Color(0xFF607D8B), onNavigateToSettings),
-    )
+    // Pre-compute string resources (stable across recompositions)
+    val lNotes     = stringResource(R.string.notes)
+    val lWishes    = stringResource(R.string.wishes)
+    val lMood      = stringResource(R.string.mood)
+    val lActivities = stringResource(R.string.activities)
+    val lCycle     = stringResource(R.string.cycle)
+    val lCalendars = stringResource(R.string.calendars)
+    val lRelation  = stringResource(R.string.relationship)
+    val lSettings  = stringResource(R.string.settings)
+
+    // Tiles are static — remember them so IOSTile can be skipped on recomposition
+    val tiles = remember(
+        onNavigateToNotes, onNavigateToWishes, onNavigateToMood,
+        onNavigateToActivity, onNavigateToMenstrual, onNavigateToCalendars,
+        onNavigateToRelationship, onNavigateToSettings
+    ) {
+        listOf(
+            MenutileData(lNotes,      Icons.Default.Description,     iOSPrimaryPink,      onNavigateToNotes),
+            MenutileData(lWishes,     Icons.Default.CardGiftcard,     iOSSecondaryPeach,   onNavigateToWishes),
+            MenutileData(lMood,       Icons.Default.SentimentSatisfied, iOSActivityBlue,   onNavigateToMood),
+            MenutileData(lActivities, Icons.Default.SportsScore,      iOSActivityOrange,   onNavigateToActivity),
+            MenutileData(lCycle,      Icons.Default.AutoGraph,        iOSActivityPurple,   onNavigateToMenstrual),
+            MenutileData(lCalendars,  Icons.Default.CalendarMonth,    iOSTertiaryCoral,    onNavigateToCalendars),
+            MenutileData(lRelation,   Icons.Default.People,           iOSActivityGreen,    onNavigateToRelationship),
+            MenutileData(lSettings,   Icons.Default.Settings,         Color(0xFF607D8B),   onNavigateToSettings),
+        )
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -118,7 +134,7 @@ fun DashboardScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
             ) {
-                items(tiles.size) { index ->
+                items(tiles.size, key = { it }) { index ->
                     val tile = tiles[index]
                     IOSTile(
                         title = tile.title,

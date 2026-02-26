@@ -2,6 +2,7 @@ package com.example.loveapp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.loveapp.data.api.models.NoteRequest
 import com.example.loveapp.data.api.models.NoteResponse
 import com.example.loveapp.data.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,8 +35,6 @@ class NoteViewModel @Inject constructor(
     private val _currentUserId = MutableStateFlow<Int?>(null)
     val currentUserId: StateFlow<Int?> = _currentUserId.asStateFlow()
 
-    private val _currentPage = MutableStateFlow(1)
-
     init {
         loadNotes()
         viewModelScope.launch {
@@ -48,7 +47,7 @@ class NoteViewModel @Inject constructor(
             _isLoading.value = true
             _errorMessage.value = null
             
-            val result = noteRepository.getNotes(_currentPage.value)
+            val result = noteRepository.getNotes(1)
             result.onSuccess { noteList ->
                 _notes.value = noteList
                 _isLoading.value = false
@@ -83,7 +82,7 @@ class NoteViewModel @Inject constructor(
             val result = noteRepository.createNote(
                 title = title,
                 content = content,
-                userId = 1,
+                userId = _currentUserId.value ?: 0,
                 isPrivate = isPrivate,
                 tags = tags
             )
@@ -104,7 +103,7 @@ class NoteViewModel @Inject constructor(
             _isLoading.value = true
             _errorMessage.value = null
             
-            val noteRequest = com.example.loveapp.data.api.models.NoteRequest(
+            val noteRequest = NoteRequest(
                 title = title,
                 content = content,
                 isPrivate = isPrivate

@@ -118,10 +118,11 @@ class WishViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
+            val existingPriority = _wishes.value.find { it.id == id }?.priority ?: 0
             val request = WishRequest(
                 title = title,
                 description = description,
-                priority = 1,
+                priority = existingPriority,
                 isPrivate = isPrivate,
                 imageUrls = imageUrls,
                 emoji = emoji

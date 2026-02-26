@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Preview for ActivityWidgetLarge (4×3) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_bg_activity"
+    android:padding="16dp">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🏃  Активности за день"
+        android:textSize="13sp"
+        android:textColor="#FF1E90FF"
+        android:textStyle="bold"/>
+
+    <Space android:layout_width="match_parent" android:layout_height="12dp"/>
+
+    <!-- My full card -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:background="@drawable/widget_row_blue"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="3"
+                android:textSize="34sp"
+                android:textColor="#FF1E90FF"
+                android:textStyle="bold"/>
+
+            <Space android:layout_width="10dp" android:layout_height="wrap_content"/>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Я"
+                    android:textSize="11sp"
+                    android:textColor="#FF1E90FF"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="активности"
+                    android:textSize="11sp"
+                    android:textColor="#FF8E8E93"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <Space android:layout_width="match_parent" android:layout_height="6dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="💼  🏃  📚"
+            android:textSize="18sp"/>
+
+        <Space android:layout_width="match_parent" android:layout_height="2dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Работа · Спорт · Чтение"
+            android:textSize="10sp"
+            android:textColor="#FF636366"/>
+    </LinearLayout>
+
+    <Space android:layout_width="match_parent" android:layout_height="10dp"/>
+
+    <!-- Partner full card -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:background="@drawable/widget_row_gray"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="34sp"
+                android:textColor="#FF48484A"
+                android:textStyle="bold"/>
+
+            <Space android:layout_width="10dp" android:layout_height="wrap_content"/>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Партнёр"
+                    android:textSize="11sp"
+                    android:textColor="#FF636366"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ничего"
+                    android:textSize="11sp"
+                    android:textColor="#FF8E8E93"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <Space android:layout_width="match_parent" android:layout_height="4dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Нет активностей"
+            android:textSize="11sp"
+            android:textColor="#FFAEAEB2"/>
+    </LinearLayout>
+
+</LinearLayout>

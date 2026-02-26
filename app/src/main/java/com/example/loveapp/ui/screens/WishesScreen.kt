@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,9 +62,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -111,6 +110,18 @@ private val WISH_ICON_MAP: Map<String, ImageVector> = mapOf(
     "spa"       to Icons.Default.Spa,
     "movie"     to Icons.Default.Theaters,
     "cafe"      to Icons.Default.LocalCafe,
+)
+
+private val WISH_LIGHT_BGS = listOf(
+    Color(0xFFFFF0F3), Color(0xFFF0F4FF), Color(0xFFF0FFF4),
+    Color(0xFFFFF9F0), Color(0xFFF5F0FF), Color(0xFFFBFFF0)
+)
+private val WISH_DARK_BGS = listOf(
+    Color(0xFF3A2C2E), Color(0xFF1E2A38), Color(0xFF1C3228),
+    Color(0xFF3A2D1E), Color(0xFF2A1E3A), Color(0xFF2A3214)
+)
+private val WISH_IMAGE_GRADIENT = Brush.verticalGradient(
+    listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f))
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -239,7 +250,8 @@ fun WishesScreen(
 
 @Composable
 fun WishIOSTile(wish: WishResponse, onClick: () -> Unit) {
-    var isPressed by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
 
     val shadowElevation by animateFloatAsState(
         targetValue = if (isPressed) 2f else 6f,
@@ -247,24 +259,17 @@ fun WishIOSTile(wish: WishResponse, onClick: () -> Unit) {
         label = "wish-tile-shadow"
     )
 
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val background = MaterialTheme.colorScheme.background
+    val isDark = remember(background) { background.luminance() < 0.5f }
 
-    // Cycling pastel palette
-    val lightBgs = listOf(
-        Color(0xFFFFF0F3), Color(0xFFF0F4FF), Color(0xFFF0FFF4),
-        Color(0xFFFFF9F0), Color(0xFFF5F0FF), Color(0xFFFBFFF0)
-    )
-    val darkBgs = listOf(
-        Color(0xFF3A2C2E), Color(0xFF1E2A38), Color(0xFF1C3228),
-        Color(0xFF3A2D1E), Color(0xFF2A1E3A), Color(0xFF2A3214)
-    )
-    val colorIdx = wish.id % lightBgs.size
-    val tileBg = if (isDark) darkBgs[colorIdx] else lightBgs[colorIdx]
-    val titleColor = if (isDark) Color(0xFFF2F2F7) else Color(0xFF1C1C1E)
-    val subColor = if (isDark) Color(0xFF8E8E93) else Color(0xFF636366)
+    // Cycling pastel palette (lists are top-level constants)
+    val colorIdx = wish.id % WISH_LIGHT_BGS.size
+    val tileBg = remember(isDark, colorIdx) { if (isDark) WISH_DARK_BGS[colorIdx] else WISH_LIGHT_BGS[colorIdx] }
+    val titleColor = remember(isDark) { if (isDark) Color(0xFFF2F2F7) else Color(0xFF1C1C1E) }
+    val subColor = remember(isDark) { if (isDark) Color(0xFF8E8E93) else Color(0xFF636366) }
 
     val hasImage = wish.imageUrls.orEmpty().isNotBlank()
-    val thumbUrl = wish.imageUrls.orEmpty().split(",").firstOrNull { it.isNotBlank() }
+    val thumbUrl = remember(wish.imageUrls) { wish.imageUrls.orEmpty().split(",").firstOrNull { it.isNotBlank() } }
     val displayEmoji = wish.emoji.orEmpty().ifBlank { null }
 
     Box(
@@ -281,9 +286,8 @@ fun WishIOSTile(wish: WishResponse, onClick: () -> Unit) {
             .background(tileBg)
             .clickable(
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = interactionSource
             ) {
-                isPressed = true
                 onClick()
             }
     ) {
@@ -298,11 +302,7 @@ fun WishIOSTile(wish: WishResponse, onClick: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f))
-                        )
-                    )
+                    .background(WISH_IMAGE_GRADIENT)
             )
         }
 

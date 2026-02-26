@@ -36,6 +36,9 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 
+private val CALENDAR_DOW_FULL  = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+private val CALENDAR_DOW_SHORT = listOf("S", "M", "T", "W", "T", "F", "S")
+
 /**
  * iOS-style calendar widget
  * Suitable for menstrual cycle tracking and memorable dates
@@ -111,7 +114,7 @@ fun IOSCalendar(
                 .padding(bottom = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat").forEach { day ->
+            CALENDAR_DOW_FULL.forEach { day ->
                 Text(
                     text = day,
                     style = MaterialTheme.typography.labelSmall,
@@ -122,18 +125,16 @@ fun IOSCalendar(
             }
         }
 
-        // Calendar grid
-        val firstDay = currentMonth.atDay(1)
-        val lastDay = currentMonth.atEndOfMonth()
-        val daysInMonth = ChronoUnit.DAYS.between(firstDay, lastDay).toInt() + 1
-        val firstDayOfWeek = firstDay.dayOfWeek.value % 7 // 0 = Sunday
-        
-        val totalCells = firstDayOfWeek + daysInMonth
-        val days = (1..totalCells).map { cell ->
-            if (cell <= firstDayOfWeek || cell > firstDayOfWeek + daysInMonth) {
-                null
-            } else {
-                firstDay.plusDays((cell - firstDayOfWeek - 1).toLong())
+        // Calendar grid — precomputed per month so no recomputation on unrelated recompositions
+        val days = remember(currentMonth) {
+            val firstDay = currentMonth.atDay(1)
+            val lastDay = currentMonth.atEndOfMonth()
+            val daysInMonth = ChronoUnit.DAYS.between(firstDay, lastDay).toInt() + 1
+            val firstDayOfWeek = firstDay.dayOfWeek.value % 7
+            val totalCells = firstDayOfWeek + daysInMonth
+            (1..totalCells).map { cell ->
+                if (cell <= firstDayOfWeek || cell > firstDayOfWeek + daysInMonth) null
+                else firstDay.plusDays((cell - firstDayOfWeek - 1).toLong())
             }
         }
 
@@ -143,7 +144,7 @@ fun IOSCalendar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            items(days.size) { index ->
+            items(days.size, key = { it }) { index ->
                 val day = days[index]
                 if (day == null) {
                     Box(modifier = Modifier.size(40.dp))
@@ -229,7 +230,7 @@ fun CompactIOSCalendar(
                 .padding(bottom = 4.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            listOf("S", "M", "T", "W", "T", "F", "S").forEach { day ->
+            CALENDAR_DOW_SHORT.forEach { day ->
                 Text(
                     text = day,
                     style = MaterialTheme.typography.labelSmall,
@@ -241,17 +242,15 @@ fun CompactIOSCalendar(
             }
         }
 
-        // Mini calendar grid
-        val firstDay = month.atDay(1)
-        val lastDay = month.atEndOfMonth()
-        val daysInMonth = ChronoUnit.DAYS.between(firstDay, lastDay).toInt() + 1
-        val firstDayOfWeek = firstDay.dayOfWeek.value % 7
-
-        val days = (1..(firstDayOfWeek + daysInMonth)).map { cell ->
-            if (cell <= firstDayOfWeek || cell > firstDayOfWeek + daysInMonth) {
-                null
-            } else {
-                firstDay.plusDays((cell - firstDayOfWeek - 1).toLong())
+        // Mini calendar grid — precomputed per month
+        val days = remember(month) {
+            val firstDay = month.atDay(1)
+            val lastDay = month.atEndOfMonth()
+            val daysInMonth = ChronoUnit.DAYS.between(firstDay, lastDay).toInt() + 1
+            val firstDayOfWeek = firstDay.dayOfWeek.value % 7
+            (1..(firstDayOfWeek + daysInMonth)).map { cell ->
+                if (cell <= firstDayOfWeek || cell > firstDayOfWeek + daysInMonth) null
+                else firstDay.plusDays((cell - firstDayOfWeek - 1).toLong())
             }
         }
 
@@ -261,7 +260,7 @@ fun CompactIOSCalendar(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            items(days.size) { index ->
+            items(days.size, key = { it }) { index ->
                 val day = days[index]
                 if (day == null) {
                     Box(modifier = Modifier.size(28.dp))

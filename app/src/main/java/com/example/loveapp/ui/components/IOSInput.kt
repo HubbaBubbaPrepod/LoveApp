@@ -50,12 +50,6 @@ fun IOSToggle(
         label = "toggle-offset"
     )
 
-    val backgroundColor by animateFloatAsState(
-        targetValue = if (isChecked) 1f else 0f,
-        animationSpec = tween(durationMillis = 300),
-        label = "toggle-bg"
-    )
-
     Box(
         modifier = modifier
             .width(60.dp)
@@ -274,8 +268,6 @@ fun IOSSearchBar(
     onSearch: () -> Unit = {},
     placeholder: String = "Search"
 ) {
-    var isFocused by remember { mutableStateOf(false) }
-
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -294,8 +286,7 @@ fun IOSSearchBar(
                 value = value,
                 onValueChange = onValueChange,
                 modifier = Modifier
-                    .weight(1f)
-                    .onFocusChanged { isFocused = it.isFocused },
+                    .weight(1f),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
                     color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 16.sp

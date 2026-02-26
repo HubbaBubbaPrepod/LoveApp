@@ -12,14 +12,14 @@ val iOSPrimaryPinkVeryLight = Color(0xFFFDE4F0) // Very light pink
 // Secondary colors - Peachy/coral tones  
 val iOSSecondaryPeach = Color(0xFFFFB3A2)   // Soft peach
 val iOSSecondaryPeachLight = Color(0xFFFFD9CE) // Very light peach
-val iOSSecondaryRed = Color(0xFFFF6B9D)     // Romantic red
+val iOSSecondaryRed = iOSPrimaryPink         // Same romantic pink, deduplicated
 val iOSSecondaryRedLight = Color(0xFFFDD5E5) // Light red
 
 // Tertiary colors - Purple/rose tones
 val iOSTertiaryPurple = Color(0xFFB8A3D9)   // Soft purple  
 val iOSTertiaryPurpleLight = Color(0xFFE8D9F2) // Light purple
 val iOSTertiaryCoral = Color(0xFFFF9B85)    // Coral
-val iOSTerminaryCoralLight = Color(0xFFFFD9CE) // Light coral
+val iOSTerminaryCoralLight = iOSSecondaryPeachLight // Light coral (= peach light, deduplicated)
 
 // Surface & Background - iOS Glass effect
 val iOSGlassWhite = Color(0xFFFAFBFD)       // Glass white (like iOS widgets)

@@ -5,22 +5,24 @@ import androidx.lifecycle.viewModelScope
 import com.example.loveapp.data.api.models.ActivityResponse
 import com.example.loveapp.data.repository.ActivityRepository
 import com.example.loveapp.utils.DateUtils
+import com.example.loveapp.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
 class ActivityViewModel @Inject constructor(
-    private val activityRepository: ActivityRepository
+    private val activityRepository: ActivityRepository,
+    private val widgetUpdater: WidgetUpdater
 ) : ViewModel() {
 
+    // Shared class-level formatter — not created on every loadCalendarMonth() call
+    private val calFmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+    private val initCal = java.util.Calendar.getInstance()
     // Today
     private val _myTodayActivities = MutableStateFlow<List<ActivityResponse>>(emptyList())
     val myTodayActivities: StateFlow<List<ActivityResponse>> = _myTodayActivities.asStateFlow()
@@ -42,15 +44,11 @@ class ActivityViewModel @Inject constructor(
     private val _partnerMonthActivities = MutableStateFlow<Map<String, List<ActivityResponse>>>(emptyMap())
     val partnerMonthActivities: StateFlow<Map<String, List<ActivityResponse>>> = _partnerMonthActivities.asStateFlow()
 
-    private val _calendarYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR))
+    private val _calendarYear = MutableStateFlow(initCal.get(java.util.Calendar.YEAR))
     val calendarYear: StateFlow<Int> = _calendarYear.asStateFlow()
 
-    private val _calendarMonth = MutableStateFlow(Calendar.getInstance().get(Calendar.MONTH))
+    private val _calendarMonth = MutableStateFlow(initCal.get(java.util.Calendar.MONTH))
     val calendarMonth: StateFlow<Int> = _calendarMonth.asStateFlow()
-
-    // Legacy compat
-    private val _activities = MutableStateFlow<List<ActivityResponse>>(emptyList())
-    val activities: StateFlow<List<ActivityResponse>> = _activities.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -69,18 +67,34 @@ class ActivityViewModel @Inject constructor(
     fun loadToday() {
         viewModelScope.launch {
             _isLoading.value = true
-            val today = DateUtils.getTodayDateString()
+            val today      = DateUtils.getTodayDateString()
             val myDef      = async { activityRepository.getActivities(date = today) }
             val partnerDef = async { activityRepository.getPartnerActivities(date = today) }
-            myDef.await().onSuccess { list ->
+            val myResult   = myDef.await()
+            val ptResult   = partnerDef.await()
+            myResult.onSuccess { list ->
                 _myTodayActivities.value = list
-                _activities.value = list
                 if (_myName.value == null) _myName.value = list.firstOrNull()?.displayName
             }
-            partnerDef.await().onSuccess { list ->
+            ptResult.onSuccess { list ->
                 _partnerTodayActivities.value = list
                 if (_partnerName.value == null) _partnerName.value = list.firstOrNull()?.displayName
             }.onFailure { /* no partner is ok */ }
+            // Push both users' activities to the home-screen widget after both loads finish
+            val my      = myResult.getOrElse { emptyList() }
+            val pt      = ptResult.getOrElse { emptyList() }
+            val myTypes = my.map { it.activityType }.distinct().take(4).joinToString(",")
+            val ptTypes = pt.map { it.activityType }.distinct().take(4).joinToString(",")
+            viewModelScope.launch {
+                widgetUpdater.pushActivityUpdate(
+                    myCount = my.size,
+                    myTypes = myTypes,
+                    myName  = _myName.value,
+                    ptCount = pt.size,
+                    ptTypes = ptTypes,
+                    ptName  = _partnerName.value
+                )
+            }
             _isLoading.value = false
         }
     }
@@ -116,12 +130,11 @@ class ActivityViewModel @Inject constructor(
         _calendarMonth.value = month
         viewModelScope.launch {
             _isCalendarLoading.value = true
-            val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            val cal = Calendar.getInstance()
+            val cal = java.util.Calendar.getInstance()
             cal.set(year, month, 1)
-            val firstDay = fmt.format(cal.time)
-            cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
-            val lastDay = fmt.format(cal.time)
+            val firstDay = calFmt.format(cal.time)
+            cal.set(java.util.Calendar.DAY_OF_MONTH, cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH))
+            val lastDay = calFmt.format(cal.time)
             val myDef      = async { activityRepository.getActivities(startDate = firstDay, endDate = lastDay) }
             val partnerDef = async { activityRepository.getPartnerActivities(startDate = firstDay, endDate = lastDay) }
             myDef.await().onSuccess { list ->
@@ -135,9 +148,6 @@ class ActivityViewModel @Inject constructor(
             _isCalendarLoading.value = false
         }
     }
-
-    // Legacy compat
-    fun loadActivities() = loadToday()
 
     fun clearMessages() {
         _errorMessage.value = null

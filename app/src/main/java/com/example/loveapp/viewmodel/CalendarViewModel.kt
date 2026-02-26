@@ -62,14 +62,18 @@ class CalendarViewModel @Inject constructor(
             val myDeferred      = async { calendarRepository.getCalendars() }
             val partnerDeferred = async { calendarRepository.getPartnerCalendars() }
 
-            val mine    = myDeferred.await().getOrElse { emptyList() }
-            val partner = partnerDeferred.await().getOrElse { emptyList() }
+            // Capture results once — avoid redundant await() calls on same Deferred
+            val myResult      = myDeferred.await()
+            val partnerResult = partnerDeferred.await()
+
+            val mine    = myResult.getOrElse { emptyList() }
+            val partner = partnerResult.getOrElse { emptyList() }
 
             val all = (mine + partner).distinctBy { it.id }
             _calendars.value = all
 
-            if (myDeferred.await().isFailure) {
-                _errorMessage.value = myDeferred.await().exceptionOrNull()?.message
+            if (myResult.isFailure) {
+                _errorMessage.value = myResult.exceptionOrNull()?.message
             }
 
             // Prefetch events for all calendars in parallel (for mini-week preview)
@@ -132,11 +136,9 @@ class CalendarViewModel @Inject constructor(
     fun nextMonth() { _calendarMonth.value = _calendarMonth.value.plusMonths(1) }
 
     //  CRUD 
-    fun createCalendar(name: String) {
+    fun createCalendar(name: String, color: String) {
         viewModelScope.launch {
             _isLoading.value = true
-            val colors = listOf("#FF4D6D", "#4D7FFF", "#30D158", "#FF9F0A", "#BF5AF2", "#FF6B6B")
-            val color  = colors.random()
             calendarRepository.createCalendar(name, "custom", color).onSuccess { cal ->
                 _calendars.value = listOf(cal) + _calendars.value
                 _successMessage.value = "Создан $name"

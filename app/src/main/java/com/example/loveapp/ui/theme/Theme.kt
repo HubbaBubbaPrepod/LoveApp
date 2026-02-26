@@ -6,7 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -87,11 +87,20 @@ fun LoveAppTheme(
 
     val view = LocalView.current
     if (!view.isInEditMode) {
-        SideEffect {
+        LaunchedEffect(darkTheme) {
             val window = (view.context as Activity).window
-            // Edge-to-edge: status bar is transparent, background drawn by topBar composables
-            // Light theme → dark icons (on white/pink bg), dark theme → light icons
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            // Force edge-to-edge on ALL devices including OEM ROMs (Samsung, MIUI, etc.)
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            // Transparent bars so composable backgrounds bleed through properly
+            @Suppress("DEPRECATION")
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            // Icon tint: light theme → dark icons on pink bg, dark theme → light icons
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !darkTheme
+                isAppearanceLightNavigationBars = !darkTheme
+            }
         }
     }
 

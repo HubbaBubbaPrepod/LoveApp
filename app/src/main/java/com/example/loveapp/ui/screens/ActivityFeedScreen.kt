@@ -61,6 +61,10 @@ internal val ACTIVITY_TYPES = listOf(
 
 internal fun activityDef(key: String) = ACTIVITY_TYPES.find { it.key == key } ?: ACTIVITY_TYPES.last()
 
+private val ACT_MONTH_NAMES = listOf("Январь","Февраль","Март","Апрель","Май","Июнь",
+                              "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь")
+private val ACT_DOW_LABELS  = listOf("Пн","Вт","Ср","Чт","Пт","Сб","Вс")
+
 // endregion
 
 // region Screen
@@ -152,7 +156,10 @@ fun ActivityFeedScreen(
             if (myActivities.isNotEmpty()) {
                 Text("Сегодня", style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     items(myActivities) { a ->
                         ActivityRow(activity = a, onDelete = { viewModel.deleteActivity(a.id) })
                     }
@@ -326,7 +333,8 @@ private fun ActivityRow(activity: ActivityResponse, onDelete: (() -> Unit)?) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(def.label, style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium)
-                val meta = buildString {
+            val meta = remember(activity.startTime, activity.durationMinutes, activity.note) {
+                buildString {
                     if (activity.startTime.isNotBlank()) append(activity.startTime)
                     if (activity.durationMinutes > 0) {
                         if (isNotEmpty()) append("  ")
@@ -337,6 +345,7 @@ private fun ActivityRow(activity: ActivityResponse, onDelete: (() -> Unit)?) {
                         append(activity.note.take(30))
                     }
                 }
+            }
                 if (meta.isNotBlank()) {
                     Text(meta, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
@@ -509,9 +518,8 @@ private fun ActivityCalendarSheet(
 
     var selectedDay by remember { mutableStateOf<String?>(null) }
 
-    val monthNames = listOf("Январь","Февраль","Март","Апрель","Май","Июнь",
-                            "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь")
-    val dayLabels  = listOf("Пн","Вт","Ср","Чт","Пт","Сб","Вс")
+    val monthNames = ACT_MONTH_NAMES
+    val dayLabels  = ACT_DOW_LABELS
 
     ModalBottomSheet(onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
@@ -548,24 +556,29 @@ private fun ActivityCalendarSheet(
                     }
                 }
 
-                val cal = Calendar.getInstance()
-                cal.set(year, month, 1)
-                val firstDow = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
-                val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
-                val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-
-                val cells = (0 until firstDow).map { null } + (1..daysInMonth).map { it }
-                val rows = cells.chunked(7)
+                val (calRows, dateForDay) = remember(year, month) {
+                    val cal = Calendar.getInstance()
+                    cal.set(year, month, 1)
+                    val firstDow = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+                    val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+                    val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                    val cells = (0 until firstDow).map { null } + (1..daysInMonth).map { it }
+                    val rows = cells.chunked(7)
+                    val dateMap = (1..daysInMonth).associate { d ->
+                        cal.set(year, month, d)
+                        d to fmt.format(cal.time)
+                    }
+                    Pair(rows, dateMap)
+                }
 
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    rows.forEach { row ->
+                    calRows.forEach { row ->
                         Row(modifier = Modifier.fillMaxWidth()) {
                             row.forEach { day ->
                                 Box(modifier = Modifier.weight(1f),
                                     contentAlignment = Alignment.Center) {
                                     if (day != null) {
-                                        cal.set(year, month, day)
-                                        val dateStr = fmt.format(cal.time)
+                                        val dateStr = dateForDay[day] ?: ""
                                         val myList  = myMap[dateStr] ?: emptyList()
                                         val ptList  = partMap[dateStr] ?: emptyList()
                                         val isSelected = selectedDay == dateStr
@@ -651,13 +664,15 @@ private fun ActivityStatsSheet(
             Text("Статистика  сегодня", style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
 
-            val myByType  = myActivities.groupBy { it.activityType }
-            val ptByType  = partnerActivities.groupBy { it.activityType }
-            val allKeys   = (myByType.keys + ptByType.keys).distinct()
-            val maxMin    = allKeys.maxOfOrNull { key ->
-                maxOf(myByType[key]?.sumOf { it.durationMinutes } ?: 0,
-                      ptByType[key]?.sumOf { it.durationMinutes } ?: 0)
-            }?.coerceAtLeast(1) ?: 1
+            val myByType  = remember(myActivities) { myActivities.groupBy { it.activityType } }
+            val ptByType  = remember(partnerActivities) { partnerActivities.groupBy { it.activityType } }
+            val allKeys   = remember(myActivities, partnerActivities) { (myByType.keys + ptByType.keys).distinct() }
+            val maxMin    = remember(myActivities, partnerActivities) {
+                allKeys.maxOfOrNull { key ->
+                    maxOf(myByType[key]?.sumOf { it.durationMinutes } ?: 0,
+                          ptByType[key]?.sumOf { it.durationMinutes } ?: 0)
+                }?.coerceAtLeast(1) ?: 1
+            }
 
             if (allKeys.isEmpty()) {
                 Text("Нет данных для отображения",

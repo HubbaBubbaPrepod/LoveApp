@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">LoveApp</string>
+
+    <!-- Widgets -->
+    <string name="widget_mood_description">Настроение за день</string>
+    <string name="widget_mood_small_description">Настроение (компактный)</string>
+    <string name="widget_mood_large_description">Настроение (большой)</string>
+    <string name="widget_activity_description">Активности за день</string>
+    <string name="widget_activity_small_description">Активности (компактный)</string>
+    <string name="widget_activity_large_description">Активности (большой)</string>
+    <!-- Widget picker labels (shown under each widget in the picker) -->
+    <string name="widget_mood_small_label">💭 Настроение · Мини</string>
+    <string name="widget_mood_medium_label">💭 Настроение · Стандарт</string>
+    <string name="widget_mood_large_label">💭 Настроение · Большой</string>
+    <string name="widget_activity_small_label">🏃 Активности · Мини</string>
+    <string name="widget_activity_medium_label">🏃 Активности · Стандарт</string>
+    <string name="widget_activity_large_label">🏃 Активности · Большой</string>
     
     <!-- Auth -->
     <string name="login">Вход</string>

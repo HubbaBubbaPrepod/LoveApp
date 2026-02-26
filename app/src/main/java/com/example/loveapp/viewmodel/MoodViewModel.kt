@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.loveapp.data.api.models.MoodResponse
 import com.example.loveapp.data.repository.MoodRepository
 import com.example.loveapp.utils.DateUtils
+import com.example.loveapp.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +19,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MoodViewModel @Inject constructor(
-    private val moodRepository: MoodRepository
+    private val moodRepository: MoodRepository,
+    private val widgetUpdater: WidgetUpdater
 ) : ViewModel() {
 
     private val _myTodayMoods = MutableStateFlow<List<MoodResponse>>(emptyList())
@@ -68,21 +70,34 @@ class MoodViewModel @Inject constructor(
     fun loadToday() {
         viewModelScope.launch {
             _isLoading.value = true
-            val today = DateUtils.getTodayDateString()
-            val myDef = async { moodRepository.getMoods(date = today) }
+            val today      = DateUtils.getTodayDateString()
+            val myDef      = async { moodRepository.getMoods(date = today) }
             val partnerDef = async { moodRepository.getPartnerMoods(date = today) }
-            myDef.await().onSuccess {
+            val myResult   = myDef.await()
+            val ptResult   = partnerDef.await()
+            myResult.onSuccess {
                 _myTodayMoods.value = it
-                if (_myName.value == null) {
-                    _myName.value = it.firstOrNull()?.displayName
-                }
+                if (_myName.value == null) _myName.value = it.firstOrNull()?.displayName
             }
-            partnerDef.await().onSuccess { moods ->
+            ptResult.onSuccess { moods ->
                 _partnerTodayMoods.value = moods
-                if (_partnerName.value == null) {
-                    _partnerName.value = moods.firstOrNull()?.displayName
-                }
+                if (_partnerName.value == null) _partnerName.value = moods.firstOrNull()?.displayName
             }.onFailure { /* no partner is ok */ }
+            // Push both users' moods to the home-screen widget after both loads finish
+            val my      = myResult.getOrElse { emptyList() }
+            val pt      = ptResult.getOrElse { emptyList() }
+            val myFirst = my.firstOrNull()
+            val ptFirst = pt.firstOrNull()
+            viewModelScope.launch {
+                widgetUpdater.pushMoodUpdate(
+                    myType = myFirst?.moodType ?: "",
+                    myNote = myFirst?.note     ?: "",
+                    myName = _myName.value,
+                    ptType = ptFirst?.moodType ?: "",
+                    ptNote = ptFirst?.note     ?: "",
+                    ptName = _partnerName.value
+                )
+            }
             _isLoading.value = false
         }
     }

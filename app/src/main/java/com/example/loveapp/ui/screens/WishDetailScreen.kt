@@ -91,6 +91,32 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import com.example.loveapp.viewmodel.WishViewModel
 
+private val WISH_ICON_OPTIONS: List<Pair<String, ImageVector>> = listOf(
+    "gift"      to Icons.Default.CardGiftcard,
+    "heart"     to Icons.Default.Favorite,
+    "star"      to Icons.Default.Star,
+    "home"      to Icons.Default.Home,
+    "phone"     to Icons.Default.Smartphone,
+    "music"     to Icons.Default.MusicNote,
+    "book"      to Icons.Default.AutoStories,
+    "travel"    to Icons.Default.FlightTakeoff,
+    "games"     to Icons.Default.SportsEsports,
+    "cart"      to Icons.Default.ShoppingCart,
+    "art"       to Icons.Default.Palette,
+    "mic"       to Icons.Default.Mic,
+    "camera"    to Icons.Default.PhotoCamera,
+    "diamond"   to Icons.Default.Diamond,
+    "sparkle"   to Icons.Default.AutoAwesome,
+    "fitness"   to Icons.Default.FitnessCenter,
+    "car"       to Icons.Default.DirectionsCar,
+    "celebrate" to Icons.Default.Celebration,
+    "beach"     to Icons.Default.BeachAccess,
+    "flowers"   to Icons.Default.LocalFlorist,
+    "spa"       to Icons.Default.Spa,
+    "movie"     to Icons.Default.Theaters,
+    "cafe"      to Icons.Default.LocalCafe,
+)
+
 @androidx.compose.material3.ExperimentalMaterial3Api
 @Composable
 fun WishDetailScreen(
@@ -377,33 +403,10 @@ fun WishDetailScreen(
             Spacer(Modifier.height(16.dp))
 
             // Icon picker
-            val wishIconOptions: List<Pair<String, ImageVector>> = listOf(
-                "gift"      to Icons.Default.CardGiftcard,
-                "heart"     to Icons.Default.Favorite,
-                "star"      to Icons.Default.Star,
-                "home"      to Icons.Default.Home,
-                "phone"     to Icons.Default.Smartphone,
-                "music"     to Icons.Default.MusicNote,
-                "book"      to Icons.Default.AutoStories,
-                "travel"    to Icons.Default.FlightTakeoff,
-                "games"     to Icons.Default.SportsEsports,
-                "cart"      to Icons.Default.ShoppingCart,
-                "art"       to Icons.Default.Palette,
-                "mic"       to Icons.Default.Mic,
-                "camera"    to Icons.Default.PhotoCamera,
-                "diamond"   to Icons.Default.Diamond,
-                "sparkle"   to Icons.Default.AutoAwesome,
-                "fitness"   to Icons.Default.FitnessCenter,
-                "car"       to Icons.Default.DirectionsCar,
-                "celebrate" to Icons.Default.Celebration,
-                "beach"     to Icons.Default.BeachAccess,
-                "flowers"   to Icons.Default.LocalFlorist,
-                "spa"       to Icons.Default.Spa,
-                "movie"     to Icons.Default.Theaters,
-                "cafe"      to Icons.Default.LocalCafe,
-            )
-            val selectedIconVector = wishIconOptions.find { it.first == emoji }?.second
-                ?: Icons.Default.AutoAwesome
+            val selectedIconVector = remember(emoji) {
+                WISH_ICON_OPTIONS.find { it.first == emoji }?.second
+                    ?: Icons.Default.AutoAwesome
+            }
 
             Column(
                 modifier = Modifier
@@ -444,7 +447,7 @@ fun WishDetailScreen(
                 }
                 if (!isReadOnly) {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(wishIconOptions) { (key, icon) ->
+                        items(WISH_ICON_OPTIONS) { (key, icon) ->
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)

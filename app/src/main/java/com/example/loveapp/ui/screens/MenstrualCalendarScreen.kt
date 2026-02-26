@@ -153,7 +153,7 @@ fun MenstrualCalendarScreen(
                     item {
                         Button(
                             onClick = {
-                                val today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                                val today = LocalDate.now().format(CYCLE_CAL_FMT)
                                 viewModel.markPeriodStart(today)
                             },
                             modifier = Modifier.fillMaxWidth(),
@@ -291,6 +291,13 @@ private fun StatChip(label: String, value: String, color: Color) {
 
 // region Calendar
 
+// DateTimeFormatter is thread-safe — keep a single top-level instance
+private val CYCLE_CAL_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+private val CYCLE_STATS_DISPLAY_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale("ru"))
+private val CYCLE_MONTH_SHORT = listOf("янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек")
+private val CYCLE_MONTH_FULL  = listOf("Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь")
+private val CYCLE_DOW_LABELS  = listOf("Пн","Вт","Ср","Чт","Пт","Сб","Вс")
+
 @Composable
 private fun CycleCalendar(
     year: Int, month: Int,
@@ -302,11 +309,19 @@ private fun CycleCalendar(
     onPrevMonth: () -> Unit,
     onNextMonth: () -> Unit
 ) {
-    val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    val ym = YearMonth.of(year, month + 1)
-    val monthNames = listOf("Январь","Февраль","Март","Апрель","Май","Июнь",
-                            "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь")
-    val dayLabels  = listOf("Пн","Вт","Ср","Чт","Пт","Сб","Вс")
+    val monthNames = CYCLE_MONTH_FULL
+    val dayLabels  = CYCLE_DOW_LABELS
+
+    // Cache expensive grid computation — only recalculate when year or month changes
+    val (calRows, dateForDay, todayStr) = remember(year, month) {
+        val ym = YearMonth.of(year, month + 1)
+        val firstDow = (ym.atDay(1).dayOfWeek.value - 1)
+        val daysInMonth = ym.lengthOfMonth()
+        val cells = (0 until firstDow).map { null } + (1..daysInMonth).map { it }
+        val rows = cells.chunked(7)
+        val dateMap = (1..daysInMonth).associate { d -> d to ym.atDay(d).format(CYCLE_CAL_FMT) }
+        Triple(rows, dateMap, LocalDate.now().format(CYCLE_CAL_FMT))
+    }
 
     Card(shape = RoundedCornerShape(20.dp),
          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -333,25 +348,19 @@ private fun CycleCalendar(
             }
 
             // Grid
-            val firstDay = ym.atDay(1)
-            val firstDow = (firstDay.dayOfWeek.value - 1) // Mon=0
-            val daysInMonth = ym.lengthOfMonth()
-            val cells = (0 until firstDow).map { null } + (1..daysInMonth).map { it }
-            val rows = cells.chunked(7)
-
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                rows.forEach { row ->
+                calRows.forEach { row ->
                     Row(modifier = Modifier.fillMaxWidth()) {
                         row.forEach { day ->
                             Box(modifier = Modifier.weight(1f),
                                 contentAlignment = Alignment.Center) {
                                 if (day != null) {
-                                    val date = ym.atDay(day).format(fmt)
+                                    val date = dateForDay[day] ?: ""
                                     val dayType = cycleDayMap[date]
                                     val syms = getSymptoms(date)
                                     val mood = getMood(date)
                                     val isSelected = selectedDate == date
-                                    val isToday = ym.atDay(day) == LocalDate.now()
+                                    val isToday = date == todayStr
                                     CycleCalendarDay(
                                         day = day, date = date, dayType = dayType,
                                         symptoms = syms, mood = mood,
@@ -470,12 +479,10 @@ private fun DayDetailSheet(
     onSave: (List<String>, String) -> Unit,
     onMarkPeriodStart: () -> Unit
 ) {
-    val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    val parsedDate = runCatching { LocalDate.parse(date, fmt) }.getOrNull()
-    val displayDate = parsedDate?.let {
-        val months = listOf("янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек")
-        "${it.dayOfMonth} ${months[it.monthValue - 1]} ${it.year}"
-    } ?: date
+    val parsedDate = remember(date) { runCatching { LocalDate.parse(date, CYCLE_CAL_FMT) }.getOrNull() }
+    val displayDate = remember(parsedDate) {
+        parsedDate?.let { "${it.dayOfMonth} ${CYCLE_MONTH_SHORT[it.monthValue - 1]} ${it.year}" } ?: date
+    }
 
     var selectedSymptoms by remember(date) { mutableStateOf(symptoms.toMutableList()) }
     var selectedMood     by remember(date) { mutableStateOf(mood) }
@@ -631,9 +638,6 @@ private fun StatsSheet(
     nextPeriod: String?,
     onDismiss: () -> Unit
 ) {
-    val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    val displayFmt = DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale("ru"))
-
     ModalBottomSheet(onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
         Column(modifier = Modifier.fillMaxWidth()
@@ -653,7 +657,7 @@ private fun StatsSheet(
 
             // Next period
             if (nextPeriod != null) {
-                val d = runCatching { LocalDate.parse(nextPeriod, fmt).format(displayFmt) }.getOrNull() ?: nextPeriod
+                val d = runCatching { LocalDate.parse(nextPeriod, CYCLE_CAL_FMT).format(CYCLE_STATS_DISPLAY_FMT) }.getOrNull() ?: nextPeriod
                 Card(colors = CardDefaults.cardColors(containerColor = ColorPeriodPredicted.copy(alpha = 0.3f)),
                      shape = RoundedCornerShape(16.dp)) {
                     Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -672,8 +676,8 @@ private fun StatsSheet(
                     fontWeight = FontWeight.SemiBold)
                 val sorted = cycles.sortedBy { it.cycleStartDate }
                 val lengths = sorted.zip(sorted.drop(1)).map { (a, b) ->
-                    val la = runCatching { LocalDate.parse(a.cycleStartDate, fmt) }.getOrNull()
-                    val lb = runCatching { LocalDate.parse(b.cycleStartDate, fmt) }.getOrNull()
+                    val la = runCatching { LocalDate.parse(a.cycleStartDate, CYCLE_CAL_FMT) }.getOrNull()
+                    val lb = runCatching { LocalDate.parse(b.cycleStartDate, CYCLE_CAL_FMT) }.getOrNull()
                     if (la != null && lb != null) java.time.temporal.ChronoUnit.DAYS.between(la, lb).toInt() else null
                 }.filterNotNull().takeLast(6)
                 val maxLen = lengths.maxOrNull()?.coerceAtLeast(1) ?: 1

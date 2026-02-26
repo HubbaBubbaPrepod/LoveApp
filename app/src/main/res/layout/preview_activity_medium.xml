@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Preview for ActivityDayWidget / medium (3×2) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_bg_activity"
+    android:padding="14dp">
+
+    <!-- Header -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🏃  Активности сегодня"
+        android:textSize="10sp"
+        android:textColor="#FF8E8E93"
+        android:textStyle="bold"/>
+
+    <Space android:layout_width="match_parent" android:layout_height="8dp"/>
+
+    <!-- My activity row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/widget_row_blue"
+        android:padding="8dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="58dp"
+            android:layout_height="wrap_content"
+            android:text="Я"
+            android:textSize="10sp"
+            android:textColor="#FF1E90FF"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3"
+            android:textSize="20sp"
+            android:textColor="#FF1E90FF"
+            android:textStyle="bold"/>
+
+        <Space android:layout_width="4dp" android:layout_height="wrap_content"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="акт."
+            android:textSize="10sp"
+            android:textColor="#FF8E8E93"/>
+
+        <Space android:layout_width="6dp" android:layout_height="wrap_content"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="💼 🏃 📚"
+            android:textSize="14sp"/>
+    </LinearLayout>
+
+    <Space android:layout_width="match_parent" android:layout_height="6dp"/>
+
+    <!-- Partner activity row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/widget_row_gray"
+        android:padding="8dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="58dp"
+            android:layout_height="wrap_content"
+            android:text="Партнёр"
+            android:textSize="10sp"
+            android:textColor="#FF636366"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="—"
+            android:textSize="16sp"
+            android:textColor="#FFAEAEB2"/>
+    </LinearLayout>
+
+</LinearLayout>

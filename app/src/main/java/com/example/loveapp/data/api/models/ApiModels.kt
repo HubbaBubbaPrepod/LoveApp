@@ -295,3 +295,29 @@ data class PaginatedResponse<T>(
     @SerializedName("page_size")
     val pageSize: Int
 )
+
+// FCM
+data class FcmTokenRequest(
+    @SerializedName("fcm_token")
+    val fcmToken: String
+)
+
+// Partner Pairing
+data class PairingCodeResponse(
+    val code: String,
+    @SerializedName("expires_minutes")
+    val expiresMinutes: Int
+)
+
+data class LinkPartnerRequest(
+    val code: String
+)
+
+data class LinkPartnerResponse(
+    @SerializedName("partner_id")
+    val partnerId: Int,
+    @SerializedName("partner_name")
+    val partnerName: String,
+    @SerializedName("partner_username")
+    val partnerUsername: String
+)

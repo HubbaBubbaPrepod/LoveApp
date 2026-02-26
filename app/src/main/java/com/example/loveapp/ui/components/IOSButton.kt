@@ -5,19 +5,16 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,8 +35,9 @@ fun IOSButton(
     enabled: Boolean = true,
     paddingValues: PaddingValues = PaddingValues(horizontal = 32.dp, vertical = 12.dp)
 ) {
-    var isPressed by remember { mutableStateOf(false) }
-    
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     val alpha by animateFloatAsState(
         targetValue = if (isPressed) 0.7f else 1f,
         animationSpec = tween(durationMillis = 150),
@@ -59,7 +57,7 @@ fun IOSButton(
             .clickable(
                 enabled = enabled,
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 onClick = onClick
             )
             .padding(paddingValues),
@@ -87,8 +85,9 @@ fun IOSSecondaryButton(
     enabled: Boolean = true,
     paddingValues: PaddingValues = PaddingValues(horizontal = 32.dp, vertical = 12.dp)
 ) {
-    var isPressed by remember { mutableStateOf(false) }
-    
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     val alpha by animateFloatAsState(
         targetValue = if (isPressed) 0.1f else 0f,
         animationSpec = tween(durationMillis = 150),
@@ -102,7 +101,7 @@ fun IOSSecondaryButton(
             .clickable(
                 enabled = enabled,
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 onClick = onClick
             )
             .padding(paddingValues),
@@ -129,8 +128,9 @@ fun IOSSmallButton(
     textColor: Color = Color.White,
     enabled: Boolean = true
 ) {
-    var isPressed by remember { mutableStateOf(false) }
-    
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     val alpha by animateFloatAsState(
         targetValue = if (isPressed) 0.7f else 1f,
         animationSpec = tween(durationMillis = 150),
@@ -144,7 +144,7 @@ fun IOSSmallButton(
             .clickable(
                 enabled = enabled,
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 onClick = onClick
             )
             .padding(PaddingValues(horizontal = 16.dp, vertical = 8.dp)),

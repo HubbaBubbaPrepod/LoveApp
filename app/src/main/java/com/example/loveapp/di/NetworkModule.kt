@@ -5,6 +5,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import com.example.loveapp.BuildConfig
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -12,14 +13,6 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
 import javax.inject.Singleton
-
-/**
- * PostgreSQL Database Connection Details:
- * PGHOST=195.2.71.218
- * PGUSER=spyuser
- * PGPASSWORD=0451
- * PGPORT=5432
- */
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -31,12 +24,13 @@ object NetworkModule {
     @Provides
     fun provideHttpClient(): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                    else HttpLoggingInterceptor.Level.NONE
         }
         val errorInterceptor = Interceptor { chain ->
             val response = chain.proceed(chain.request())
             if (!response.isSuccessful) {
-                val body = response.peekBody(Long.MAX_VALUE).string()
+                val body = response.peekBody(65_536L).string()
                 val msg = try {
                     org.json.JSONObject(body).optString("message", "Error ${response.code}")
                 } catch (_: Exception) {

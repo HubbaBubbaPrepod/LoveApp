@@ -1,10 +1,16 @@
 package com.example.loveapp.ui.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -14,9 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,8 +45,9 @@ fun MoodBubble(
     onClick: () -> Unit = {},
     emoji: String = "😊"
 ) {
-    var isPressed by remember { mutableStateOf(false) }
-    
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     // Smooth animation on press
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.9f else if (isSelected) 1.1f else 1f,
@@ -64,21 +69,18 @@ fun MoodBubble(
             modifier = Modifier
                 .size(size)
                 .scale(scale)
-                .clip(CircleShape)
-                .shadow(
+                .shadow(                // shadow BEFORE clip so it renders outside the clipped boundary
                     elevation = shadowElevation.dp,
                     shape = CircleShape,
                     ambientColor = Color.Black.copy(alpha = 0.12f),
                     spotColor = Color.Black.copy(alpha = 0.15f)
                 )
+                .clip(CircleShape)
                 .background(bubbleColor.copy(alpha = 0.85f))
                 .clickable(
                     indication = null,
-                    interactionSource = remember { MutableInteractionSource() },
-                    onClick = {
-                        isPressed = !isPressed
-                        onClick()
-                    }
+                    interactionSource = interactionSource,
+                    onClick = onClick
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -109,28 +111,23 @@ fun PulsingBubble(
     size: Dp = 60.dp,
     content: @Composable () -> Unit = {}
 ) {
-    var isPulsing by remember { mutableStateOf(true) }
-    
-    val scale by animateFloatAsState(
-        targetValue = if (isPulsing) 1.2f else 1f,
-        animationSpec = tween(durationMillis = 1000),
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.12f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
         label = "pulse-scale"
-    )
-    
-    val alpha by animateFloatAsState(
-        targetValue = if (isPulsing) 0f else 1f,
-        animationSpec = tween(durationMillis = 1000),
-        label = "pulse-alpha"
     )
 
     Box(
         modifier = Modifier
             .size(size)
+            .scale(pulseScale)
+            .shadow(elevation = 8.dp, shape = CircleShape)  // shadow before clip
             .clip(CircleShape)
-            .shadow(
-                elevation = 8.dp,
-                shape = CircleShape
-            )
             .background(color.copy(alpha = 0.85f)),
         contentAlignment = Alignment.Center
     ) {
@@ -162,13 +159,13 @@ fun ProgressBubble(
         Box(
             modifier = Modifier
                 .size(size)
-                .clip(CircleShape)
-                .shadow(
+                .shadow(             // shadow BEFORE clip so it renders outside the clipped boundary
                     elevation = 6.dp,
                     shape = CircleShape,
                     ambientColor = Color.Black.copy(alpha = 0.1f),
                     spotColor = Color.Black.copy(alpha = 0.15f)
                 )
+                .clip(CircleShape)
                 .background(bubbleColor.copy(alpha = 0.85f))
                 .clickable(
                     indication = null,

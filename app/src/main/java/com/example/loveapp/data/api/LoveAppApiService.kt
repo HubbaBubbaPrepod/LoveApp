@@ -16,6 +16,10 @@ import com.example.loveapp.data.api.models.MoodResponse
 import com.example.loveapp.data.api.models.NoteRequest
 import com.example.loveapp.data.api.models.NoteResponse
 import com.example.loveapp.data.api.models.PaginatedResponse
+import com.example.loveapp.data.api.models.FcmTokenRequest
+import com.example.loveapp.data.api.models.LinkPartnerRequest
+import com.example.loveapp.data.api.models.LinkPartnerResponse
+import com.example.loveapp.data.api.models.PairingCodeResponse
 import com.example.loveapp.data.api.models.RelationshipRequest
 import com.example.loveapp.data.api.models.RelationshipResponse
 import com.example.loveapp.data.api.models.SignupRequest
@@ -78,7 +82,7 @@ interface LoveAppApiService {
     suspend fun deleteNote(
         @Header("Authorization") token: String,
         @Path("id") id: Int
-    ): ApiResponse<String>
+    ): ApiResponse<Any?>
 
     // ==================== Upload Endpoints ====================
     @Multipart
@@ -119,7 +123,7 @@ interface LoveAppApiService {
     suspend fun deleteWish(
         @Header("Authorization") token: String,
         @Path("id") id: Int
-    ): ApiResponse<String>
+    ): ApiResponse<Any?>
 
     @POST("wishes/{id}/complete")
     suspend fun completeWish(
@@ -169,7 +173,7 @@ interface LoveAppApiService {
     suspend fun deleteMood(
         @Header("Authorization") token: String,
         @Path("id") id: Int
-    ): ApiResponse<String>
+    ): ApiResponse<Any?>
 
     // ==================== Activity Endpoints ====================
     @POST("activities")
@@ -200,7 +204,7 @@ interface LoveAppApiService {
     suspend fun deleteActivity(
         @Header("Authorization") token: String,
         @Path("id") id: Int
-    ): ApiResponse<String>
+    ): ApiResponse<Any?>
 
     // ==================== Menstrual Cycle Endpoints ====================
     @POST("cycles")
@@ -244,7 +248,7 @@ interface LoveAppApiService {
     suspend fun deleteCycle(
         @Header("Authorization") token: String,
         @Path("id") id: Int
-    ): ApiResponse<String>
+    ): ApiResponse<Any?>
 
     // ==================== Custom Calendars Endpoints ====================
     @POST("calendars")
@@ -278,7 +282,7 @@ interface LoveAppApiService {
     suspend fun deleteCalendar(
         @Header("Authorization") token: String,
         @Path("id") id: Int
-    ): ApiResponse<String>
+    ): ApiResponse<Any?>
 
     @GET("calendars/partner")
     suspend fun getPartnerCalendars(
@@ -303,7 +307,7 @@ interface LoveAppApiService {
     suspend fun deleteCalendarEvent(
         @Header("Authorization") token: String,
         @Path("eventId") eventId: Int
-    ): ApiResponse<String>
+    ): ApiResponse<Any?>
 
     // ==================== Relationship Endpoints ====================
     // Server has no POST; use PUT for both create and update (server does upsert)
@@ -317,4 +321,23 @@ interface LoveAppApiService {
         @Header("Authorization") token: String,
         @Body request: RelationshipRequest
     ): ApiResponse<RelationshipResponse>
+
+    // ==================== FCM Token ====================
+    @POST("fcm-token")
+    suspend fun registerFcmToken(
+        @Header("Authorization") authHeader: String,
+        @Body request: FcmTokenRequest
+    ): ApiResponse<Any?>
+
+    // ==================== Partner Pairing ====================
+    @POST("partner/generate-code")
+    suspend fun generatePairingCode(
+        @Header("Authorization") token: String
+    ): ApiResponse<PairingCodeResponse>
+
+    @POST("partner/link")
+    suspend fun linkPartner(
+        @Header("Authorization") token: String,
+        @Body request: LinkPartnerRequest
+    ): ApiResponse<LinkPartnerResponse>
 }

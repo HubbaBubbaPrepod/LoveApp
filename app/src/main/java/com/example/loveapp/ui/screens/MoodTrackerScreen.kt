@@ -135,6 +135,8 @@ fun moodLabel(type: String): String =
         else                     -> type
     }
 
+private val MOOD_CAL_DOW = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
+
 private fun blendMoodColors(moods: List<MoodResponse>): Color {
     if (moods.isEmpty()) return Color.Transparent
     val r = moods.map { moodColor(it.moodType).red }.average().toFloat()
@@ -374,18 +376,19 @@ private fun MoodFlask(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark      = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val cardBg      = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
-    val labelColor  = if (isDark) Color(0xFFE5E5EA) else Color(0xFF1C1C1E)
-    val emptyClr    = if (isDark) Color(0xFF3A3A3C) else Color(0xFFD1D1D6)
-    val outlineClr  = if (isDark) Color(0xFF48484A) else Color(0xFFC7C7CC)
-    val subColor    = if (isDark) Color(0xFF8E8E93) else Color(0xFF636366)
+    val background  = MaterialTheme.colorScheme.background
+    val isDark      = remember(background) { background.luminance() < 0.5f }
+    val cardBg      = remember(isDark) { if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7) }
+    val labelColor  = remember(isDark) { if (isDark) Color(0xFFE5E5EA) else Color(0xFF1C1C1E) }
+    val emptyClr    = remember(isDark) { if (isDark) Color(0xFF3A3A3C) else Color(0xFFD1D1D6) }
+    val outlineClr  = remember(isDark) { if (isDark) Color(0xFF48484A) else Color(0xFFC7C7CC) }
+    val subColor    = remember(isDark) { if (isDark) Color(0xFF8E8E93) else Color(0xFF636366) }
 
     val targetFill = if (moods.isEmpty()) 0f
                      else (0.22f + moods.size * 0.18f).coerceAtMost(0.88f)
     val fillFrac by animateFloatAsState(
         targetValue   = targetFill,
-        animationSpec = spring(dampingRatio = 0.65f, stiffness = 60f),
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = 200f),
         label = "fill"
     )
     val blendedColor  = remember(moods) { blendMoodColors(moods) }
@@ -393,7 +396,11 @@ private fun MoodFlask(
         targetValue   = if (moods.isEmpty()) Color.Transparent else blendedColor,
         animationSpec = tween(700), label = "liq"
     )
-    val dominant = moods.groupBy { it.moodType }.maxByOrNull { it.value.size }?.key
+    val dominant = remember(moods) { moods.groupBy { it.moodType }.maxByOrNull { it.value.size }?.key }
+
+    // Cache the flask Path — only rebuilt when the Canvas size changes, not every animation frame
+    val flaskPath = remember { Path() }
+    val flaskGeom = remember { FloatArray(5) } // [w, h, shldrBotY, bodyEndY, strokePx]
 
     Surface(
         modifier        = modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick),
@@ -417,38 +424,42 @@ private fun MoodFlask(
 
             Canvas(modifier = Modifier.fillMaxWidth().height(160.dp)) {
                 val w = size.width; val h = size.height
-                val neckW     = w * 0.38f
-                val neckLeft  = (w - neckW) / 2f
-                val neckRight = (w + neckW) / 2f
-                val neckBotY  = h * 0.28f
-                val shldrBotY = h * 0.42f
-                val bodyEndY  = h * 0.80f
 
-                val flask = Path().apply {
-                    moveTo(neckLeft, neckBotY * 0.18f)
-                    arcTo(
+                // Rebuild geometry and path ONLY when size changes — not every animation frame
+                if (flaskGeom[0] != w || flaskGeom[1] != h) {
+                    val neckW     = w * 0.38f
+                    val neckLeft  = (w - neckW) / 2f
+                    val neckRight = (w + neckW) / 2f
+                    val neckBotY  = h * 0.28f
+                    val shldrBotY = h * 0.42f
+                    val bodyEndY  = h * 0.80f
+                    flaskPath.reset()
+                    flaskPath.moveTo(neckLeft, neckBotY * 0.18f)
+                    flaskPath.arcTo(
                         rect = Rect(neckLeft, 0f, neckRight, neckBotY * 0.36f),
-                        startAngleDegrees = 180f, sweepAngleDegrees = 180f,
-                        forceMoveTo = false
+                        startAngleDegrees = 180f, sweepAngleDegrees = 180f, forceMoveTo = false
                     )
-                    lineTo(neckRight, neckBotY)
-                    cubicTo(neckRight, shldrBotY, w, shldrBotY, w, shldrBotY + h * 0.04f)
-                    lineTo(w, bodyEndY)
-                    arcTo(
+                    flaskPath.lineTo(neckRight, neckBotY)
+                    flaskPath.cubicTo(neckRight, shldrBotY, w, shldrBotY, w, shldrBotY + h * 0.04f)
+                    flaskPath.lineTo(w, bodyEndY)
+                    flaskPath.arcTo(
                         rect = Rect(0f, 2f * bodyEndY - h, w, h),
-                        startAngleDegrees = 0f, sweepAngleDegrees = 180f,
-                        forceMoveTo = false
+                        startAngleDegrees = 0f, sweepAngleDegrees = 180f, forceMoveTo = false
                     )
-                    lineTo(0f, shldrBotY + h * 0.04f)
-                    cubicTo(0f, shldrBotY, neckLeft, shldrBotY, neckLeft, neckBotY)
-                    close()
+                    flaskPath.lineTo(0f, shldrBotY + h * 0.04f)
+                    flaskPath.cubicTo(0f, shldrBotY, neckLeft, shldrBotY, neckLeft, neckBotY)
+                    flaskPath.close()
+                    flaskGeom[0] = w; flaskGeom[1] = h
+                    flaskGeom[2] = shldrBotY; flaskGeom[3] = bodyEndY
+                    flaskGeom[4] = 1.8.dp.toPx()
                 }
+                val shldrBotY = flaskGeom[2]
 
-                drawPath(flask, emptyClr)
+                drawPath(flaskPath, emptyClr)
 
                 if (fillFrac > 0f && liquidColor != Color.Transparent) {
                     val liquidTopY = h - fillFrac * (h - shldrBotY)
-                    clipPath(flask) {
+                    clipPath(flaskPath) {
                         drawRect(
                             color   = liquidColor.copy(alpha = 0.80f),
                             topLeft = Offset(0f, liquidTopY),
@@ -467,8 +478,8 @@ private fun MoodFlask(
                     }
                 }
 
-                drawPath(flask, outlineClr,
-                    style = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                drawPath(flaskPath, outlineClr,
+                    style = Stroke(flaskGeom[4], cap = StrokeCap.Round, join = StrokeJoin.Round))
             }
 
             Spacer(Modifier.height(8.dp))
@@ -510,8 +521,9 @@ private fun MoodFlask(
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun MoodEntryRow(mood: MoodResponse, onDelete: () -> Unit) {
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val cardBg = if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7)
+    val background = MaterialTheme.colorScheme.background
+    val isDark = remember(background) { background.luminance() < 0.5f }
+    val cardBg = remember(isDark) { if (isDark) Color(0xFF2C2C2E) else Color(0xFFF2F2F7) }
     val accent = moodColor(mood.moodType)
     Surface(shape = RoundedCornerShape(14.dp), color = cardBg,
             shadowElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
@@ -717,6 +729,23 @@ private fun CalendarContent(
     var selectedDay by remember(year, month) { mutableStateOf<String?>(null) }
     val today = remember { fmt.format(System.currentTimeMillis()) }
 
+    val cellDateStrings = remember(year, month) {
+        val c = Calendar.getInstance()
+        val result = HashMap<Int, String>(daysInMonth)
+        for (d in 1..daysInMonth) { c.set(year, month, d); result[d] = fmt.format(c.time) }
+        result
+    }
+    val myBlended = remember(year, month, myMoods) {
+        cellDateStrings.values.associateWith { ds ->
+            myMoods[ds]?.takeIf { it.isNotEmpty() }?.let { blendMoodColors(it) }
+        }
+    }
+    val partBlended = remember(year, month, partnerMoods) {
+        cellDateStrings.values.associateWith { ds ->
+            partnerMoods[ds]?.takeIf { it.isNotEmpty() }?.let { blendMoodColors(it) }
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
@@ -750,7 +779,7 @@ private fun CalendarContent(
         } else {
             item {
                 Row(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
-                    listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс").forEach { d ->
+                    MOOD_CAL_DOW.forEach { d ->
                         Text(d, modifier = Modifier.weight(1f), textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -766,8 +795,7 @@ private fun CalendarContent(
                         if (dayNum < 1 || dayNum > daysInMonth) {
                             Box(modifier = Modifier.weight(1f).height(44.dp))
                         } else {
-                            val dayStr = fmt.format(
-                                Calendar.getInstance().also { it.set(year, month, dayNum) }.time)
+                            val dayStr = cellDateStrings[dayNum] ?: ""
                             val myDay  = myMoods[dayStr] ?: emptyList()
                             val pDay   = partnerMoods[dayStr] ?: emptyList()
                             val isSel  = selectedDay == dayStr
@@ -790,12 +818,12 @@ private fun CalendarContent(
                                         color = if (isTod) MaterialTheme.colorScheme.primary
                                                 else MaterialTheme.colorScheme.onSurface)
                                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        if (myDay.isNotEmpty())
-                                            Box(Modifier.size(6.dp).background(
-                                                blendMoodColors(myDay), CircleShape))
-                                        if (pDay.isNotEmpty())
-                                            Box(Modifier.size(6.dp).background(
-                                                blendMoodColors(pDay), CircleShape))
+                                        myBlended[dayStr]?.let { c ->
+                                            Box(Modifier.size(6.dp).background(c, CircleShape))
+                                        }
+                                        partBlended[dayStr]?.let { c ->
+                                            Box(Modifier.size(6.dp).background(c, CircleShape))
+                                        }
                                     }
                                 }
                             }
@@ -873,8 +901,10 @@ private fun StatsContent(
     partnerName: String,
     isLoading: Boolean
 ) {
-    val myAll      = myMoods.values.flatten()
-    val partnerAll = partnerMoods.values.flatten()
+    val myAll      = remember(myMoods)      { myMoods.values.flatten() }
+    val partnerAll = remember(partnerMoods) { partnerMoods.values.flatten() }
+    val myCounts   = remember(myMoods)      { myAll.groupingBy { it.moodType.lowercase() }.eachCount() }
+    val ptCounts   = remember(partnerMoods) { partnerAll.groupingBy { it.moodType.lowercase() }.eachCount() }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -892,8 +922,8 @@ private fun StatsContent(
             val myTotal      = myAll.size.coerceAtLeast(1)
             val partnerTotal = partnerAll.size.coerceAtLeast(1)
             MOODS.forEach { mood ->
-                val myCount = myAll.count { it.moodType.equals(mood.key, true) }
-                val pCount  = partnerAll.count { it.moodType.equals(mood.key, true) }
+                val myCount = myCounts[mood.key] ?: 0
+                val pCount  = ptCounts[mood.key] ?: 0
                 if (myCount == 0 && pCount == 0) return@forEach
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically) {

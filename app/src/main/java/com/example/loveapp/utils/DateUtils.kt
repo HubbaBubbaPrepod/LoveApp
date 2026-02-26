@@ -7,27 +7,22 @@ import java.util.Locale
 object DateUtils {
     private val ruLocale = Locale("ru", "RU")
 
-    fun getTodayDateString(): String {
-        val format = SimpleDateFormat("yyyy-MM-dd", ruLocale)
-        return format.format(Date())
-    }
+    // Shared formatter instances — never recreate on every call
+    private val ISO_FMT   = SimpleDateFormat("yyyy-MM-dd", ruLocale)
+    private val DISP_FMT  = SimpleDateFormat("d MMMM yyyy", ruLocale)
+    private val MONTH_FMT = SimpleDateFormat("LLLL yyyy", ruLocale)
 
-    fun timestampToDateString(timestamp: Long): String {
-        val format = SimpleDateFormat("yyyy-MM-dd", ruLocale)
-        return format.format(Date(timestamp))
-    }
+    fun getTodayDateString(): String = ISO_FMT.format(Date())
 
-    fun dateStringToTimestamp(dateString: String): Long {
-        val format = SimpleDateFormat("yyyy-MM-dd", ruLocale)
-        return format.parse(dateString)?.time ?: System.currentTimeMillis()
-    }
+    fun timestampToDateString(timestamp: Long): String = ISO_FMT.format(Date(timestamp))
+
+    fun dateStringToTimestamp(dateString: String): Long =
+        ISO_FMT.parse(dateString)?.time ?: System.currentTimeMillis()
 
     fun formatDateForDisplay(dateString: String): String {
         return try {
-            val parseFormat = SimpleDateFormat("yyyy-MM-dd", ruLocale)
-            val displayFormat = SimpleDateFormat("d MMMM yyyy", ruLocale)
-            val date = parseFormat.parse(dateString) ?: return dateString
-            displayFormat.format(date)
+            val date = ISO_FMT.parse(dateString) ?: return dateString
+            DISP_FMT.format(date)
         } catch (_: Exception) {
             dateString
         }
@@ -36,24 +31,20 @@ object DateUtils {
     fun formatMonthYear(year: Int, month: Int): String {
         val calendar = java.util.Calendar.getInstance(ruLocale)
         calendar.set(year, month - 1, 1)
-        val format = SimpleDateFormat("LLLL yyyy", ruLocale)
-        return format.format(calendar.time)
+        return MONTH_FMT.format(calendar.time)
     }
 
-    fun getDaysBetween(startDate: Long, endDate: Long): Long {
-        return (endDate - startDate) / (1000 * 60 * 60 * 24)
-    }
+    fun getDaysBetween(startDate: Long, endDate: Long): Long =
+        (endDate - startDate) / (1000 * 60 * 60 * 24)
 
     fun getAllDatesInMonth(year: Int, month: Int): List<String> {
         val dates = mutableListOf<String>()
-        val format = SimpleDateFormat("yyyy-MM-dd", ruLocale)
         val calendar = java.util.Calendar.getInstance(ruLocale)
         calendar.set(year, month - 1, 1)
-        
         val maxDay = calendar.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
         for (day in 1..maxDay) {
             calendar.set(year, month - 1, day)
-            dates.add(format.format(calendar.time))
+            dates.add(ISO_FMT.format(calendar.time))
         }
         return dates
     }

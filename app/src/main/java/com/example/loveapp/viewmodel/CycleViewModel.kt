@@ -178,6 +178,35 @@ class CycleViewModel @Inject constructor(
         }
     }
 
+    /** Update cycle duration and period duration for the latest cycle */
+    fun updateCycleSettings(cycleDuration: Int, periodDuration: Int) {
+        val latest = _cycles.value.firstOrNull() ?: run {
+            _errorMessage.value = "Нет данных цикла для обновления"
+            return
+        }
+        viewModelScope.launch {
+            _isLoading.value = true
+            cycleRepository.updateCycle(
+                id = latest.id,
+                cycle = com.example.loveapp.data.api.models.CycleRequest(
+                    cycleStartDate = latest.cycleStartDate,
+                    cycleDuration  = cycleDuration,
+                    periodDuration = periodDuration,
+                    symptoms       = latest.symptoms,
+                    mood           = latest.mood,
+                    notes          = latest.notes
+                )
+            ).onSuccess { updated ->
+                val list = _cycles.value.map { if (it.id == updated.id) updated else it }
+                    .sortedByDescending { it.cycleStartDate }
+                _cycles.value = list
+                recompute(list)
+                _successMessage.value = "Настройки цикла сохранены"
+            }.onFailure { _errorMessage.value = it.message }
+            _isLoading.value = false
+        }
+    }
+
     fun deleteCycleEntry(id: Int) {
         viewModelScope.launch {
             cycleRepository.deleteCycle(id).onSuccess {
@@ -261,9 +290,9 @@ class CycleViewModel @Inject constructor(
         val latestStart = runCatching { LocalDate.parse(sorted.first().cycleStartDate, fmt) }.getOrNull()
             ?: return
 
-        // Build day map: go back 6 months, forward 4 months
-        val mapStart = today.minusMonths(6)
-        val mapEnd   = today.plusMonths(4)
+        // Build day map: go back 24 months, forward 13 months
+        val mapStart = today.minusMonths(24)
+        val mapEnd   = today.plusMonths(13)
         val dayMap   = mutableMapOf<String, CycleDayType>()
 
         // Mark actual cycle days
@@ -288,9 +317,9 @@ class CycleViewModel @Inject constructor(
             }
         }
 
-        // Predict future cycles
+        // Predict future cycles — cover up to 13 months ahead
         var predictStart = latestStart.plusDays(avgCycleDur.toLong())
-        repeat(4) {
+        repeat(18) {
             if (!predictStart.isAfter(mapEnd)) {
                 val perEnd = predictStart.plusDays(avgPeriodDur.toLong() - 1)
                 var d = predictStart

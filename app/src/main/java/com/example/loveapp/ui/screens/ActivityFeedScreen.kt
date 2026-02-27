@@ -372,10 +372,12 @@ private fun ActivityPickerSheet(
     onDismiss: () -> Unit,
     onSave: (type: String, durationMinutes: Int, startTime: String, note: String) -> Unit
 ) {
-    var selectedType by remember { mutableStateOf("") }
-    var durationText by remember { mutableStateOf("") }
-    var startTime    by remember { mutableStateOf("") }
-    var note         by remember { mutableStateOf("") }
+    var selectedType      by remember { mutableStateOf("") }
+    var durationHoursText by remember { mutableStateOf("") }
+    var durationMinsText  by remember { mutableStateOf("") }
+    var startTime         by remember { mutableStateOf("") }
+    var note          by remember { mutableStateOf("") }
+    var showTimePicker by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
@@ -399,25 +401,76 @@ private fun ActivityPickerSheet(
                 }
             }
 
-            OutlinedTextField(
-                value = durationText,
-                onValueChange = { durationText = it.filter { c -> c.isDigit() } },
-                label = { Text("Продолжительность (мин)") },
-                leadingIcon = { Icon(Icons.Default.Timer, null) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            // ── Duration picker ─────────────────────────────────────────
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Default.Timer, null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp))
+                    Text("Продолжительность",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.weight(1f))
+                    val h = durationHoursText.toIntOrNull() ?: 0
+                    val m = durationMinsText.toIntOrNull() ?: 0
+                    val totalMin = h * 60 + m
+                    Text(
+                        text = if (totalMin == 0) "не указано"
+                               else if (h > 0 && m > 0) "${h}ч ${m}мин"
+                               else if (h > 0) "${h} ч"
+                               else "${m} мин",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = durationHoursText,
+                        onValueChange = { v -> if (v.length <= 3 && v.all { it.isDigit() }) durationHoursText = v },
+                        label = { Text("Часы") },
+                        placeholder = { Text("0") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = durationMinsText,
+                        onValueChange = { v ->
+                            if (v.length <= 2 && v.all { it.isDigit() }) {
+                                val num = v.toIntOrNull()
+                                if (num == null || num in 0..59) durationMinsText = v
+                            }
+                        },
+                        label = { Text("Минуты (0–59)") },
+                        placeholder = { Text("0") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
 
-            OutlinedTextField(
-                value = startTime,
-                onValueChange = { startTime = it },
-                label = { Text("Время начала (необязательно)") },
-                placeholder = { Text("09:30") },
-                leadingIcon = { Icon(Icons.Default.AccessTime, null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            // ── Start time picker ────────────────────────────────────
+            OutlinedButton(
+                onClick = { showTimePicker = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.AccessTime, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (startTime.isEmpty()) "Время начала (необязательно)" else "Начало: $startTime")
+            }
+            if (startTime.isNotEmpty()) {
+                TextButton(
+                    onClick = { startTime = "" },
+                    modifier = Modifier.align(Alignment.End)
+                ) { Text("Очистить время",
+                    style = MaterialTheme.typography.labelSmall) }
+            }
 
             OutlinedTextField(
                 value = note,
@@ -434,14 +487,27 @@ private fun ActivityPickerSheet(
                 }
                 Button(
                     onClick = {
-                        val dur = durationText.toIntOrNull() ?: 0
-                        onSave(selectedType.ifBlank { "other" }, dur, startTime.trim(), note.trim())
+                        val totalMin = (durationHoursText.toIntOrNull() ?: 0) * 60 +
+                                       (durationMinsText.toIntOrNull() ?: 0)
+                        onSave(selectedType.ifBlank { "other" }, totalMin, startTime.trim(), note.trim())
                     },
                     modifier = Modifier.weight(1f),
-                    enabled = selectedType.isNotBlank() || durationText.isNotBlank()
+                    enabled = selectedType.isNotBlank() ||
+                              (durationHoursText.toIntOrNull() ?: 0) > 0 ||
+                              (durationMinsText.toIntOrNull() ?: 0) > 0
                 ) { Text("Сохранить") }
             }
         }
+    }
+
+    if (showTimePicker) {
+        ActivityTimePickerDialog(
+            onDismiss  = { showTimePicker = false },
+            onConfirm  = { h, m ->
+                startTime = "%02d:%02d".format(h, m)
+                showTimePicker = false
+            }
+        )
     }
 }
 
@@ -751,6 +817,44 @@ private fun LegendChip(color: Color, label: String) {
 @Composable
 private fun Dot(color: Color) {
     Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(color))
+}
+
+// endregion
+
+// region Time picker dialog
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ActivityTimePickerDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (hour: Int, minute: Int) -> Unit
+) {
+    val defaultHour = remember {
+        java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    }
+    val defaultMinute = remember {
+        java.util.Calendar.getInstance().get(java.util.Calendar.MINUTE)
+    }
+    val state = rememberTimePickerState(
+        initialHour = defaultHour,
+        initialMinute = defaultMinute,
+        is24Hour = true
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onConfirm(state.hour, state.minute) }) { Text("Ок") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Отмена") }
+        },
+        title = { Text("Время начала") },
+        text = {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
+                TimePicker(state = state)
+            }
+        }
+    )
 }
 
 // endregion

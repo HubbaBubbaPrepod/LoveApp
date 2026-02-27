@@ -100,6 +100,7 @@ fun MenstrualCalendarScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     var showStats         by remember { mutableStateOf(false) }
+    var showSettings      by remember { mutableStateOf(false) }
 
     LaunchedEffect(errorMessage)  { errorMessage?.let  { snackbarHostState.showSnackbar(it); viewModel.clearMessages() } }
     LaunchedEffect(successMessage){ successMessage?.let{ snackbarHostState.showSnackbar(it); viewModel.clearMessages() } }
@@ -111,6 +112,12 @@ fun MenstrualCalendarScreen(
                 title = if (isGirl) "Цикл" else "Цикл партнёра",
                 onBackClick = onNavigateBack,
                 actions = {
+                    if (isGirl && cycles.isNotEmpty()) {
+                        IconButton(onClick = { showSettings = true }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Настройки",
+                                tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                     IconButton(onClick = { showStats = true }) {
                         Icon(Icons.Default.BarChart, contentDescription = "Статистика",
                             tint = MaterialTheme.colorScheme.primary)
@@ -220,6 +227,19 @@ fun MenstrualCalendarScreen(
             avgPeriod  = avgPeriodDur,
             nextPeriod = nextPeriodDate,
             onDismiss  = { showStats = false }
+        )
+    }
+
+    //  Cycle Settings Dialog 
+    if (showSettings) {
+        CycleSettingsDialog(
+            initialCycleDuration  = avgCycleDur,
+            initialPeriodDuration = avgPeriodDur,
+            onDismiss = { showSettings = false },
+            onSave    = { cd, pd ->
+                viewModel.updateCycleSettings(cd, pd)
+                showSettings = false
+            }
         )
     }
 }
@@ -778,5 +798,114 @@ private fun StatSummaryCard(modifier: Modifier, label: String, value: String, co
         }
     }
 }
+
+// endregion
+
+// region Cycle Settings Dialog
+
+@Composable
+private fun CycleSettingsDialog(
+    initialCycleDuration: Int,
+    initialPeriodDuration: Int,
+    onDismiss: () -> Unit,
+    onSave: (Int, Int) -> Unit
+) {
+    var cycleDur  by remember { mutableStateOf(initialCycleDuration.coerceIn(21, 45)) }
+    var periodDur by remember { mutableStateOf(initialPeriodDuration.coerceIn(2, 10)) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = { onSave(cycleDur, periodDur) }) { Text("Сохранить") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Отмена") }
+        },
+        title = { Text("Настройки цикла") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Cycle duration
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "Длина цикла",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "$cycleDur дней",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = ColorOvulationActual,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Slider(
+                        value       = cycleDur.toFloat(),
+                        onValueChange = { cycleDur = it.toInt() },
+                        valueRange  = 21f..45f,
+                        steps       = 23,  // 45-21-1 = 23 steps
+                        colors      = SliderDefaults.colors(
+                            thumbColor       = ColorOvulationActual,
+                            activeTrackColor = ColorOvulationActual
+                        )
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("21 д", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("45 д", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                // Period duration
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "Длина месячных",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "$periodDur дней",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = ColorPeriodActual,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Slider(
+                        value       = periodDur.toFloat(),
+                        onValueChange = { periodDur = it.toInt() },
+                        valueRange  = 2f..10f,
+                        steps       = 7,   // 10-2-1 = 7 steps
+                        colors      = SliderDefaults.colors(
+                            thumbColor       = ColorPeriodActual,
+                            activeTrackColor = ColorPeriodActual
+                        )
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("2 д", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("10 д", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    )
+}
+
+// endregion
 
 // endregion

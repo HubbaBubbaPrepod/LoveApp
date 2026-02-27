@@ -286,16 +286,33 @@ app.post('/api/auth/login', async (req, res) => {
 // Google Sign-In
 app.post('/api/auth/google', async (req, res) => {
   try {
-    if (!admin.apps.length) {
-      return sendResponse(res, false, 'Google auth not configured on server', null, 503);
-    }
-
     const { id_token } = req.body;
     if (!id_token) return sendResponse(res, false, 'id_token is required', null, 400);
 
-    // Verify Firebase ID token (issued by Google, validated by Firebase Admin SDK)
-    const decoded = await admin.auth().verifyIdToken(id_token);
-    const { email, name } = decoded;
+    // Verify Google ID token via Google's tokeninfo endpoint (no Firebase needed)
+    const GOOGLE_WEB_CLIENT_ID = '833288193423-pdau5bt5ffa4tjvioss2tut96s8frkd1.apps.googleusercontent.com';
+    const tokenInfoRes = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(id_token)}`
+    );
+    const tokenInfo = await tokenInfoRes.json();
+
+    if (!tokenInfoRes.ok || tokenInfo.error) {
+      console.error('Google tokeninfo error:', tokenInfo.error);
+      return sendResponse(res, false, 'Invalid Google ID token', null, 401);
+    }
+
+    // Verify audience matches our Web Client ID (or Android Client ID)
+    const validAudiences = [
+      GOOGLE_WEB_CLIENT_ID,
+      '833288193423-obc5cifc5109pifdcou1cp4s6p01emab.apps.googleusercontent.com', // Android client
+    ];
+    if (!validAudiences.includes(tokenInfo.aud)) {
+      console.error('Google token audience mismatch:', tokenInfo.aud);
+      return sendResponse(res, false, 'Google token audience mismatch', null, 401);
+    }
+
+    const email = tokenInfo.email;
+    const name  = tokenInfo.name || tokenInfo.given_name || '';
     if (!email) return sendResponse(res, false, 'Email not available from Google account', null, 400);
 
     // Find or create user

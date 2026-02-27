@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -184,7 +185,7 @@ fun MoodTrackerScreen(
     }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0),
+        contentWindowInsets = WindowInsets.navigationBars,
         topBar = {
             IOSTopAppBar(
                 title = "Настроение",
@@ -624,7 +625,8 @@ private fun MoodPickerContent(
                         color      = if (isSelected) mood.color
                                      else MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign  = TextAlign.Center, maxLines = 1,
-                        fontSize   = 9.sp
+                        fontSize   = 9.sp,
+                        overflow   = TextOverflow.Ellipsis
                     )
                 }
             }

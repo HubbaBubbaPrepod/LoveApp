@@ -10,6 +10,7 @@ import com.example.loveapp.data.api.models.CustomCalendarRequest
 import com.example.loveapp.data.api.models.CustomCalendarResponse
 import com.example.loveapp.data.api.models.CalendarEventRequest
 import com.example.loveapp.data.api.models.CalendarEventResponse
+import com.example.loveapp.data.api.models.GoogleSignInRequest
 import com.example.loveapp.data.api.models.LoginRequest
 import com.example.loveapp.data.api.models.MoodRequest
 import com.example.loveapp.data.api.models.MoodResponse
@@ -47,6 +48,9 @@ interface LoveAppApiService {
 
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): ApiResponse<AuthResponse>
+
+    @POST("auth/google")
+    suspend fun googleAuth(@Body request: GoogleSignInRequest): ApiResponse<AuthResponse>
 
     @GET("auth/profile")
     suspend fun getProfile(@Header("Authorization") token: String): ApiResponse<AuthResponse>

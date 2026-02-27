@@ -28,6 +28,10 @@
 }
 -keepattributes Signature
 -keepattributes *Annotation*
+
+# ─── Google Sign-In (Credential Manager) ─────────────────────────────────────
+-keep class androidx.credentials.** { *; }
+-keep class com.google.android.libraries.identity.googleid.** { *; }
 -dontwarn sun.misc.**
 
 # ─── Retrofit interface ───────────────────────────────────────────────────────

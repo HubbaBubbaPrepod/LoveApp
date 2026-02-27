@@ -36,6 +36,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -99,7 +101,13 @@ class MainActivity : ComponentActivity() {
                 val settingsViewModel: SettingsViewModel = hiltViewModel()
                 val isDarkMode by settingsViewModel.isDarkMode.collectAsState()
                 LoveAppTheme(darkTheme = isDarkMode) {
-                    LoveAppNavigation(widgetDestination = widgetDestination)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .semantics { testTagsAsResourceId = true }
+                    ) {
+                        LoveAppNavigation(widgetDestination = widgetDestination)
+                    }
                 }
             }
             Log.d("LoveApp", "MainActivity.onCreate completed")
@@ -265,7 +273,8 @@ fun LoveAppNavigation(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToPairing = { navController.navigate(Screen.Pairing.route) }
+                onNavigateToPairing = { navController.navigate(Screen.Pairing.route) },
+                authViewModel = authViewModel
             )
         }
 

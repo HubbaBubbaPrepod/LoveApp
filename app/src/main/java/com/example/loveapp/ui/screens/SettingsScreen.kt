@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -66,6 +67,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.loveapp.BuildConfig
 import com.example.loveapp.ui.components.IOSTopAppBar
 import com.example.loveapp.ui.theme.AccentPurple
 import com.example.loveapp.ui.theme.PrimaryPink
@@ -94,13 +96,8 @@ fun SettingsScreen(
     // Load profile on open
     LaunchedEffect(Unit) { authViewModel.getProfile() }
 
-    // Navigate away when logged out
-    LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn == false) onNavigateBack()
-    }
-
     Scaffold(
-        contentWindowInsets = WindowInsets(0),
+        contentWindowInsets = WindowInsets.navigationBars,
         topBar = {
             IOSTopAppBar(title = "Настройки", onBackClick = onNavigateBack)
         },
@@ -269,7 +266,7 @@ fun SettingsScreen(
                         icon     = Icons.Default.Info,
                         iconTint = Color(0xFF2196F3),
                         title    = "Версия",
-                        value    = "1.0.0"
+                        value    = BuildConfig.VERSION_NAME
                     )
                 }
             }

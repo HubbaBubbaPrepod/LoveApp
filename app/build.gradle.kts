@@ -19,8 +19,8 @@ android {
         applicationId = "com.example.loveapp"
         minSdk = 23
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -36,6 +36,7 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
         debug {
+            isDebuggable = true
             isMinifyEnabled = false
         }
     }
@@ -108,6 +109,11 @@ dependencies {
     // Firebase Cloud Messaging
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
+
+    // Google Sign-In (Credential Manager)
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

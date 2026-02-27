@@ -12,7 +12,20 @@
           "package_name": "com.example.loveapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "833288193423-obc5cifc5109pifdcou1cp4s6p01emab.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.loveapp",
+            "certificate_hash": "205345e9c7c02614a92593547a82eb77d70c8037"
+          }
+        },
+        {
+          "client_id": "833288193423-pdau5bt5ffa4tjvioss2tut96s8frkd1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAlrV3vYRw0J9vE3zhpRbNL8nGPGlXirik"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "833288193423-pdau5bt5ffa4tjvioss2tut96s8frkd1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -106,7 +107,7 @@ fun MenstrualCalendarScreen(
     LaunchedEffect(successMessage){ successMessage?.let{ snackbarHostState.showSnackbar(it); viewModel.clearMessages() } }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0),
+        contentWindowInsets = WindowInsets.navigationBars,
         topBar = {
             IOSTopAppBar(
                 title = if (isGirl) "Цикл" else "Цикл партнёра",
@@ -608,6 +609,7 @@ private fun DayDetailSheet(
                             Text(def.emoji, fontSize = 22.sp, textAlign = TextAlign.Center)
                             Text(def.label, style = MaterialTheme.typography.labelSmall,
                                 textAlign = TextAlign.Center, maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
                                 fontSize = 9.sp, lineHeight = 11.sp)
                         }
                     }

@@ -2,6 +2,7 @@ package com.example.loveapp.data.repository
 
 import com.example.loveapp.data.api.LoveAppApiService
 import com.example.loveapp.data.api.models.AuthResponse
+import com.example.loveapp.data.api.models.GoogleSignInRequest
 import com.example.loveapp.data.api.models.LinkPartnerRequest
 import com.example.loveapp.data.api.models.LinkPartnerResponse
 import com.example.loveapp.data.api.models.LoginRequest
@@ -99,6 +100,37 @@ class AuthRepository @Inject constructor(
             Result.success(response.data)
         } else {
             Result.failure(Exception(response.message ?: "Login failed"))
+        }
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    suspend fun loginWithGoogle(idToken: String): Result<AuthResponse> = try {
+        val request = GoogleSignInRequest(idToken = idToken)
+        val response = apiService.googleAuth(request)
+        if (response.success && response.data != null) {
+            response.data.token?.let { token ->
+                tokenManager.saveToken(
+                    token = token,
+                    userId = response.data.id.toString(),
+                    username = response.data.username,
+                    email = response.data.email,
+                    displayName = response.data.displayName
+                )
+            }
+            val user = User(
+                username = response.data.username,
+                email = response.data.email,
+                password = "",
+                displayName = response.data.displayName,
+                gender = response.data.gender ?: "",
+                isLoggedIn = true
+            )
+            userDao.insertUser(user)
+            fcmTokenManager.refreshAndRegister()
+            Result.success(response.data)
+        } else {
+            Result.failure(Exception(response.message ?: "Google sign-in failed"))
         }
     } catch (e: Exception) {
         Result.failure(e)

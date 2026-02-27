@@ -283,6 +283,65 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Google Sign-In
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    if (!admin.apps.length) {
+      return sendResponse(res, false, 'Google auth not configured on server', null, 503);
+    }
+
+    const { id_token } = req.body;
+    if (!id_token) return sendResponse(res, false, 'id_token is required', null, 400);
+
+    // Verify Firebase ID token (issued by Google, validated by Firebase Admin SDK)
+    const decoded = await admin.auth().verifyIdToken(id_token);
+    const { email, name } = decoded;
+    if (!email) return sendResponse(res, false, 'Email not available from Google account', null, 400);
+
+    // Find or create user
+    let userResult = await pool.query(
+      'SELECT id, username, email, display_name, gender, created_at FROM users WHERE email = $1',
+      [email]
+    );
+
+    let user;
+    if (userResult.rows.length > 0) {
+      // Existing user — return as-is
+      user = userResult.rows[0];
+    } else {
+      // New user — generate unique username from email prefix
+      const base = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 20);
+      let username = base;
+      let suffix = 1;
+      while (true) {
+        const check = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+        if (check.rows.length === 0) break;
+        username = `${base}_${suffix++}`;
+      }
+      const displayName = name || username;
+      const result = await pool.query(
+        'INSERT INTO users (username, email, password_hash, display_name, gender) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, display_name, gender, created_at',
+        [username, email, '', displayName, 'other']
+      );
+      user = result.rows[0];
+    }
+
+    const token = generateToken(user.id);
+    sendResponse(res, true, 'Google auth successful', {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      display_name: user.display_name,
+      gender: user.gender,
+      token,
+      created_at: user.created_at,
+    });
+  } catch (err) {
+    console.error('Google auth error:', err.message);
+    sendResponse(res, false, 'Google authentication failed', null, 401);
+  }
+});
+
 // Get Profile
 app.get('/api/auth/profile', authenticateToken, async (req, res) => {
   try {

@@ -87,7 +87,12 @@ class RelationshipViewModel @Inject constructor(
                 }
                 _isLoading.value = false
             }.onFailure { error ->
-                _errorMessage.value = error.message ?: "Failed to load relationship"
+                val msg = error.message?.lowercase() ?: ""
+                val isNotFound = msg.contains("not found") || msg.contains("no relationship") ||
+                    msg.contains("404") || msg.contains("no relationship data")
+                if (!isNotFound) {
+                    _errorMessage.value = error.message ?: "Failed to load relationship"
+                }
                 _isLoading.value = false
             }
         }

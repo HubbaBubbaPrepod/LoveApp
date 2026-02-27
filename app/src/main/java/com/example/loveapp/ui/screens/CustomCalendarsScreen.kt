@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.ColorUtils
@@ -82,7 +83,7 @@ fun CustomCalendarsScreen(
     }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0),
+        contentWindowInsets = WindowInsets.navigationBars,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { inner ->
         AnimatedContent(
@@ -128,7 +129,7 @@ private fun CalendarListScreen(
     var showDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0),
+        contentWindowInsets = WindowInsets.navigationBars,
         topBar = {
             TopAppBar(
                 title = { Text("Календари", fontWeight = FontWeight.Bold) },
@@ -268,7 +269,8 @@ private fun CalendarTile(
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -487,7 +489,7 @@ private fun CalendarDetailScreen(
     val accent  = if (calendar != null) calendarAccentColor(calendar.colorHex) else MaterialTheme.colorScheme.primary
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0),
+        contentWindowInsets = WindowInsets.navigationBars,
         topBar = {
             TopAppBar(
                 title = {

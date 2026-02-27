@@ -26,12 +26,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.R
+import com.example.loveapp.ui.components.GoogleSignInButton
 import com.example.loveapp.viewmodel.AuthViewModel
 
 @Composable
@@ -76,7 +79,8 @@ fun LoginScreen(
             label = { Text(stringResource(R.string.email)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp),
+                .padding(bottom = 16.dp)
+                .semantics { testTag = "login_email" },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
 
@@ -86,7 +90,8 @@ fun LoginScreen(
             label = { Text(stringResource(R.string.password)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp),
+                .padding(bottom = 24.dp)
+                .semantics { testTag = "login_password" },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
         )
@@ -106,11 +111,20 @@ fun LoginScreen(
             onClick = { viewModel.login(email, password) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
+                .height(48.dp)
+                .semantics { testTag = "login_button" },
             enabled = !isLoading && email.isNotBlank() && password.isNotBlank()
         ) {
             Text(if (isLoading) stringResource(R.string.loading) else stringResource(R.string.login))
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        GoogleSignInButton(
+            isLoading = isLoading,
+            onIdToken = { idToken -> viewModel.loginWithGoogle(idToken) },
+            onError   = { /* errorMessage already shown via StateFlow */ viewModel.setErrorMessage(it) }
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 

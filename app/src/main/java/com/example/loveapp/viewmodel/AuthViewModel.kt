@@ -86,6 +86,24 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun loginWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            _authSuccessEvent.value = false
+            val result = authRepository.loginWithGoogle(idToken)
+            result.onSuccess { authResponse ->
+                _currentUser.value = authResponse
+                _isLoggedIn.value = true
+                _authSuccessEvent.value = true
+                _isLoading.value = false
+            }.onFailure { error ->
+                _errorMessage.value = error.message ?: "Google sign-in failed"
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun logout() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -119,5 +137,9 @@ class AuthViewModel @Inject constructor(
     fun clearMessages() {
         _errorMessage.value = null
         _successMessage.value = null
+    }
+
+    fun setErrorMessage(message: String) {
+        _errorMessage.value = message
     }
 }

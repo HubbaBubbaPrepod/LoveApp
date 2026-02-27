@@ -99,7 +99,7 @@ fun ActivityFeedScreen(
     }
 
     Scaffold(
-        contentWindowInsets = WindowInsets(0),
+        contentWindowInsets = WindowInsets.navigationBars,
         topBar = {
             IOSTopAppBar(
                 title = "Активности",

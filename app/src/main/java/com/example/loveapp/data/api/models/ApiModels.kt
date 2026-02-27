@@ -17,6 +17,11 @@ data class LoginRequest(
     val password: String
 )
 
+data class GoogleSignInRequest(
+    @SerializedName("id_token")
+    val idToken: String
+)
+
 data class AuthResponse(
     val id: Int,
     val username: String,

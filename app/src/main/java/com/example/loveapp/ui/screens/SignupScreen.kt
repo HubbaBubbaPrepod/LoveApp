@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.R
+import com.example.loveapp.ui.components.GoogleSignInButton
 import com.example.loveapp.viewmodel.AuthViewModel
 
 @Composable
@@ -126,14 +127,14 @@ fun SignupScreen(
                     selected = gender == "female",
                     onClick = { gender = "female" }
                 )
-                Text(stringResource(R.string.female))
+                Text(stringResource(R.string.female), color = MaterialTheme.colorScheme.onSurface)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
                     selected = gender == "male",
                     onClick = { gender = "male" }
                 )
-                Text(stringResource(R.string.male))
+                Text(stringResource(R.string.male), color = MaterialTheme.colorScheme.onSurface)
             }
         }
 
@@ -157,6 +158,14 @@ fun SignupScreen(
         ) {
             Text(if (isLoading) stringResource(R.string.loading) else stringResource(R.string.sign_up))
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        GoogleSignInButton(
+            isLoading = isLoading,
+            onIdToken = { idToken -> viewModel.loginWithGoogle(idToken) },
+            onError   = { viewModel.setErrorMessage(it) }
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 

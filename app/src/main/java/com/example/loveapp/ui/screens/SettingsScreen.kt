@@ -1,5 +1,7 @@
 ﻿package com.example.loveapp.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Notifications
@@ -41,6 +44,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,6 +60,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -81,6 +87,7 @@ fun SettingsScreen(
     val isLoading            by authViewModel.isLoading.collectAsState()
     val isLoggedIn           by authViewModel.isLoggedIn.collectAsState()
 
+    val context           = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
@@ -174,6 +181,83 @@ fun SettingsScreen(
                         isDestructive = false,
                         onClick     = onNavigateToPairing
                     )
+                }
+            }
+
+            //  Support 
+            item { SettingsSectionLabel(text = "Поддержать") }
+            item {
+                val supportGradient = remember {
+                    Brush.horizontalGradient(listOf(PrimaryPink, AccentPurple))
+                }
+                Card(
+                    modifier  = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape     = RoundedCornerShape(14.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors    = CardDefaults.cardColors(containerColor = Color.Transparent)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(supportGradient)
+                            .padding(horizontal = 20.dp, vertical = 18.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Icon(
+                                imageVector        = Icons.Default.Favorite,
+                                contentDescription = null,
+                                tint               = Color.White,
+                                modifier           = Modifier.size(28.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text       = "Поддержать проект",
+                                    style      = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color      = Color.White
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text  = "Если приложение нравится — помоги ему развиваться ❤️",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(14.dp))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(supportGradient)
+                            .padding(start = 20.dp, end = 20.dp, bottom = 16.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                val intent = Intent(
+                                    Intent.ACTION_VIEW,
+                                    // TODO: замени на свою ссылку (Boosty, DonationAlerts и т.д.)
+                                    Uri.parse("https://dalink.to/zxchubbabubba")
+                                )
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors   = ButtonDefaults.buttonColors(
+                                containerColor = Color.White.copy(alpha = 0.25f),
+                                contentColor   = Color.White
+                            )
+                        ) {
+                            Icon(Icons.Default.FavoriteBorder, null,
+                                modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Поддержать", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
 

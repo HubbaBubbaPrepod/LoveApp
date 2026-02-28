@@ -21,4 +21,5 @@ sealed class Screen(val route: String) {
     object Pairing : Screen("pairing")
     object PrivacyPolicy : Screen("privacy_policy")
     object TermsOfUse : Screen("terms_of_use")
+    object ProfileSetup : Screen("profile_setup")
 }

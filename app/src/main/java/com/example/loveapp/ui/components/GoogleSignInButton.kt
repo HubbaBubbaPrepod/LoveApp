@@ -28,6 +28,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.example.loveapp.R
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -83,36 +84,38 @@ private suspend fun launchGoogleSignIn(
     onIdToken: (String) -> Unit,
     onError: (String) -> Unit
 ) {
+    val activity = context as? Activity
+        ?: return onError("Не удалось запустить Google Sign-In")
+
+    val credentialManager = CredentialManager.create(context)
+
+    val request = GetCredentialRequest.Builder()
+        .addCredentialOption(GetSignInWithGoogleOption.Builder(WEB_CLIENT_ID).build())
+        .build()
+
     try {
-        val activity = context as? Activity
-            ?: return onError("Не удалось запустить Google Sign-In")
-
-        val credentialManager = CredentialManager.create(context)
-
-        // GetSignInWithGoogleOption — показывает полный пикер аккаунтов Google,
-        // работает при первом входе (в отличие от GetGoogleIdOption/One Tap)
-        val signInOption = GetSignInWithGoogleOption.Builder(WEB_CLIENT_ID).build()
-
-        val request = GetCredentialRequest.Builder()
-            .addCredentialOption(signInOption)
-            .build()
-
-        val response = credentialManager.getCredential(activity, request)
+        val response   = credentialManager.getCredential(activity, request)
         val credential = response.credential
 
         if (credential is CustomCredential &&
             credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
         ) {
-            val tokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-            onIdToken(tokenCredential.idToken)
+            onIdToken(GoogleIdTokenCredential.createFrom(credential.data).idToken)
         } else {
-            onError("Неподдерживаемый тип аутентификации")
+            onError("Неподдерживаемый тип учётных данных: ${credential.type}")
         }
     } catch (e: GetCredentialCancellationException) {
-        // Пользователь отменил — не показываем ошибку
+        // This is thrown both when user presses Back AND when the token exchange
+        // fails silently (wrong SHA-1, expired session, Play Services error).
+        // Show message so it's visible — if user deliberately cancelled they
+        // understand the context.
+        val msg = e.errorMessage?.toString()
+        onError(if (msg.isNullOrBlank()) "Вход отменён или не удался. Попробуйте ещё раз" else msg)
+    } catch (e: NoCredentialException) {
+        onError("Нет доступных аккаунтов Google. Проверьте, что аккаунт добавлен в настройках устройства")
     } catch (e: GetCredentialException) {
-        onError(e.errorMessage?.toString() ?: "Ошибка Google Sign-In")
+        onError(e.errorMessage?.toString() ?: "Ошибка Google Sign-In (${e.javaClass.simpleName})")
     } catch (e: Exception) {
-        onError(e.message ?: "Ошибка Google Sign-In")
+        onError("Ошибка: ${e.message ?: e.javaClass.simpleName}")
     }
 }

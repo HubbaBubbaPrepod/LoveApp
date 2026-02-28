@@ -42,6 +42,7 @@ import com.example.loveapp.viewmodel.AuthViewModel
 @Composable
 fun SignupScreen(
     onSignupSuccess: () -> Unit,
+    onNavigateToProfileSetup: () -> Unit = {},
     onNavigateToLogin: () -> Unit,
     onNavigateToPrivacyPolicy: () -> Unit = {},
     onNavigateToTermsOfUse: () -> Unit = {},
@@ -53,6 +54,7 @@ fun SignupScreen(
     var displayName by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
     val authSuccess by viewModel.authSuccessEvent.collectAsState(initial = false)
+    val needsProfileSetup by viewModel.needsProfileSetupEvent.collectAsState(initial = false)
     val isLoading by viewModel.isLoading.collectAsState(initial = false)
     val errorMessage by viewModel.errorMessage.collectAsState(initial = null)
 
@@ -60,6 +62,13 @@ fun SignupScreen(
         if (authSuccess) {
             viewModel.clearAuthSuccessEvent()
             onSignupSuccess()
+        }
+    }
+
+    LaunchedEffect(needsProfileSetup) {
+        if (needsProfileSetup) {
+            viewModel.clearNeedsProfileSetupEvent()
+            onNavigateToProfileSetup()
         }
     }
 

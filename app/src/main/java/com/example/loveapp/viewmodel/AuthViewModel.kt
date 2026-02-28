@@ -32,6 +32,10 @@ class AuthViewModel @Inject constructor(
     private val _authSuccessEvent = MutableStateFlow(false)
     val authSuccessEvent: StateFlow<Boolean> = _authSuccessEvent.asStateFlow()
 
+    /** One-shot: true when Google login succeeded but profile is not yet complete */
+    private val _needsProfileSetupEvent = MutableStateFlow(false)
+    val needsProfileSetupEvent: StateFlow<Boolean> = _needsProfileSetupEvent.asStateFlow()
+
     /** null = ещё проверяем токен, true = залогинен, false = не залогинен. При старте проверяем сохранённый токен. */
     private val _isLoggedIn = MutableStateFlow<Boolean?>(null)
     val isLoggedIn: StateFlow<Boolean?> = _isLoggedIn.asStateFlow()
@@ -44,6 +48,10 @@ class AuthViewModel @Inject constructor(
 
     fun clearAuthSuccessEvent() {
         _authSuccessEvent.value = false
+    }
+
+    fun clearNeedsProfileSetupEvent() {
+        _needsProfileSetupEvent.value = false
     }
 
     fun signup(username: String, email: String, password: String, displayName: String, gender: String) {
@@ -91,14 +99,36 @@ class AuthViewModel @Inject constructor(
             _isLoading.value = true
             _errorMessage.value = null
             _authSuccessEvent.value = false
+            _needsProfileSetupEvent.value = false
             val result = authRepository.loginWithGoogle(idToken)
             result.onSuccess { authResponse ->
                 _currentUser.value = authResponse
                 _isLoggedIn.value = true
-                _authSuccessEvent.value = true
+                if (authResponse.needsProfileSetup) {
+                    _needsProfileSetupEvent.value = true
+                } else {
+                    _authSuccessEvent.value = true
+                }
                 _isLoading.value = false
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Google sign-in failed"
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun setupProfile(displayName: String, gender: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            val result = authRepository.setupProfile(displayName, gender)
+            result.onSuccess { authResponse ->
+                _currentUser.value = authResponse
+                _needsProfileSetupEvent.value = false
+                _authSuccessEvent.value = true
+                _isLoading.value = false
+            }.onFailure { error ->
+                _errorMessage.value = error.message ?: "Profile setup failed"
                 _isLoading.value = false
             }
         }

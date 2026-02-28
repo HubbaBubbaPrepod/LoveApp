@@ -61,6 +61,7 @@ import com.example.loveapp.ui.screens.PrivacyPolicyScreen
 import com.example.loveapp.ui.screens.RelationshipDashboardScreen
 import com.example.loveapp.ui.screens.TermsOfUseScreen
 import com.example.loveapp.ui.screens.SettingsScreen
+import com.example.loveapp.ui.screens.SetupProfileScreen
 import com.example.loveapp.ui.screens.SignupScreen
 import com.example.loveapp.ui.screens.WishDetailScreen
 import com.example.loveapp.ui.screens.WishesScreen
@@ -178,6 +179,11 @@ fun LoveAppNavigation(
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
+                onNavigateToProfileSetup = {
+                    navController.navigate(Screen.ProfileSetup.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                },
                 onNavigateToSignup = {
                     navController.navigate(Screen.Signup.route)
                 },
@@ -190,6 +196,11 @@ fun LoveAppNavigation(
             SignupScreen(
                 onSignupSuccess = {
                     navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(Screen.Signup.route) { inclusive = true }
+                    }
+                },
+                onNavigateToProfileSetup = {
+                    navController.navigate(Screen.ProfileSetup.route) {
                         popUpTo(Screen.Signup.route) { inclusive = true }
                     }
                 },
@@ -296,6 +307,16 @@ fun LoveAppNavigation(
 
         composable(Screen.TermsOfUse.route) {
             TermsOfUseScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.ProfileSetup.route) {
+            SetupProfileScreen(
+                onSetupComplete = {
+                    navController.navigate(Screen.Dashboard.route) {
+                        popUpTo(Screen.ProfileSetup.route) { inclusive = true }
+                    }
+                }
+            )
         }
         }
     }

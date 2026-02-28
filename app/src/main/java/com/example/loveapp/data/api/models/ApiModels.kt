@@ -33,7 +33,15 @@ data class AuthResponse(
     val profileImage: String? = null,
     val token: String? = null,
     @SerializedName("created_at")
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    @SerializedName("needs_profile_setup")
+    val needsProfileSetup: Boolean = false
+)
+
+data class SetupProfileRequest(
+    @SerializedName("display_name")
+    val displayName: String,
+    val gender: String
 )
 
 // Notes Models

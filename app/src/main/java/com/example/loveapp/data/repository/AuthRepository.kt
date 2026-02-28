@@ -127,10 +127,40 @@ class AuthRepository @Inject constructor(
                 isLoggedIn = true
             )
             userDao.insertUser(user)
-            fcmTokenManager.refreshAndRegister()
+            // Only register FCM if profile is complete (don't block setup flow)
+            if (!response.data.needsProfileSetup) {
+                fcmTokenManager.refreshAndRegister()
+            }
             Result.success(response.data)
         } else {
             Result.failure(Exception(response.message ?: "Google sign-in failed"))
+        }
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    suspend fun setupProfile(displayName: String, gender: String): Result<AuthResponse> = try {
+        val token = tokenManager.getToken() ?: return Result.failure(Exception("Not authenticated"))
+        val request = com.example.loveapp.data.api.models.SetupProfileRequest(
+            displayName = displayName,
+            gender = gender
+        )
+        val response = apiService.setupProfile("Bearer $token", request)
+        if (response.success && response.data != null) {
+            // Update cached user with the chosen display name and gender
+            val existing = userDao.getAllUsers().firstOrNull()
+            if (existing != null) {
+                userDao.updateUser(
+                    existing.copy(
+                        displayName = displayName,
+                        gender = gender
+                    )
+                )
+            }
+            fcmTokenManager.refreshAndRegister()
+            Result.success(response.data)
+        } else {
+            Result.failure(Exception(response.message ?: "Profile setup failed"))
         }
     } catch (e: Exception) {
         Result.failure(e)

@@ -31,7 +31,20 @@
 
 # ─── Google Sign-In (Credential Manager) ─────────────────────────────────────
 -keep class androidx.credentials.** { *; }
+-keepclassmembers class androidx.credentials.** { *; }
 -keep class com.google.android.libraries.identity.googleid.** { *; }
+-keepclassmembers class com.google.android.libraries.identity.googleid.** { *; }
+# CredentialManager discovers providers via ServiceLoader — without this
+# R8 strips the META-INF/services entries and the picker silently fails.
+-keep class * implements androidx.credentials.CredentialProvider { *; }
+-keepnames class * implements androidx.credentials.CredentialProvider
+-keep class androidx.credentials.playservices.** { *; }
+-keepclassmembers class androidx.credentials.playservices.** { *; }
+# Credential option types are compared by class-name strings at runtime
+-keepnames class androidx.credentials.GetCredentialRequest
+-keepnames class androidx.credentials.GetCredentialResponse
+-keepnames class androidx.credentials.CustomCredential
+-dontnote com.google.android.libraries.identity.googleid.**
 -dontwarn sun.misc.**
 
 # ─── Retrofit interface ───────────────────────────────────────────────────────

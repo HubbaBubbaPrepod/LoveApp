@@ -52,6 +52,12 @@ interface LoveAppApiService {
     @POST("auth/google")
     suspend fun googleAuth(@Body request: GoogleSignInRequest): ApiResponse<AuthResponse>
 
+    @PUT("auth/setup-profile")
+    suspend fun setupProfile(
+        @Header("Authorization") token: String,
+        @Body request: com.example.loveapp.data.api.models.SetupProfileRequest
+    ): ApiResponse<AuthResponse>
+
     @GET("auth/profile")
     suspend fun getProfile(@Header("Authorization") token: String): ApiResponse<AuthResponse>
 

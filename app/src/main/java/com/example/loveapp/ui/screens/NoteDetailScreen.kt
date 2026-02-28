@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.viewmodel.NoteViewModel
+import com.example.loveapp.utils.rememberResponsiveConfig
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -78,6 +79,8 @@ fun NoteDetailScreen(
     var isSaving by remember { mutableStateOf(false) }
 
     val contentFocusRequester = remember { FocusRequester() }
+    val r = rememberResponsiveConfig()
+
 
     val today = remember {
         SimpleDateFormat("d MMMM yyyy, HH:mm", Locale.getDefault()).format(Date())
@@ -255,7 +258,7 @@ fun NoteDetailScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = r.hPadding)
                 .verticalScroll(rememberScrollState())
         ) {
             Spacer(modifier = Modifier.height(20.dp))
@@ -267,7 +270,7 @@ fun NoteDetailScreen(
                 readOnly = isReadOnly,
                 modifier = Modifier.fillMaxWidth(),
                 textStyle = TextStyle(
-                    fontSize = 28.sp,
+                    fontSize = r.titleFontSize,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     lineHeight = 34.sp
@@ -278,7 +281,7 @@ fun NoteDetailScreen(
                         if (title.isEmpty()) {
                             Text(
                                 text = "Title",
-                                fontSize = 28.sp,
+                                fontSize = r.titleFontSize,
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = 34.sp,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)

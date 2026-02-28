@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.res.stringResource
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.R
 import com.example.loveapp.ui.components.GoogleSignInButton
+import com.example.loveapp.utils.rememberResponsiveConfig
 import com.example.loveapp.viewmodel.AuthViewModel
 
 @Composable
@@ -57,6 +59,7 @@ fun SignupScreen(
     val needsProfileSetup by viewModel.needsProfileSetupEvent.collectAsState(initial = false)
     val isLoading by viewModel.isLoading.collectAsState(initial = false)
     val errorMessage by viewModel.errorMessage.collectAsState(initial = null)
+    val r = rememberResponsiveConfig()
 
     LaunchedEffect(authSuccess) {
         if (authSuccess) {
@@ -78,15 +81,20 @@ fun SignupScreen(
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(horizontal = r.hPadding, vertical = 24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Column(
+            modifier = Modifier.widthIn(max = r.maxContentWidth).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         Text(
             text = stringResource(R.string.create_account),
             style = MaterialTheme.typography.displaySmall,
+            fontSize = r.titleFontSize,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier.padding(bottom = r.vSpacingLarge)
         )
 
         OutlinedTextField(
@@ -95,7 +103,7 @@ fun SignupScreen(
             label = { Text(stringResource(R.string.display_name)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = r.vSpacingMedium)
         )
 
         OutlinedTextField(
@@ -104,7 +112,7 @@ fun SignupScreen(
             label = { Text(stringResource(R.string.username)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = r.vSpacingMedium)
         )
 
         OutlinedTextField(
@@ -113,7 +121,7 @@ fun SignupScreen(
             label = { Text(stringResource(R.string.email)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp),
+                .padding(bottom = r.vSpacingMedium),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
 
@@ -123,16 +131,16 @@ fun SignupScreen(
             label = { Text(stringResource(R.string.password)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp),
+                .padding(bottom = r.vSpacingMedium),
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
         )
 
-        Text(stringResource(R.string.gender), style = MaterialTheme.typography.labelMedium, modifier = Modifier.align(Alignment.Start))
+        Text(stringResource(R.string.gender), style = MaterialTheme.typography.labelMedium, fontSize = r.captionFontSize, modifier = Modifier.align(Alignment.Start))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp),
+                .padding(bottom = r.vSpacingMedium),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -140,14 +148,14 @@ fun SignupScreen(
                     selected = gender == "female",
                     onClick = { gender = "female" }
                 )
-                Text(stringResource(R.string.female), color = MaterialTheme.colorScheme.onSurface)
+                Text(stringResource(R.string.female), color = MaterialTheme.colorScheme.onSurface, fontSize = r.bodyFontSize)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
                     selected = gender == "male",
                     onClick = { gender = "male" }
                 )
-                Text(stringResource(R.string.male), color = MaterialTheme.colorScheme.onSurface)
+                Text(stringResource(R.string.male), color = MaterialTheme.colorScheme.onSurface, fontSize = r.bodyFontSize)
             }
         }
 
@@ -156,9 +164,10 @@ fun SignupScreen(
                 text = errorMessage!!,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
+                fontSize = r.captionFontSize,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp)
+                    .padding(bottom = r.vSpacingSmall)
             )
         }
 
@@ -166,13 +175,16 @@ fun SignupScreen(
             onClick = { viewModel.signup(username, email, password, displayName, gender) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
+                .height(r.buttonHeight),
             enabled = !isLoading && username.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && displayName.isNotEmpty() && gender.isNotEmpty()
         ) {
-            Text(if (isLoading) stringResource(R.string.loading) else stringResource(R.string.sign_up))
+            Text(
+                if (isLoading) stringResource(R.string.loading) else stringResource(R.string.sign_up),
+                fontSize = r.bodyFontSize
+            )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(r.vSpacingSmall))
 
         GoogleSignInButton(
             isLoading = isLoading,
@@ -180,40 +192,43 @@ fun SignupScreen(
             onError   = { viewModel.setErrorMessage(it) }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(r.vSpacingMedium))
 
         TextButton(onClick = onNavigateToLogin) {
-            Text(stringResource(R.string.have_account))
+            Text(stringResource(R.string.have_account), fontSize = r.bodyFontSize)
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(r.vSpacingSmall))
 
         Text(
             text = "Регистрируясь, вы соглашаетесь с",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            fontSize = 11.sp
+            fontSize = r.captionFontSize
         )
-        Row(horizontalArrangement = Arrangement.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
             TextButton(onClick = onNavigateToPrivacyPolicy, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
                 Text(
                     text = "Политикой конфиденциальности",
                     style = MaterialTheme.typography.bodySmall,
                     textDecoration = TextDecoration.Underline,
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 11.sp
+                    fontSize = r.captionFontSize
                 )
             }
-            Text("·", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), modifier = Modifier.align(Alignment.CenterVertically))
             TextButton(onClick = onNavigateToTermsOfUse, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
                 Text(
                     text = "Условиями использования",
                     style = MaterialTheme.typography.bodySmall,
                     textDecoration = TextDecoration.Underline,
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 11.sp
+                    fontSize = r.captionFontSize
                 )
             }
         }
-    }
+        } // inner content Column
+    } // outer scroll Column
 }

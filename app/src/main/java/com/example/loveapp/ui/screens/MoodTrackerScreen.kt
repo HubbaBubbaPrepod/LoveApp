@@ -84,6 +84,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.data.api.models.MoodResponse
 import com.example.loveapp.ui.components.IOSTopAppBar
 import com.example.loveapp.viewmodel.MoodViewModel
+import com.example.loveapp.utils.rememberResponsiveConfig
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -169,6 +170,7 @@ fun MoodTrackerScreen(
     val isLoading        by viewModel.isLoading.collectAsState()
     val errorMessage     by viewModel.errorMessage.collectAsState()
     val successMessage   by viewModel.successMessage.collectAsState()
+    val r = rememberResponsiveConfig()
 
     var showPicker         by remember { mutableStateOf(false) }
     var showPartnerHistory by remember { mutableStateOf(false) }

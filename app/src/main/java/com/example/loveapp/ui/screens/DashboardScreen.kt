@@ -46,6 +46,7 @@ import com.example.loveapp.ui.theme.iOSActivityPurple
 import com.example.loveapp.ui.theme.iOSPrimaryPink
 import com.example.loveapp.ui.theme.iOSSecondaryPeach
 import com.example.loveapp.ui.theme.iOSTertiaryCoral
+import com.example.loveapp.utils.rememberResponsiveConfig
 import com.example.loveapp.R
 
 data class MenutileData(
@@ -76,6 +77,7 @@ fun DashboardScreen(
     val lCalendars = stringResource(R.string.calendars)
     val lRelation  = stringResource(R.string.relationship)
     val lSettings  = stringResource(R.string.settings)
+    val r = rememberResponsiveConfig()
 
     // Tiles are static — remember them so IOSTile can be skipped on recomposition
     val tiles = remember(
@@ -103,20 +105,20 @@ fun DashboardScreen(
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.primary)
                     .statusBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .padding(horizontal = r.hPadding, vertical = r.vSpacingMedium)
             ) {
                 Text(
                     text = "Love App",
                     style = MaterialTheme.typography.displaySmall,
                     color = MaterialTheme.colorScheme.onPrimary,
-                    fontSize = 34.sp,
+                    fontSize = r.titleFontSize,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Your personal companion",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
-                    fontSize = 14.sp,
+                    fontSize = r.bodyFontSize,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -129,11 +131,11 @@ fun DashboardScreen(
                 .padding(innerPadding)
         ) {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
+                columns = GridCells.Fixed(r.gridColumns),
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+                verticalArrangement = Arrangement.spacedBy(r.vSpacingMedium),
+                horizontalArrangement = Arrangement.spacedBy(r.vSpacingMedium),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(r.hPadding)
             ) {
                 items(tiles.size, key = { it }) { index ->
                     val tile = tiles[index]

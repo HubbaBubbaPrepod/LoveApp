@@ -71,6 +71,7 @@ import com.example.loveapp.ui.theme.PrimaryPink
 import com.example.loveapp.viewmodel.MilestoneEvent
 import com.example.loveapp.viewmodel.MilestoneType
 import com.example.loveapp.viewmodel.RelationshipViewModel
+import com.example.loveapp.utils.rememberResponsiveConfig
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -93,6 +94,7 @@ fun RelationshipDashboardScreen(
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val r = rememberResponsiveConfig()
 
     val relationship      by viewModel.relationship.collectAsState()
     val partnerDisplayName by viewModel.partnerDisplayName.collectAsState()

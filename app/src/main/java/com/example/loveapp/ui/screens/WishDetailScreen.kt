@@ -91,6 +91,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import com.example.loveapp.viewmodel.WishViewModel
+import com.example.loveapp.utils.rememberResponsiveConfig
 
 private val WISH_ICON_OPTIONS: List<Pair<String, ImageVector>> = listOf(
     "gift"      to Icons.Default.CardGiftcard,
@@ -131,6 +132,7 @@ fun WishDetailScreen(
     val successMessage by viewModel.successMessage.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val r = rememberResponsiveConfig()
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }

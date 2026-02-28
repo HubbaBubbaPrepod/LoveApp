@@ -75,6 +75,7 @@ import com.example.loveapp.ui.theme.AccentPurple
 import com.example.loveapp.ui.theme.PrimaryPink
 import com.example.loveapp.viewmodel.AuthViewModel
 import com.example.loveapp.viewmodel.SettingsViewModel
+import com.example.loveapp.utils.rememberResponsiveConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,6 +96,7 @@ fun SettingsScreen(
 
     val context           = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val r = rememberResponsiveConfig()
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     // Load profile on open
@@ -194,7 +196,7 @@ fun SettingsScreen(
                 Card(
                     modifier  = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = r.hPadding),
                     shape     = RoundedCornerShape(14.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                     colors    = CardDefaults.cardColors(containerColor = Color.Transparent)
@@ -447,10 +449,11 @@ private fun SettingsSectionLabel(text: String) {
 
 @Composable
 private fun SettingsGroup(content: @Composable () -> Unit) {
+    val rg = rememberResponsiveConfig()
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = rg.hPadding),
         shape = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)

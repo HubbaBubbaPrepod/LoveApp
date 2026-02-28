@@ -62,6 +62,7 @@ import com.example.loveapp.R
 import com.example.loveapp.data.api.models.NoteResponse
 import com.example.loveapp.navigation.Screen
 import com.example.loveapp.ui.components.IOSTopAppBar
+import com.example.loveapp.utils.rememberResponsiveConfig
 import com.example.loveapp.viewmodel.NoteViewModel
 
 @androidx.compose.material3.ExperimentalMaterial3Api
@@ -73,7 +74,7 @@ fun NotesScreen(
     viewModel: NoteViewModel = hiltViewModel()
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-
+    val r = rememberResponsiveConfig()
     val notes by viewModel.notes.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -146,11 +147,11 @@ fun NotesScreen(
                 }
                 else -> {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
+                        columns = GridCells.Fixed(r.gridColumns),
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        contentPadding = PaddingValues(r.hPadding),
+                        verticalArrangement = Arrangement.spacedBy(r.vSpacingMedium),
+                        horizontalArrangement = Arrangement.spacedBy(r.vSpacingMedium)
                     ) {
                         items(notes) { note ->
                             NoteIOSTile(

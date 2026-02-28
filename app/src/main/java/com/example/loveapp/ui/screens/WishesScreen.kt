@@ -85,6 +85,7 @@ import com.example.loveapp.R
 import com.example.loveapp.data.api.models.WishResponse
 import com.example.loveapp.navigation.Screen
 import com.example.loveapp.ui.components.IOSTopAppBar
+import com.example.loveapp.utils.rememberResponsiveConfig
 import com.example.loveapp.viewmodel.WishViewModel
 
 private val WISH_ICON_MAP: Map<String, ImageVector> = mapOf(
@@ -134,6 +135,7 @@ fun WishesScreen(
     viewModel: WishViewModel = hiltViewModel()
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val r = rememberResponsiveConfig()
     val wishes by viewModel.wishes.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -207,11 +209,11 @@ fun WishesScreen(
                 }
                 else -> {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
+                        columns = GridCells.Fixed(r.gridColumns),
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        contentPadding = PaddingValues(r.hPadding),
+                        verticalArrangement = Arrangement.spacedBy(r.vSpacingMedium),
+                        horizontalArrangement = Arrangement.spacedBy(r.vSpacingMedium)
                     ) {
                         items(wishes) { wish ->
                             WishIOSTile(

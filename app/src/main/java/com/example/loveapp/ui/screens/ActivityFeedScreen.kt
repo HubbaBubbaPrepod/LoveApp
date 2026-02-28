@@ -33,6 +33,7 @@ import com.example.loveapp.data.api.models.ActivityResponse
 import com.example.loveapp.ui.components.IOSTopAppBar
 import com.example.loveapp.utils.DateUtils
 import com.example.loveapp.viewmodel.ActivityViewModel
+import com.example.loveapp.utils.rememberResponsiveConfig
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -84,6 +85,7 @@ fun ActivityFeedScreen(
     val successMessage    by viewModel.successMessage.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val r = rememberResponsiveConfig()
 
     var showPicker         by remember { mutableStateOf(false) }
     var showMyHistory      by remember { mutableStateOf(false) }

@@ -29,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.ui.components.IOSTopAppBar
 import com.example.loveapp.viewmodel.CycleDayType
 import com.example.loveapp.viewmodel.CycleViewModel
+import com.example.loveapp.utils.rememberResponsiveConfig
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -100,6 +101,7 @@ fun MenstrualCalendarScreen(
     val avgPeriodDur    by viewModel.avgPeriodDuration.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val r = rememberResponsiveConfig()
     var showStats         by remember { mutableStateOf(false) }
     var showSettings      by remember { mutableStateOf(false) }
 

@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.R
 import com.example.loveapp.ui.components.GoogleSignInButton
+import com.example.loveapp.utils.rememberResponsiveConfig
 import com.example.loveapp.viewmodel.AuthViewModel
 
 @Composable
@@ -55,6 +57,7 @@ fun LoginScreen(
     val needsProfileSetup by viewModel.needsProfileSetupEvent.collectAsState(initial = false)
     val isLoading by viewModel.isLoading.collectAsState(initial = false)
     val errorMessage by viewModel.errorMessage.collectAsState(initial = null)
+    val r = rememberResponsiveConfig()
 
     LaunchedEffect(authSuccess) {
         if (authSuccess) {
@@ -76,15 +79,20 @@ fun LoginScreen(
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(horizontal = r.hPadding, vertical = 24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Column(
+            modifier = Modifier.widthIn(max = r.maxContentWidth).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         Text(
             text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.displayMedium,
+            fontSize = r.titleFontSize,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier.padding(bottom = r.vSpacingLarge)
         )
 
         OutlinedTextField(
@@ -93,7 +101,7 @@ fun LoginScreen(
             label = { Text(stringResource(R.string.email)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = r.vSpacingMedium)
                 .semantics { testTag = "login_email" },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
@@ -104,7 +112,7 @@ fun LoginScreen(
             label = { Text(stringResource(R.string.password)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp)
+                .padding(bottom = r.vSpacingMedium)
                 .semantics { testTag = "login_password" },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
@@ -115,9 +123,10 @@ fun LoginScreen(
                 text = errorMessage!!,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
+                fontSize = r.captionFontSize,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp)
+                    .padding(bottom = r.vSpacingSmall)
             )
         }
 
@@ -125,55 +134,61 @@ fun LoginScreen(
             onClick = { viewModel.login(email, password) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .height(r.buttonHeight)
                 .semantics { testTag = "login_button" },
             enabled = !isLoading && email.isNotBlank() && password.isNotBlank()
         ) {
-            Text(if (isLoading) stringResource(R.string.loading) else stringResource(R.string.login))
+            Text(
+                if (isLoading) stringResource(R.string.loading) else stringResource(R.string.login),
+                fontSize = r.bodyFontSize
+            )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(r.vSpacingSmall))
 
         GoogleSignInButton(
             isLoading = isLoading,
             onIdToken = { idToken -> viewModel.loginWithGoogle(idToken) },
-            onError   = { /* errorMessage already shown via StateFlow */ viewModel.setErrorMessage(it) }
+            onError   = { viewModel.setErrorMessage(it) }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(r.vSpacingMedium))
 
         TextButton(onClick = onNavigateToSignup) {
-            Text(stringResource(R.string.no_account))
+            Text(stringResource(R.string.no_account), fontSize = r.bodyFontSize)
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(r.vSpacingSmall))
 
         Text(
             text = "Продолжая, вы соглашаетесь с",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            fontSize = 11.sp
+            fontSize = r.captionFontSize
         )
-        Row(horizontalArrangement = Arrangement.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
             TextButton(onClick = onNavigateToPrivacyPolicy, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
                 Text(
                     text = "Политикой конфиденциальности",
                     style = MaterialTheme.typography.bodySmall,
                     textDecoration = TextDecoration.Underline,
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 11.sp
+                    fontSize = r.captionFontSize
                 )
             }
-            Text("·", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), modifier = Modifier.align(Alignment.CenterVertically))
             TextButton(onClick = onNavigateToTermsOfUse, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
                 Text(
                     text = "Условиями использования",
                     style = MaterialTheme.typography.bodySmall,
                     textDecoration = TextDecoration.Underline,
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 11.sp
+                    fontSize = r.captionFontSize
                 )
             }
         }
-    }
+        } // inner content Column
+    } // outer scroll Column
 }

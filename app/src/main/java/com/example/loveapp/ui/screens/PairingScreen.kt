@@ -70,6 +70,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.ui.components.IOSTopAppBar
 import com.example.loveapp.ui.theme.AccentPurple
 import com.example.loveapp.ui.theme.PrimaryPink
+import com.example.loveapp.utils.rememberResponsiveConfig
 import com.example.loveapp.viewmodel.PairingViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,6 +86,7 @@ fun PairingScreen(
 
     var selectedTab by remember { mutableIntStateOf(0) }
     var inputCode by remember { mutableStateOf("") }
+    val r = rememberResponsiveConfig()
 
     // Show error in snackbar
     LaunchedEffect(uiState.error) {
@@ -116,7 +118,7 @@ fun PairingScreen(
                 .background(gradient)
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = r.hPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.height(16.dp))

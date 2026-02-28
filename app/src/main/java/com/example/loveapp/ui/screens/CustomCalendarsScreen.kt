@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.ColorUtils
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.viewmodel.CalendarViewModel
+import com.example.loveapp.utils.rememberResponsiveConfig
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -72,6 +73,7 @@ fun CustomCalendarsScreen(
 ) {
     var selectedCalendarId by remember { mutableStateOf<Int?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val r = rememberResponsiveConfig()
     val errorMessage  by viewModel.errorMessage.collectAsState()
     val successMessage by viewModel.successMessage.collectAsState()
 
@@ -127,6 +129,7 @@ private fun CalendarListScreen(
     val isLoading  by viewModel.isLoading.collectAsState()
     val events     by viewModel.events.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
+    val r = rememberResponsiveConfig()
 
     Scaffold(
         contentWindowInsets = WindowInsets.navigationBars,
@@ -180,8 +183,8 @@ private fun CalendarListScreen(
                 else -> {
                     val today = LocalDate.now()
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(12.dp),
+                        columns = GridCells.Fixed(r.gridColumns),
+                        contentPadding = PaddingValues(r.hPadding),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxSize()

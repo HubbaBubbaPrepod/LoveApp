@@ -57,7 +57,9 @@ import com.example.loveapp.ui.screens.MoodTrackerScreen
 import com.example.loveapp.ui.screens.NoteDetailScreen
 import com.example.loveapp.ui.screens.NotesScreen
 import com.example.loveapp.ui.screens.PairingScreen
+import com.example.loveapp.ui.screens.PrivacyPolicyScreen
 import com.example.loveapp.ui.screens.RelationshipDashboardScreen
+import com.example.loveapp.ui.screens.TermsOfUseScreen
 import com.example.loveapp.ui.screens.SettingsScreen
 import com.example.loveapp.ui.screens.SignupScreen
 import com.example.loveapp.ui.screens.WishDetailScreen
@@ -178,7 +180,9 @@ fun LoveAppNavigation(
                 },
                 onNavigateToSignup = {
                     navController.navigate(Screen.Signup.route)
-                }
+                },
+                onNavigateToPrivacyPolicy = { navController.navigate(Screen.PrivacyPolicy.route) },
+                onNavigateToTermsOfUse = { navController.navigate(Screen.TermsOfUse.route) }
             )
         }
 
@@ -191,7 +195,9 @@ fun LoveAppNavigation(
                 },
                 onNavigateToLogin = {
                     navController.popBackStack()
-                }
+                },
+                onNavigateToPrivacyPolicy = { navController.navigate(Screen.PrivacyPolicy.route) },
+                onNavigateToTermsOfUse = { navController.navigate(Screen.TermsOfUse.route) }
             )
         }
 
@@ -274,12 +280,22 @@ fun LoveAppNavigation(
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToPairing = { navController.navigate(Screen.Pairing.route) },
+                onNavigateToPrivacyPolicy = { navController.navigate(Screen.PrivacyPolicy.route) },
+                onNavigateToTermsOfUse = { navController.navigate(Screen.TermsOfUse.route) },
                 authViewModel = authViewModel
             )
         }
 
         composable(Screen.Pairing.route) {
             PairingScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.PrivacyPolicy.route) {
+            PrivacyPolicyScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.TermsOfUse.route) {
+            TermsOfUseScreen(onNavigateBack = { navController.popBackStack() })
         }
         }
     }

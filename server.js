@@ -338,18 +338,20 @@ app.post('/api/auth/google', async (req, res) => {
       const displayName = name || username;
       const result = await pool.query(
         'INSERT INTO users (username, email, password_hash, display_name, gender) VALUES ($1, $2, $3, $4, $5) RETURNING id, username, email, display_name, gender, created_at',
-        [username, email, '', displayName, 'other']
+        [username, email, '', displayName, null]
       );
       user = result.rows[0];
     }
 
     const token = generateToken(user.id);
+    const needsProfileSetup = !user.gender;
     sendResponse(res, true, 'Google auth successful', {
       id: user.id,
       username: user.username,
       email: user.email,
       display_name: user.display_name,
       gender: user.gender,
+      needs_profile_setup: needsProfileSetup,
       token,
       created_at: user.created_at,
     });
@@ -374,6 +376,35 @@ app.get('/api/auth/profile', authenticateToken, async (req, res) => {
     sendResponse(res, true, 'Profile retrieved', result.rows[0]);
   } catch (err) {
     console.error('Get profile error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Complete profile setup after Google Sign-In (display_name + gender)
+app.put('/api/auth/setup-profile', authenticateToken, async (req, res) => {
+  try {
+    const { display_name, gender } = req.body;
+
+    if (!display_name || display_name.trim().length === 0) {
+      return sendResponse(res, false, 'display_name is required', null, 400);
+    }
+    if (!gender || !['male', 'female', 'other'].includes(gender)) {
+      return sendResponse(res, false, 'Valid gender is required (male, female, other)', null, 400);
+    }
+
+    const result = await pool.query(
+      'UPDATE users SET display_name = $1, gender = $2, updated_at = NOW() WHERE id = $3 RETURNING id, username, email, display_name, gender, created_at',
+      [display_name.trim(), gender, req.userId]
+    );
+
+    if (result.rows.length === 0) return sendResponse(res, false, 'User not found', null, 404);
+
+    sendResponse(res, true, 'Profile setup complete', {
+      ...result.rows[0],
+      needs_profile_setup: false,
+    });
+  } catch (err) {
+    console.error('Setup profile error:', err);
     sendResponse(res, false, 'Internal server error', null, 500);
   }
 });

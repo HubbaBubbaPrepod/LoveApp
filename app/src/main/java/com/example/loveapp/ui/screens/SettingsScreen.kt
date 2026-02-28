@@ -23,11 +23,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Sync
@@ -79,6 +81,8 @@ import com.example.loveapp.viewmodel.SettingsViewModel
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToPairing: () -> Unit = {},
+    onNavigateToPrivacyPolicy: () -> Unit = {},
+    onNavigateToTermsOfUse: () -> Unit = {},
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
@@ -267,6 +271,28 @@ fun SettingsScreen(
                         iconTint = Color(0xFF2196F3),
                         title    = "Версия",
                         value    = BuildConfig.VERSION_NAME
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon     = Icons.Default.Lock,
+                        iconTint = Color(0xFF607D8B),
+                        title    = "Политика конфиденциальности",
+                        subtitle = "Как мы обрабатываем ваши данные",
+                        onClick  = onNavigateToPrivacyPolicy
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon     = Icons.Default.Description,
+                        iconTint = Color(0xFF607D8B),
+                        title    = "Условия использования",
+                        subtitle = "Правила использования приложения",
+                        onClick  = onNavigateToTermsOfUse
                     )
                 }
             }

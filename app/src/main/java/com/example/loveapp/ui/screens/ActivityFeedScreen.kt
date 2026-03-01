@@ -1,6 +1,7 @@
 ﻿package com.example.loveapp.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,7 +29,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.example.loveapp.data.api.models.ActivityResponse
 import com.example.loveapp.data.api.models.CustomActivityTypeResponse
 import com.example.loveapp.ui.components.IOSTopAppBar
@@ -41,11 +46,16 @@ import java.util.Locale
 
 // region Activity type definitions
 
+/**
+ * [ActivityDef] describes a single activity type for the UI.
+ * - [icon]       : vector icon for built-in types (non-null when [iconValue] is null)
+ * - [iconValue]  : for custom types; either a named key from [CUSTOM_ICON_MAP] or an http(s) URL
+ */
 internal data class ActivityDef(
     val key: String,
     val label: String,
     val icon: ImageVector? = null,
-    val emoji: String? = null,
+    val iconValue: String? = null,   // icon-name key OR image URL
     val color: Color
 )
 
@@ -62,6 +72,60 @@ internal val ACTIVITY_TYPES = listOf(
     ActivityDef("other",    "Другое",    Icons.Default.MoreHoriz,       color = Color(0xFF8E8E93))
 )
 
+/**
+ * Curated set of Material icons available for custom activity types.
+ * Stored by their string key so the key can be persisted to the server.
+ */
+internal data class IconOption(val key: String, val icon: ImageVector, val label: String)
+
+internal val CUSTOM_ICON_OPTIONS: List<IconOption> = listOf(
+    IconOption("Favorite",         Icons.Default.Favorite,          "Любовь"),
+    IconOption("Star",             Icons.Default.Star,              "Звезда"),
+    IconOption("EmojiEvents",      Icons.Default.EmojiEvents,       "Победа"),
+    IconOption("FitnessCenter",    Icons.Default.FitnessCenter,     "Тренировка"),
+    IconOption("DirectionsRun",    Icons.Default.DirectionsRun,     "Бег"),
+    IconOption("SelfImprovement",  Icons.Default.SelfImprovement,   "Медитация"),
+    IconOption("Spa",              Icons.Default.Spa,               "Спа"),
+    IconOption("LocalCafe",        Icons.Default.LocalCafe,         "Кофе"),
+    IconOption("LocalBar",         Icons.Default.LocalBar,          "Бар"),
+    IconOption("Restaurant",       Icons.Default.Restaurant,        "Еда"),
+    IconOption("Fastfood",         Icons.Default.Fastfood,          "Фастфуд"),
+    IconOption("ShoppingCart",     Icons.Default.ShoppingCart,      "Покупки"),
+    IconOption("School",           Icons.Default.School,            "Учёба"),
+    IconOption("MenuBook",         Icons.Default.MenuBook,          "Чтение"),
+    IconOption("MusicNote",        Icons.Default.MusicNote,         "Музыка"),
+    IconOption("Headphones",       Icons.Default.Headphones,        "Наушники"),
+    IconOption("Videocam",         Icons.Default.Videocam,          "Видео"),
+    IconOption("PhotoCamera",      Icons.Default.PhotoCamera,       "Фото"),
+    IconOption("Brush",            Icons.Default.Brush,             "Рисунок"),
+    IconOption("Palette",          Icons.Default.Palette,           "Творчество"),
+    IconOption("Games",            Icons.Default.Games,             "Игры"),
+    IconOption("SportsEsports",    Icons.Default.SportsEsports,     "Гейминг"),
+    IconOption("Pets",             Icons.Default.Pets,              "Питомцы"),
+    IconOption("Park",             Icons.Default.Park,              "Природа"),
+    IconOption("FlightTakeoff",    Icons.Default.FlightTakeoff,     "Путешествия"),
+    IconOption("Hotel",            Icons.Default.Hotel,             "Отель"),
+    IconOption("LocalHospital",    Icons.Default.LocalHospital,     "Больница"),
+    IconOption("DirectionsCar",    Icons.Default.DirectionsCar,     "Авто"),
+    IconOption("TwoWheeler",       Icons.Default.TwoWheeler,        "Мото"),
+    IconOption("Pool",             Icons.Default.Pool,              "Бассейн"),
+    IconOption("SportsBasketball", Icons.Default.SportsBasketball,  "Баскетбол"),
+    IconOption("SportsSoccer",     Icons.Default.SportsSoccer,      "Футбол"),
+    IconOption("SportsTennis",     Icons.Default.SportsTennis,      "Теннис"),
+    IconOption("Hiking",           Icons.Default.Hiking,            "Поход"),
+    IconOption("Sailing",          Icons.Default.Sailing,           "Яхта"),
+    IconOption("Casino",           Icons.Default.Casino,            "Казино"),
+    IconOption("Cake",             Icons.Default.Cake,              "Праздник"),
+    IconOption("CardGiftcard",     Icons.Default.CardGiftcard,      "Подарок"),
+    IconOption("Nightlife",        Icons.Default.Nightlife,         "Найтклаб"),
+    IconOption("DinnerDining",     Icons.Default.DinnerDining,      "Ужин"),
+    IconOption("Work",             Icons.Default.Work,              "Работа")
+)
+
+/** Fast name → ImageVector lookup for custom types. */
+internal val CUSTOM_ICON_MAP: Map<String, ImageVector> =
+    CUSTOM_ICON_OPTIONS.associate { it.key to it.icon }
+
 /** Parses #RRGGBB to Compose Color, falls back to grey on error. */
 private fun parseHexColor(hex: String): Color = try {
     Color(android.graphics.Color.parseColor(hex))
@@ -69,19 +133,21 @@ private fun parseHexColor(hex: String): Color = try {
     Color(0xFF8E8E93)
 }
 
-/** Converts a CustomActivityTypeResponse into an ActivityDef for display. */
+/** Returns true if the string looks like a remote image URL. */
+private fun String.isImageUrl() = startsWith("http://") || startsWith("https://")
+
+/** Converts a [CustomActivityTypeResponse] into an [ActivityDef] for display. */
 internal fun customActivityDef(ct: CustomActivityTypeResponse): ActivityDef =
     ActivityDef(
-        key   = "c_${ct.id}",
-        label = ct.name,
-        emoji = ct.emoji,
-        color = parseHexColor(ct.colorHex)
+        key       = "c_${ct.id}",
+        label     = ct.name,
+        iconValue = ct.emoji,         // stores icon-name key OR image URL
+        color     = parseHexColor(ct.colorHex)
     )
 
 /**
- * Returns the ActivityDef for the given activity_type key.
- * Built-in keys are resolved from ACTIVITY_TYPES; custom keys ("c_{id}") are
- * resolved from the provided list.
+ * Returns the [ActivityDef] for the given activity_type key.
+ * Built-in keys → ACTIVITY_TYPES; custom keys ("c_{id}") → customTypes list.
  */
 internal fun activityDef(
     key: String,
@@ -95,25 +161,41 @@ internal fun activityDef(
     return ACTIVITY_TYPES.last()
 }
 
-/** CompositionLocal that carries the current user's + partner's custom activity types. */
+/** CompositionLocal that carries the current user’s + partner’s custom activity types. */
 val LocalCustomActivityTypes = compositionLocalOf<List<CustomActivityTypeResponse>> { emptyList() }
 
-/** Renders the icon for an [ActivityDef] — vector icon or emoji text. */
+/**
+ * Renders the icon for an [ActivityDef]:
+ * - [ActivityDef.icon] not null → built-in Material vector icon
+ * - [ActivityDef.iconValue] is an http URL → remote image via Coil
+ * - [ActivityDef.iconValue] is a named key → look up in [CUSTOM_ICON_MAP]
+ */
 @Composable
-private fun ActivityIconView(def: ActivityDef, sizeDp: Float, tint: Color) {
-    if (def.emoji != null) {
-        Text(
-            text = def.emoji,
-            fontSize = (sizeDp * 0.75f).sp,
-            textAlign = TextAlign.Center
-        )
-    } else {
-        Icon(
-            imageVector = def.icon!!,
+internal fun ActivityIconView(def: ActivityDef, sizeDp: Float, tint: Color) {
+    when {
+        def.icon != null -> Icon(
+            imageVector      = def.icon,
             contentDescription = def.label,
-            tint = tint,
-            modifier = Modifier.size(sizeDp.dp)
+            tint             = tint,
+            modifier         = Modifier.size(sizeDp.dp)
         )
+        def.iconValue?.isImageUrl() == true -> AsyncImage(
+            model              = def.iconValue,
+            contentDescription = def.label,
+            modifier           = Modifier.size(sizeDp.dp).clip(CircleShape),
+            error              = androidx.compose.ui.res.painterResource(
+                android.R.drawable.ic_menu_gallery
+            )
+        )
+        else -> {
+            val vec = CUSTOM_ICON_MAP[def.iconValue]
+            Icon(
+                imageVector      = vec ?: Icons.Default.MoreHoriz,
+                contentDescription = def.label,
+                tint             = tint,
+                modifier         = Modifier.size(sizeDp.dp)
+            )
+        }
     }
 }
 
@@ -239,13 +321,23 @@ fun ActivityFeedScreen(
         )
     }
 
+    val isIconUploading by viewModel.isIconUploading.collectAsState()
+    val iconUploadUrl   by viewModel.iconUploadUrl.collectAsState()
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { viewModel.uploadActivityIcon(it) }
+    }
+
     if (showCreateCustomActivity) {
         CreateCustomActivitySheet(
-            onDismiss = { showCreateCustomActivity = false },
-            onCreate  = { name, emoji, colorHex ->
-                viewModel.createCustomActivityType(name, emoji, colorHex)
+            onDismiss         = { showCreateCustomActivity = false; viewModel.clearIconUpload() },
+            onCreate          = { name, iconValue, colorHex ->
+                viewModel.createCustomActivityType(name, iconValue, colorHex)
                 showCreateCustomActivity = false
-            }
+                viewModel.clearIconUpload()
+            },
+            onPickFromGallery = { galleryLauncher.launch("image/*") },
+            isUploadingIcon   = isIconUploading,
+            uploadedIconUrl   = iconUploadUrl
         )
     }
 
@@ -644,12 +736,6 @@ private fun ActivityTypeChip(def: ActivityDef, selected: Boolean, onClick: () ->
 
 // region Create Custom Activity Sheet
 
-private val CUSTOM_EMOJI_OPTIONS = listOf(
-    "🎮","🎨","🎵","🎬","📸","🏋️","🎯","🧘","🚴","🏊",
-    "🛒","🍳","🧹","🌱","✈️","🎭","🎲","🏃","💃","🎤",
-    "🧩","🦴","🌸","🎸","🐕","🐈","✍️","🎻","🏄","🛁"
-)
-
 private val CUSTOM_COLOR_OPTIONS = listOf(
     "#E53935","#D81B60","#8E24AA","#5E35B1","#3949AB",
     "#1E88E5","#039BE5","#00ACC1","#00897B","#43A047",
@@ -660,11 +746,28 @@ private val CUSTOM_COLOR_OPTIONS = listOf(
 @Composable
 private fun CreateCustomActivitySheet(
     onDismiss: () -> Unit,
-    onCreate: (name: String, emoji: String, colorHex: String) -> Unit
+    onCreate: (name: String, iconValue: String, colorHex: String) -> Unit,
+    onPickFromGallery: () -> Unit = {},
+    isUploadingIcon: Boolean = false,
+    uploadedIconUrl: String? = null
 ) {
-    var name          by remember { mutableStateOf("") }
-    var selectedEmoji by remember { mutableStateOf(CUSTOM_EMOJI_OPTIONS.first()) }
-    var selectedColor by remember { mutableStateOf(CUSTOM_COLOR_OPTIONS.first()) }
+    var name            by remember { mutableStateOf("") }
+    // 0 = Material Icons tab, 1 = URL tab
+    var iconTab         by remember { mutableStateOf(0) }
+    var selectedIconKey by remember { mutableStateOf(CUSTOM_ICON_OPTIONS.first().key) }
+    var iconUrlInput    by remember { mutableStateOf("") }
+    var selectedColor   by remember { mutableStateOf(CUSTOM_COLOR_OPTIONS.first()) }
+
+    // Auto-fill URL field when gallery upload completes
+    LaunchedEffect(uploadedIconUrl) {
+        if (uploadedIconUrl != null) {
+            iconTab = 1
+            iconUrlInput = uploadedIconUrl
+        }
+    }
+
+    val currentIconValue = if (iconTab == 0) selectedIconKey else iconUrlInput.trim()
+    val accentColor = parseHexColor(selectedColor)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -687,65 +790,193 @@ private fun CreateCustomActivitySheet(
 
             // ── Name field ──────────────────────────────────────────
             OutlinedTextField(
-                value          = name,
-                onValueChange  = { if (it.length <= 30) name = it },
-                label          = { Text("Название") },
-                singleLine     = true,
-                leadingIcon    = {
-                    Text(selectedEmoji, fontSize = 18.sp,
-                        modifier = Modifier.padding(start = 4.dp))
+                value         = name,
+                onValueChange = { if (it.length <= 30) name = it },
+                label         = { Text("Название") },
+                singleLine    = true,
+                leadingIcon   = {
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(accentColor.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ActivityIconView(
+                            def    = ActivityDef(key = "_p", label = "", iconValue = currentIconValue, color = accentColor),
+                            sizeDp = 16f,
+                            tint   = accentColor
+                        )
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // ── Emoji picker ────────────────────────────────────────
-            Text("Иконка", style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold)
-            LazyVerticalGrid(
-                columns               = GridCells.Fixed(6),
-                modifier              = Modifier.height(148.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement   = Arrangement.spacedBy(6.dp)
-            ) {
-                items(CUSTOM_EMOJI_OPTIONS) { emoji ->
-                    val isSelected = emoji == selectedEmoji
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(
-                                if (isSelected) parseHexColor(selectedColor).copy(alpha = 0.3f)
-                                else MaterialTheme.colorScheme.surfaceVariant
+            // ── Icon picker: tab switcher ───────────────────────────
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    listOf("Иконки", "URL").forEachIndexed { idx, tabLabel ->
+                        val active = idx == iconTab
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (active) accentColor else Color.Transparent)
+                                .clickable { iconTab = idx }
+                                .padding(vertical = 10.dp)
+                        ) {
+                            Text(
+                                tabLabel,
+                                style      = MaterialTheme.typography.labelLarge,
+                                fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                                color      = if (active) Color.White
+                                             else MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            .clickable { selectedEmoji = emoji }
+                        }
+                    }
+                }
+
+                // Tab 0: Material Icons grid
+                if (iconTab == 0) {
+                    LazyVerticalGrid(
+                        columns               = GridCells.Fixed(5),
+                        modifier              = Modifier.height(208.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement   = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(emoji, fontSize = 22.sp, textAlign = TextAlign.Center)
+                        items(CUSTOM_ICON_OPTIONS) { opt ->
+                            val isSel = opt.key == selectedIconKey
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.clickable { selectedIconKey = opt.key }
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(
+                                            if (isSel) accentColor
+                                            else MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                ) {
+                                    Icon(
+                                        imageVector        = opt.icon,
+                                        contentDescription = opt.label,
+                                        tint               = if (isSel) Color.White
+                                                             else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier           = Modifier.size(24.dp)
+                                    )
+                                }
+                                Text(
+                                    opt.label, fontSize = 8.sp,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Tab 1: URL input
+                if (iconTab == 1) {
+                    OutlinedTextField(
+                        value         = iconUrlInput,
+                        onValueChange = { iconUrlInput = it },
+                        label         = { Text("URL изображения") },
+                        placeholder   = { Text("https://...",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+                        singleLine    = true,
+                        leadingIcon   = { Icon(Icons.Default.Link, contentDescription = null) },
+                        modifier      = Modifier.fillMaxWidth()
+                    )
+                    // Gallery picker button
+                    OutlinedButton(
+                        onClick  = onPickFromGallery,
+                        enabled  = !isUploadingIcon,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isUploadingIcon) {
+                            CircularProgressIndicator(
+                                modifier  = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color     = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Загрузка...")
+                        } else {
+                            Icon(Icons.Default.PhotoLibrary, contentDescription = null,
+                                modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Выбрать из галереи")
+                        }
+                    }
+                    if (iconUrlInput.isNotBlank() && iconUrlInput.trim().isImageUrl()) {
+                        Row(
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(12.dp)
+                        ) {
+                            AsyncImage(
+                                model              = iconUrlInput.trim(),
+                                contentDescription = null,
+                                modifier           = Modifier.size(44.dp).clip(CircleShape)
+                            )
+                            Text("Предпросмотр изображения",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else if (iconUrlInput.isNotBlank()) {
+                        Text(
+                            "Введите полный URL (должен начинаться с https://)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
                     }
                 }
             }
 
             // ── Color picker ────────────────────────────────────────
-            Text("Цвет", style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold)
-            LazyVerticalGrid(
-                columns               = GridCells.Fixed(5),
-                modifier              = Modifier.height(96.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement   = Arrangement.spacedBy(8.dp)
-            ) {
-                items(CUSTOM_COLOR_OPTIONS) { hex ->
-                    val isSelected = hex == selectedColor
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(parseHexColor(hex))
-                            .clickable { selectedColor = hex }
-                    ) {
-                        if (isSelected) {
-                            Icon(
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Цвет фона",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold)
+                LazyVerticalGrid(
+                    columns               = GridCells.Fixed(5),
+                    modifier              = Modifier.height(100.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement   = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(CUSTOM_COLOR_OPTIONS) { hex ->
+                        val isSel = hex == selectedColor
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(parseHexColor(hex))
+                                .then(
+                                    if (isSel) Modifier.border(
+                                        3.dp,
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        CircleShape
+                                    ) else Modifier
+                                )
+                                .clickable { selectedColor = hex }
+                        ) {
+                            if (isSel) Icon(
                                 Icons.Default.Check, contentDescription = null,
                                 tint = Color.White, modifier = Modifier.size(20.dp)
                             )
@@ -757,7 +988,7 @@ private fun CreateCustomActivitySheet(
             // ── Preview ─────────────────────────────────────────────
             if (name.isNotBlank()) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment     = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -766,16 +997,31 @@ private fun CreateCustomActivitySheet(
                         .padding(12.dp)
                 ) {
                     Box(
-                        modifier = Modifier.size(40.dp).clip(CircleShape)
-                            .background(parseHexColor(selectedColor).copy(alpha = 0.2f)),
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(accentColor.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
-                    ) { Text(selectedEmoji, fontSize = 20.sp) }
-                    Text(name, style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium)
+                    ) {
+                        ActivityIconView(
+                            def    = ActivityDef(key = "_p", label = name, iconValue = currentIconValue, color = accentColor),
+                            sizeDp = 26f,
+                            tint   = accentColor
+                        )
+                    }
+                    Column {
+                        Text(name, style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold)
+                        Text("Предпросмотр",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
 
             // ── Buttons ──────────────────────────────────────────────
+            val canSave = name.isNotBlank() &&
+                (iconTab == 0 || (iconTab == 1 && iconUrlInput.trim().isImageUrl()))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -784,9 +1030,9 @@ private fun CreateCustomActivitySheet(
                     Text("Отмена")
                 }
                 Button(
-                    onClick  = { onCreate(name.trim(), selectedEmoji, selectedColor) },
+                    onClick  = { onCreate(name.trim(), currentIconValue, selectedColor) },
                     modifier = Modifier.weight(1f),
-                    enabled  = name.isNotBlank()
+                    enabled  = canSave
                 ) { Text("Сохранить") }
             }
         }

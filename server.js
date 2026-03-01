@@ -1788,6 +1788,10 @@ pool.query(`
   )
 `).then(() => console.log('custom_activity_types table ready'))
   .catch(err => console.error('Migration error (custom_activity_types):', err));
+// Widen emoji column so it can hold image URLs
+pool.query(`ALTER TABLE custom_activity_types ALTER COLUMN emoji TYPE TEXT`)
+  .then(() => console.log('custom_activity_types.emoji column widened to TEXT'))
+  .catch(err => console.error('Migration error (custom_activity_types.emoji TEXT):', err));
 pool.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'relationship_info_user_id_key') THEN ALTER TABLE relationship_info ADD CONSTRAINT relationship_info_user_id_key UNIQUE (user_id); END IF; END $$`)
   .then(() => console.log('relationship_info unique user_id constraint ready'))
   .catch(err => console.error('Migration error (relationship_info unique):', err));

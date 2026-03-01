@@ -1,5 +1,6 @@
 package com.example.loveapp.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.loveapp.data.api.models.ActivityResponse
@@ -190,5 +191,26 @@ class ActivityViewModel @Inject constructor(
                 .onSuccess { loadCustomActivityTypes() }
                 .onFailure { _errorMessage.value = it.message }
         }
+    }
+
+    private val _isIconUploading = MutableStateFlow(false)
+    val isIconUploading: StateFlow<Boolean> = _isIconUploading.asStateFlow()
+
+    private val _iconUploadUrl = MutableStateFlow<String?>(null)
+    val iconUploadUrl: StateFlow<String?> = _iconUploadUrl.asStateFlow()
+
+    fun uploadActivityIcon(uri: Uri) {
+        viewModelScope.launch {
+            _isIconUploading.value = true
+            activityRepository.uploadImage(uri)
+                .onSuccess { _iconUploadUrl.value = it }
+                .onFailure { _errorMessage.value = it.message }
+            _isIconUploading.value = false
+        }
+    }
+
+    fun clearIconUpload() {
+        _iconUploadUrl.value = null
+        _isIconUploading.value = false
     }
 }

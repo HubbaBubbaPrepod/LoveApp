@@ -442,7 +442,8 @@ app.post('/api/upload/image', authenticateToken, (req, res, next) => {
 }, async (req, res) => {
   try {
     if (!req.file) return sendResponse(res, false, 'File is required', null, 400);
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    // Return relative path – client prepends the server base URL when displaying
+    const fileUrl = `/uploads/${req.file.filename}`;
     sendResponse(res, true, 'Image uploaded', { url: fileUrl });
   } catch (err) {
     console.error('Upload image error:', err);

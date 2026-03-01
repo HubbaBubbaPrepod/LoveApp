@@ -1,14 +1,19 @@
 package com.example.loveapp.viewmodel
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.loveapp.data.api.models.ActivityResponse
 import com.example.loveapp.data.api.models.CustomActivityTypeResponse
 import com.example.loveapp.data.repository.ActivityRepository
+import com.example.loveapp.ui.screens.CUSTOM_ICON_MAP
+import com.example.loveapp.widget.WidgetActivityIcons
+import com.example.loveapp.widget.WidgetIconPreparer
 import com.example.loveapp.utils.DateUtils
 import com.example.loveapp.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +23,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ActivityViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val activityRepository: ActivityRepository,
     private val widgetUpdater: WidgetUpdater
 ) : ViewModel() {
@@ -89,15 +95,40 @@ class ActivityViewModel @Inject constructor(
             // Push both users' activities to the home-screen widget after both loads finish
             val my      = myResult.getOrElse { emptyList() }
             val pt      = ptResult.getOrElse { emptyList() }
-            val myTypes = my.map { it.activityType }.distinct().take(4).joinToString(",")
-            val ptTypes = pt.map { it.activityType }.distinct().take(4).joinToString(",")
+            val customTypes = _customActivityTypes.value
+
+            // Build (displayName, rawIconValue) pairs — rawIconValue is the Material icon
+            // key or /uploads/... path, NOT yet an emoji
+            fun buildTypeIconPairs(list: List<ActivityResponse>) =
+                list.map { a ->
+                    val displayName = if (a.activityType.startsWith("c_")) a.title else a.activityType
+                    val rawIconValue = if (a.activityType.startsWith("c_")) {
+                        val id = a.activityType.removePrefix("c_").toIntOrNull()
+                        customTypes.find { it.id == id }?.emoji ?: ""
+                    } else {
+                        a.activityType  // built-in key like "work", "sport"
+                    }
+                    Pair(displayName, rawIconValue)
+                }.distinctBy { it.first }.take(4)
+
+            val myPairs = buildTypeIconPairs(my)
+            val ptPairs = buildTypeIconPairs(pt)
+            val myTypes = myPairs.joinToString(",") { it.first }
+            val ptTypes = ptPairs.joinToString(",") { it.first }
+            // Pre-render each icon to a cached PNG file; fallback to emoji string
+            val myIcons = WidgetIconPreparer.prepareIcons(
+                context, myPairs.map { it.second }, CUSTOM_ICON_MAP, "my")
+            val ptIcons = WidgetIconPreparer.prepareIcons(
+                context, ptPairs.map { it.second }, CUSTOM_ICON_MAP, "pt")
             viewModelScope.launch {
                 widgetUpdater.pushActivityUpdate(
                     myCount = my.size,
                     myTypes = myTypes,
+                    myIcons = myIcons,
                     myName  = _myName.value,
                     ptCount = pt.size,
                     ptTypes = ptTypes,
+                    ptIcons = ptIcons,
                     ptName  = _partnerName.value
                 )
             }

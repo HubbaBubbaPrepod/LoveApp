@@ -73,9 +73,11 @@ class WidgetSyncWorker(
         updater.pushActivityUpdate(
             myCount = myActs.size,
             myTypes = myTypes,
+            myIcons = "",
             myName  = myActs.firstOrNull()?.displayName,
             ptCount = ptActs.size,
             ptTypes = ptTypes,
+            ptIcons = "",
             ptName  = ptActs.firstOrNull()?.displayName
         )
 

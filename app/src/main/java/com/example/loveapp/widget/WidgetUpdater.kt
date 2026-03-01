@@ -36,10 +36,12 @@ class WidgetUpdater @Inject constructor(
         // Activity widget keys – my data
         val KEY_ACT_MY_COUNT = intPreferencesKey("act_my_count")
         val KEY_ACT_MY_TYPES = stringPreferencesKey("act_my_types")
+        val KEY_ACT_MY_ICONS = stringPreferencesKey("act_my_icons")
         val KEY_ACT_MY_NAME  = stringPreferencesKey("act_my_name")
         // Activity widget keys – partner data
         val KEY_ACT_PT_COUNT = intPreferencesKey("act_pt_count")
         val KEY_ACT_PT_TYPES = stringPreferencesKey("act_pt_types")
+        val KEY_ACT_PT_ICONS = stringPreferencesKey("act_pt_icons")
         val KEY_ACT_PT_NAME  = stringPreferencesKey("act_pt_name")
         val KEY_ACT_DATE     = stringPreferencesKey("act_date")
     }
@@ -83,8 +85,8 @@ class WidgetUpdater @Inject constructor(
      * Called from [com.example.loveapp.viewmodel.ActivityViewModel] after both loads complete.
      */
     suspend fun pushActivityUpdate(
-        myCount: Int, myTypes: String, myName: String?,
-        ptCount: Int, ptTypes: String, ptName: String?
+        myCount: Int, myTypes: String, myIcons: String, myName: String?,
+        ptCount: Int, ptTypes: String, ptIcons: String, ptName: String?
     ) = runCatching {
         val today = DateUtils.getTodayDateString()
         val mgr = GlanceAppWidgetManager(context)
@@ -96,9 +98,11 @@ class WidgetUpdater @Inject constructor(
                 prefs.toMutablePreferences().apply {
                     this[KEY_ACT_MY_COUNT] = myCount
                     this[KEY_ACT_MY_TYPES] = myTypes
+                    this[KEY_ACT_MY_ICONS] = myIcons
                     this[KEY_ACT_MY_NAME]  = myName ?: ""
                     this[KEY_ACT_PT_COUNT] = ptCount
                     this[KEY_ACT_PT_TYPES] = ptTypes
+                    this[KEY_ACT_PT_ICONS] = ptIcons
                     this[KEY_ACT_PT_NAME]  = ptName ?: ""
                     this[KEY_ACT_DATE]     = today
                 }

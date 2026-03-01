@@ -3,6 +3,7 @@ package com.example.loveapp.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -10,6 +11,8 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -26,6 +29,7 @@ import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
@@ -34,9 +38,11 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.example.loveapp.MainActivity
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_COUNT
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_ICONS
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_TYPES
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_COUNT
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_ICONS
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_TYPES
 
@@ -56,13 +62,15 @@ class ActivityWidgetSmall : GlanceAppWidget() {
         val prefs      = currentState<Preferences>()
         val myCount    = prefs[KEY_ACT_MY_COUNT] ?: 0
         val myTypesRaw = prefs[KEY_ACT_MY_TYPES] ?: ""
+        val myIconsRaw = prefs[KEY_ACT_MY_ICONS] ?: ""
         val myName     = (prefs[KEY_ACT_MY_NAME]?.takeIf { it.isNotBlank() } ?: "Я").take(6)
         val ptCount    = prefs[KEY_ACT_PT_COUNT] ?: 0
         val ptTypesRaw = prefs[KEY_ACT_PT_TYPES] ?: ""
+        val ptIconsRaw = prefs[KEY_ACT_PT_ICONS] ?: ""
         val ptName     = (prefs[KEY_ACT_PT_NAME]?.takeIf { it.isNotBlank() } ?: "Партн.").take(6)
 
-        val myEmojis = typesEmojis(myTypesRaw, max = 3)
-        val ptEmojis = typesEmojis(ptTypesRaw, max = 3)
+        val myIcons = parseIconList(myIconsRaw, myTypesRaw, max = 3)
+        val ptIcons = parseIconList(ptIconsRaw, ptTypesRaw, max = 3)
 
         val open = actionStartActivity(
             Intent(context, MainActivity::class.java).apply {
@@ -85,20 +93,20 @@ class ActivityWidgetSmall : GlanceAppWidget() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ActivityBadge(
-                    name     = myName,
-                    count    = myCount,
-                    emojis   = myEmojis,
-                    bgColor  = Color(0x331E90FF),
+                    name      = myName,
+                    count     = myCount,
+                    icons     = myIcons,
+                    bgColor   = Color(0x331E90FF),
                     nameColor = Color(0xFF1E90FF),
                     cntColor  = Color(0xFF1E90FF),
                     modifier  = GlanceModifier.defaultWeight()
                 )
                 Spacer(GlanceModifier.width(6.dp))
                 ActivityBadge(
-                    name     = ptName,
-                    count    = ptCount,
-                    emojis   = ptEmojis,
-                    bgColor  = Color(0x228E8E93),
+                    name      = ptName,
+                    count     = ptCount,
+                    icons     = ptIcons,
+                    bgColor   = Color(0x228E8E93),
                     nameColor = Color(0xFF636366),
                     cntColor  = Color(0xFF48484A),
                     modifier  = GlanceModifier.defaultWeight()
@@ -111,7 +119,7 @@ class ActivityWidgetSmall : GlanceAppWidget() {
     private fun ActivityBadge(
         name: String,
         count: Int,
-        emojis: String,
+        icons: List<String>,
         bgColor: Color,
         nameColor: Color,
         cntColor: Color,
@@ -133,11 +141,22 @@ class ActivityWidgetSmall : GlanceAppWidget() {
                         fontWeight = FontWeight.Bold
                     )
                 )
-                if (emojis.isNotEmpty() && count > 0) {
-                    Text(
-                        text  = emojis,
-                        style = TextStyle(fontSize = 11.sp)
-                    )
+                if (icons.isNotEmpty() && count > 0) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        icons.forEachIndexed { idx, iconStr ->
+                            if (idx > 0) Spacer(GlanceModifier.width(2.dp))
+                            val bmp = loadWidgetIconBitmap(iconStr)
+                            if (bmp != null) {
+                                Image(
+                                    provider = ImageProvider(bmp),
+                                    contentDescription = null,
+                                    modifier = GlanceModifier.size(18.dp)
+                                )
+                            } else {
+                                Text(iconStr, style = TextStyle(fontSize = 12.sp))
+                            }
+                        }
+                    }
                 }
                 Text(
                     text  = name,
@@ -151,23 +170,10 @@ class ActivityWidgetSmall : GlanceAppWidget() {
         }
     }
 
-    private fun typesEmojis(raw: String, max: Int): String {
-        if (raw.isBlank()) return ""
-        return raw.split(",").filter { it.isNotBlank() }.take(max)
-            .joinToString(" ") { activityEmoji(it) }
-    }
-
-    private fun activityEmoji(type: String) = when (type.lowercase()) {
-        "work"     -> "💼"
-        "computer" -> "💻"
-        "sport"    -> "🏃"
-        "food"     -> "🍽️"
-        "walk"     -> "🚶"
-        "sleep"    -> "😴"
-        "reading"  -> "📚"
-        "social"   -> "👥"
-        "relax"    -> "🧘"
-        else       -> "✨"
+    private fun parseIconList(iconsRaw: String, typesRaw: String, max: Int): List<String> {
+        val src = if (iconsRaw.isNotBlank()) iconsRaw else typesRaw
+        if (src.isBlank()) return emptyList()
+        return src.split(",").filter { it.isNotBlank() }.take(max)
     }
 }
 

@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -133,8 +134,15 @@ private fun parseHexColor(hex: String): Color = try {
     Color(0xFF8E8E93)
 }
 
-/** Returns true if the string looks like a remote image URL. */
-private fun String.isImageUrl() = startsWith("http://") || startsWith("https://")
+/** Server base URL – used to resolve relative /uploads/ paths. */
+private const val SERVER_BASE = "http://195.2.71.218:3005"
+
+/** Returns true if the string looks like a remote image URL or a server-relative upload path. */
+private fun String.isImageUrl() =
+    startsWith("http://") || startsWith("https://") || startsWith("/uploads/")
+
+/** Prepends [SERVER_BASE] for relative paths returned by the upload endpoint. */
+private fun String.resolveImageUrl() = if (startsWith("/")) "$SERVER_BASE$this" else this
 
 /** Converts a [CustomActivityTypeResponse] into an [ActivityDef] for display. */
 internal fun customActivityDef(ct: CustomActivityTypeResponse): ActivityDef =
@@ -180,9 +188,12 @@ internal fun ActivityIconView(def: ActivityDef, sizeDp: Float, tint: Color) {
             modifier         = Modifier.size(sizeDp.dp)
         )
         def.iconValue?.isImageUrl() == true -> AsyncImage(
-            model              = def.iconValue,
+            model              = def.iconValue!!.resolveImageUrl(),
             contentDescription = def.label,
-            modifier           = Modifier.size(sizeDp.dp).clip(CircleShape),
+            contentScale       = ContentScale.Crop,
+            modifier           = Modifier
+                .size(sizeDp.dp)
+                .clip(CircleShape),
             error              = androidx.compose.ui.res.painterResource(
                 android.R.drawable.ic_menu_gallery
             )
@@ -312,8 +323,9 @@ fun ActivityFeedScreen(
 
     if (showPicker) {
         ActivityPickerSheet(
-            onDismiss = { showPicker = false },
+            onDismiss      = { showPicker = false },
             onCreateCustom = { showPicker = false; showCreateCustomActivity = true },
+            onDeleteCustom = { id -> viewModel.deleteCustomActivityType(id) },
             onSave = { type, dur, time, note ->
                 viewModel.createActivity(type, dur, time, note)
                 showPicker = false
@@ -540,10 +552,10 @@ private fun ActivityRow(activity: ActivityResponse, onDelete: (() -> Unit)?) {
 private fun ActivityPickerSheet(
     onDismiss: () -> Unit,
     onCreateCustom: () -> Unit,
+    onDeleteCustom: ((Int) -> Unit)? = null,
     onSave: (type: String, durationMinutes: Int, startTime: String, note: String) -> Unit
 ) {
     val customTypes = LocalCustomActivityTypes.current
-    val customDefs  = customTypes.map { customActivityDef(it) }
 
     var selectedType      by remember { mutableStateOf("") }
     var durationHoursText by remember { mutableStateOf("") }
@@ -553,8 +565,7 @@ private fun ActivityPickerSheet(
     var showTimePicker by remember { mutableStateOf(false) }
 
     // total chips = built-in + custom + 1 "add" chip; each row has 5
-    val allDefs   = ACTIVITY_TYPES + customDefs
-    val gridRows  = ((allDefs.size + 1) + 4) / 5   // ceil((items+1)/5)
+    val gridRows  = ((ACTIVITY_TYPES.size + customTypes.size + 1) + 4) / 5
     val gridHeight = (gridRows * 76).dp
 
     ModalBottomSheet(onDismissRequest = onDismiss,
@@ -575,9 +586,35 @@ private fun ActivityPickerSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(allDefs) { def ->
+                items(ACTIVITY_TYPES) { def ->
                     ActivityTypeChip(def = def, selected = selectedType == def.key,
                         onClick = { selectedType = def.key })
+                }
+                // Custom types with delete badge for owned ones
+                items(customTypes) { ct ->
+                    val def = customActivityDef(ct)
+                    Box {
+                        ActivityTypeChip(def = def, selected = selectedType == def.key,
+                            onClick = { selectedType = def.key })
+                        if (ct.isMine && onDeleteCustom != null) {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .align(Alignment.TopEnd)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.error)
+                                    .clickable { onDeleteCustom(ct.id) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Удалить",
+                                    tint     = Color.White,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                            }
+                        }
+                    }
                 }
                 // "+" chip to create a new custom activity type
                 item {
@@ -930,8 +967,9 @@ private fun CreateCustomActivitySheet(
                                 .padding(12.dp)
                         ) {
                             AsyncImage(
-                                model              = iconUrlInput.trim(),
+                                model              = iconUrlInput.trim().resolveImageUrl(),
                                 contentDescription = null,
+                                contentScale       = ContentScale.Crop,
                                 modifier           = Modifier.size(44.dp).clip(CircleShape)
                             )
                             Text("Предпросмотр изображения",
@@ -940,7 +978,7 @@ private fun CreateCustomActivitySheet(
                         }
                     } else if (iconUrlInput.isNotBlank()) {
                         Text(
-                            "Введите полный URL (должен начинаться с https://)",
+                            "Введите полный URL (https://...) или выберите из галереи",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.error
                         )

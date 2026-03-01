@@ -3,6 +3,7 @@ package com.example.loveapp.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -10,6 +11,8 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -27,6 +30,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
@@ -36,9 +40,11 @@ import androidx.glance.unit.ColorProvider
 import com.example.loveapp.MainActivity
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_DATE
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_COUNT
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_ICONS
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_TYPES
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_COUNT
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_ICONS
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_TYPES
 
@@ -60,16 +66,22 @@ class ActivityDayWidget : GlanceAppWidget() {
         val prefs      = currentState<Preferences>()
         val myCount    = prefs[KEY_ACT_MY_COUNT] ?: 0
         val myTypesRaw = prefs[KEY_ACT_MY_TYPES] ?: ""
+        val myIconsRaw = prefs[KEY_ACT_MY_ICONS] ?: ""
         val myName     = (prefs[KEY_ACT_MY_NAME]?.takeIf { it.isNotBlank() } ?: "Я").take(8)
         val ptCount    = prefs[KEY_ACT_PT_COUNT] ?: 0
         val ptTypesRaw = prefs[KEY_ACT_PT_TYPES] ?: ""
+        val ptIconsRaw = prefs[KEY_ACT_PT_ICONS] ?: ""
         val ptName     = (prefs[KEY_ACT_PT_NAME]?.takeIf { it.isNotBlank() } ?: "Партнёр").take(8)
         val date       = prefs[KEY_ACT_DATE]     ?: ""
 
         val myTypes = if (myTypesRaw.isBlank()) emptyList()
                       else myTypesRaw.split(",").filter { it.isNotBlank() }.take(4)
+        val myIcons = if (myIconsRaw.isBlank()) emptyList()
+                      else myIconsRaw.split(",").filter { it.isNotBlank() }.take(4)
         val ptTypes = if (ptTypesRaw.isBlank()) emptyList()
                       else ptTypesRaw.split(",").filter { it.isNotBlank() }.take(4)
+        val ptIcons = if (ptIconsRaw.isBlank()) emptyList()
+                      else ptIconsRaw.split(",").filter { it.isNotBlank() }.take(4)
 
         val openActivity = actionStartActivity(
             Intent(context, MainActivity::class.java).apply {
@@ -106,18 +118,18 @@ class ActivityDayWidget : GlanceAppWidget() {
                 Spacer(GlanceModifier.height(8.dp))
 
                 // ── My activities ────────────────────────────────────────────
-                ActivityRow(name = myName, count = myCount, types = myTypes, isMe = true)
+                ActivityRow(name = myName, count = myCount, types = myTypes, icons = myIcons, isMe = true)
 
                 Spacer(GlanceModifier.height(6.dp))
 
-                // ── Partner activities ───────────────────────────────────────
-                ActivityRow(name = ptName, count = ptCount, types = ptTypes, isMe = false)
+                // ── Partner activities ────────────────────────────────────────
+                ActivityRow(name = ptName, count = ptCount, types = ptTypes, icons = ptIcons, isMe = false)
             }
         }
     }
 
     @Composable
-    private fun ActivityRow(name: String, count: Int, types: List<String>, isMe: Boolean) {
+    private fun ActivityRow(name: String, count: Int, types: List<String>, icons: List<String>, isMe: Boolean) {
         val rowBg   = if (isMe) Color(0x1A1E90FF) else Color(0x1A8E8E93)
         val nameClr = if (isMe) Color(0xFF1E90FF) else Color(0xFF636366)
         val cntClr  = if (isMe) Color(0xFF1E90FF) else Color(0xFF48484A)
@@ -166,10 +178,22 @@ class ActivityDayWidget : GlanceAppWidget() {
                 )
                 if (types.isNotEmpty()) {
                     Spacer(GlanceModifier.width(6.dp))
-                    Text(
-                        text  = types.joinToString(" ") { activityEmoji(it) },
-                        style = TextStyle(fontSize = 14.sp)
-                    )
+                    val iconList = if (icons.isNotEmpty()) icons else types.map { activityEmoji(it) }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        iconList.forEachIndexed { idx, iconStr ->
+                            if (idx > 0) Spacer(GlanceModifier.width(3.dp))
+                            val bmp = loadWidgetIconBitmap(iconStr)
+                            if (bmp != null) {
+                                Image(
+                                    provider = ImageProvider(bmp),
+                                    contentDescription = null,
+                                    modifier = GlanceModifier.size(20.dp)
+                                )
+                            } else {
+                                Text(iconStr, style = TextStyle(fontSize = 14.sp))
+                            }
+                        }
+                    }
                 }
             }
         }

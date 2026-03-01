@@ -1080,6 +1080,82 @@ app.delete('/api/activities/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== CUSTOM ACTIVITY TYPES ====================
+
+// Create custom activity type
+app.post('/api/custom-activity-types', authenticateToken, async (req, res) => {
+  try {
+    const { name, emoji, color_hex } = req.body;
+    if (!name || !name.trim()) {
+      return sendResponse(res, false, 'Name is required', null, 400);
+    }
+    const result = await pool.query(
+      `INSERT INTO custom_activity_types (user_id, name, emoji, color_hex)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, user_id, name, emoji, color_hex, created_at`,
+      [req.userId, name.trim(), (emoji || '✨').trim(), color_hex || '#FF6B9D']
+    );
+    sendResponse(res, true, 'Custom activity type created', { ...result.rows[0], is_mine: true }, 201);
+  } catch (err) {
+    console.error('Create custom activity type error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Get custom activity types (mine + partner's)
+app.get('/api/custom-activity-types', authenticateToken, async (req, res) => {
+  try {
+    const relResult = await pool.query(
+      'SELECT partner_user_id FROM relationship_info WHERE user_id = $1 LIMIT 1',
+      [req.userId]
+    );
+    const partnerId = relResult.rows[0]?.partner_user_id;
+
+    let rows = [];
+    if (partnerId) {
+      const result = await pool.query(
+        `SELECT id, user_id, name, emoji, color_hex, created_at,
+                (user_id = $1) AS is_mine
+         FROM custom_activity_types
+         WHERE user_id = $1 OR user_id = $2
+         ORDER BY created_at ASC`,
+        [req.userId, partnerId]
+      );
+      rows = result.rows;
+    } else {
+      const result = await pool.query(
+        `SELECT id, user_id, name, emoji, color_hex, created_at, true AS is_mine
+         FROM custom_activity_types
+         WHERE user_id = $1
+         ORDER BY created_at ASC`,
+        [req.userId]
+      );
+      rows = result.rows;
+    }
+    sendResponse(res, true, 'Custom activity types retrieved', rows);
+  } catch (err) {
+    console.error('Get custom activity types error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
+// Delete custom activity type (only creator)
+app.delete('/api/custom-activity-types/:id', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM custom_activity_types WHERE id = $1 AND user_id = $2 RETURNING id',
+      [req.params.id, req.userId]
+    );
+    if (result.rows.length === 0) {
+      return sendResponse(res, false, 'Not found or not your activity type', null, 404);
+    }
+    sendResponse(res, true, 'Custom activity type deleted');
+  } catch (err) {
+    console.error('Delete custom activity type error:', err);
+    sendResponse(res, false, 'Internal server error', null, 500);
+  }
+});
+
 // ==================== CYCLES ====================
 
 // helper – stringify only if the value is an object (so plain strings pass through as NULL)
@@ -1701,6 +1777,17 @@ pool.query(`ALTER TABLE relationship_info ADD COLUMN IF NOT EXISTS my_birthday D
 pool.query(`ALTER TABLE relationship_info ADD COLUMN IF NOT EXISTS partner_birthday DATE`)
   .then(() => console.log('relationship_info.partner_birthday column ready'))
   .catch(err => console.error('Migration error (partner_birthday):', err));
+pool.query(`
+  CREATE TABLE IF NOT EXISTS custom_activity_types (
+    id         BIGSERIAL PRIMARY KEY,
+    user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name       VARCHAR(100) NOT NULL,
+    emoji      VARCHAR(10)  NOT NULL DEFAULT '✨',
+    color_hex  VARCHAR(7)   NOT NULL DEFAULT '#FF6B9D',
+    created_at TIMESTAMPTZ  DEFAULT NOW()
+  )
+`).then(() => console.log('custom_activity_types table ready'))
+  .catch(err => console.error('Migration error (custom_activity_types):', err));
 pool.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'relationship_info_user_id_key') THEN ALTER TABLE relationship_info ADD CONSTRAINT relationship_info_user_id_key UNIQUE (user_id); END IF; END $$`)
   .then(() => console.log('relationship_info unique user_id constraint ready'))
   .catch(err => console.error('Migration error (relationship_info unique):', err));

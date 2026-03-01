@@ -175,6 +175,28 @@ data class ActivityResponse(
     val displayName: String? = null
 )
 
+// Custom Activity Type Models
+data class CustomActivityTypeRequest(
+    val name: String,
+    val emoji: String,
+    @SerializedName("color_hex")
+    val colorHex: String = "#FF6B9D"
+)
+
+data class CustomActivityTypeResponse(
+    val id: Int,
+    @SerializedName("user_id")
+    val userId: Int,
+    val name: String,
+    val emoji: String,
+    @SerializedName("color_hex")
+    val colorHex: String = "#FF6B9D",
+    @SerializedName("is_mine")
+    val isMine: Boolean = true,
+    @SerializedName("created_at")
+    val createdAt: String = ""
+)
+
 // Cycle Models
 // symptoms: Map<"YYYY-MM-DD", List<"sex"|"pain_mild"|"pain_severe"|"medication"|...>>
 // mood:     Map<"YYYY-MM-DD", "happy"|"sad"|"tired"|"anxious">

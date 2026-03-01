@@ -3,6 +3,7 @@ package com.example.loveapp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.loveapp.data.api.models.ActivityResponse
+import com.example.loveapp.data.api.models.CustomActivityTypeResponse
 import com.example.loveapp.data.repository.ActivityRepository
 import com.example.loveapp.utils.DateUtils
 import com.example.loveapp.widget.WidgetUpdater
@@ -62,7 +63,11 @@ class ActivityViewModel @Inject constructor(
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
-    init { loadToday() }
+    // Custom activity types (mine + partner's)
+    private val _customActivityTypes = MutableStateFlow<List<CustomActivityTypeResponse>>(emptyList())
+    val customActivityTypes: StateFlow<List<CustomActivityTypeResponse>> = _customActivityTypes.asStateFlow()
+
+    init { loadToday(); loadCustomActivityTypes() }
 
     fun loadToday() {
         viewModelScope.launch {
@@ -107,7 +112,14 @@ class ActivityViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _isLoading.value = true
-            activityRepository.createActivity(activityType, durationMinutes, startTime, note)
+            // Resolve a human-readable title for custom activity types ("c_{id}")
+            val displayTitle = if (activityType.startsWith("c_")) {
+                val id = activityType.removePrefix("c_").toIntOrNull()
+                _customActivityTypes.value.find { it.id == id }?.name ?: activityType
+            } else {
+                activityType
+            }
+            activityRepository.createActivity(displayTitle, activityType, durationMinutes, startTime, note)
                 .onSuccess {
                     loadToday()
                     _successMessage.value = "Активность сохранена"
@@ -152,5 +164,31 @@ class ActivityViewModel @Inject constructor(
     fun clearMessages() {
         _errorMessage.value = null
         _successMessage.value = null
+    }
+
+    fun loadCustomActivityTypes() {
+        viewModelScope.launch {
+            activityRepository.getCustomActivityTypes()
+                .onSuccess { _customActivityTypes.value = it }
+        }
+    }
+
+    fun createCustomActivityType(name: String, emoji: String, colorHex: String) {
+        viewModelScope.launch {
+            activityRepository.createCustomActivityType(name, emoji, colorHex)
+                .onSuccess {
+                    loadCustomActivityTypes()
+                    _successMessage.value = "Тип активности создан"
+                }
+                .onFailure { _errorMessage.value = it.message }
+        }
+    }
+
+    fun deleteCustomActivityType(id: Int) {
+        viewModelScope.launch {
+            activityRepository.deleteCustomActivityType(id)
+                .onSuccess { loadCustomActivityTypes() }
+                .onFailure { _errorMessage.value = it.message }
+        }
     }
 }

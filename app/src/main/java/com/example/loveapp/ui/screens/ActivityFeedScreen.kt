@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.data.api.models.ActivityResponse
+import com.example.loveapp.data.api.models.CustomActivityTypeResponse
 import com.example.loveapp.ui.components.IOSTopAppBar
 import com.example.loveapp.utils.DateUtils
 import com.example.loveapp.viewmodel.ActivityViewModel
@@ -43,24 +44,78 @@ import java.util.Locale
 internal data class ActivityDef(
     val key: String,
     val label: String,
-    val icon: ImageVector,
+    val icon: ImageVector? = null,
+    val emoji: String? = null,
     val color: Color
 )
 
 internal val ACTIVITY_TYPES = listOf(
-    ActivityDef("work",     "Работа",    Icons.Default.Work,            Color(0xFF1E90FF)),
-    ActivityDef("computer", "Компьютер", Icons.Default.Computer,        Color(0xFF5E5CE6)),
-    ActivityDef("sport",    "Спорт",     Icons.Default.FitnessCenter,   Color(0xFF30D158)),
-    ActivityDef("food",     "Еда",       Icons.Default.Restaurant,      Color(0xFFFF9F0A)),
-    ActivityDef("walk",     "Прогулка",  Icons.Default.DirectionsWalk,  Color(0xFF34C759)),
-    ActivityDef("sleep",    "Сон",       Icons.Default.Bedtime,         Color(0xFF9C5CE6)),
-    ActivityDef("reading",  "Чтение",    Icons.Default.MenuBook,        Color(0xFFFF6B9D)),
-    ActivityDef("social",   "Общение",   Icons.Default.People,          Color(0xFFFF375F)),
-    ActivityDef("relax",    "Отдых",     Icons.Default.SelfImprovement, Color(0xFFFFD60A)),
-    ActivityDef("other",    "Другое",    Icons.Default.MoreHoriz,       Color(0xFF8E8E93))
+    ActivityDef("work",     "Работа",    Icons.Default.Work,            color = Color(0xFF1E90FF)),
+    ActivityDef("computer", "Компьютер", Icons.Default.Computer,        color = Color(0xFF5E5CE6)),
+    ActivityDef("sport",    "Спорт",     Icons.Default.FitnessCenter,   color = Color(0xFF30D158)),
+    ActivityDef("food",     "Еда",       Icons.Default.Restaurant,      color = Color(0xFFFF9F0A)),
+    ActivityDef("walk",     "Прогулка",  Icons.Default.DirectionsWalk,  color = Color(0xFF34C759)),
+    ActivityDef("sleep",    "Сон",       Icons.Default.Bedtime,         color = Color(0xFF9C5CE6)),
+    ActivityDef("reading",  "Чтение",    Icons.Default.MenuBook,        color = Color(0xFFFF6B9D)),
+    ActivityDef("social",   "Общение",   Icons.Default.People,          color = Color(0xFFFF375F)),
+    ActivityDef("relax",    "Отдых",     Icons.Default.SelfImprovement, color = Color(0xFFFFD60A)),
+    ActivityDef("other",    "Другое",    Icons.Default.MoreHoriz,       color = Color(0xFF8E8E93))
 )
 
-internal fun activityDef(key: String) = ACTIVITY_TYPES.find { it.key == key } ?: ACTIVITY_TYPES.last()
+/** Parses #RRGGBB to Compose Color, falls back to grey on error. */
+private fun parseHexColor(hex: String): Color = try {
+    Color(android.graphics.Color.parseColor(hex))
+} catch (_: Exception) {
+    Color(0xFF8E8E93)
+}
+
+/** Converts a CustomActivityTypeResponse into an ActivityDef for display. */
+internal fun customActivityDef(ct: CustomActivityTypeResponse): ActivityDef =
+    ActivityDef(
+        key   = "c_${ct.id}",
+        label = ct.name,
+        emoji = ct.emoji,
+        color = parseHexColor(ct.colorHex)
+    )
+
+/**
+ * Returns the ActivityDef for the given activity_type key.
+ * Built-in keys are resolved from ACTIVITY_TYPES; custom keys ("c_{id}") are
+ * resolved from the provided list.
+ */
+internal fun activityDef(
+    key: String,
+    customTypes: List<CustomActivityTypeResponse> = emptyList()
+): ActivityDef {
+    ACTIVITY_TYPES.find { it.key == key }?.let { return it }
+    if (key.startsWith("c_")) {
+        val id = key.removePrefix("c_").toIntOrNull()
+        customTypes.find { it.id == id }?.let { return customActivityDef(it) }
+    }
+    return ACTIVITY_TYPES.last()
+}
+
+/** CompositionLocal that carries the current user's + partner's custom activity types. */
+val LocalCustomActivityTypes = compositionLocalOf<List<CustomActivityTypeResponse>> { emptyList() }
+
+/** Renders the icon for an [ActivityDef] — vector icon or emoji text. */
+@Composable
+private fun ActivityIconView(def: ActivityDef, sizeDp: Float, tint: Color) {
+    if (def.emoji != null) {
+        Text(
+            text = def.emoji,
+            fontSize = (sizeDp * 0.75f).sp,
+            textAlign = TextAlign.Center
+        )
+    } else {
+        Icon(
+            imageVector = def.icon!!,
+            contentDescription = def.label,
+            tint = tint,
+            modifier = Modifier.size(sizeDp.dp)
+        )
+    }
+}
 
 private val ACT_MONTH_NAMES = listOf("Январь","Февраль","Март","Апрель","Май","Июнь",
                               "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь")
@@ -83,15 +138,17 @@ fun ActivityFeedScreen(
     val isLoading         by viewModel.isLoading.collectAsState()
     val errorMessage      by viewModel.errorMessage.collectAsState()
     val successMessage    by viewModel.successMessage.collectAsState()
+    val customTypes       by viewModel.customActivityTypes.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val r = rememberResponsiveConfig()
 
-    var showPicker         by remember { mutableStateOf(false) }
-    var showMyHistory      by remember { mutableStateOf(false) }
-    var showPartnerHistory by remember { mutableStateOf(false) }
-    var showCalendar       by remember { mutableStateOf(false) }
-    var showStats          by remember { mutableStateOf(false) }
+    var showPicker              by remember { mutableStateOf(false) }
+    var showMyHistory           by remember { mutableStateOf(false) }
+    var showPartnerHistory      by remember { mutableStateOf(false) }
+    var showCalendar            by remember { mutableStateOf(false) }
+    var showStats               by remember { mutableStateOf(false) }
+    var showCreateCustomActivity by remember { mutableStateOf(false) }
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearMessages() }
@@ -100,8 +157,9 @@ fun ActivityFeedScreen(
         successMessage?.let { snackbarHostState.showSnackbar(it); viewModel.clearMessages() }
     }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets.navigationBars,
+    CompositionLocalProvider(LocalCustomActivityTypes provides customTypes) {
+        Scaffold(
+            contentWindowInsets = WindowInsets.navigationBars,
         topBar = {
             IOSTopAppBar(
                 title = "Активности",
@@ -173,9 +231,20 @@ fun ActivityFeedScreen(
     if (showPicker) {
         ActivityPickerSheet(
             onDismiss = { showPicker = false },
+            onCreateCustom = { showPicker = false; showCreateCustomActivity = true },
             onSave = { type, dur, time, note ->
                 viewModel.createActivity(type, dur, time, note)
                 showPicker = false
+            }
+        )
+    }
+
+    if (showCreateCustomActivity) {
+        CreateCustomActivitySheet(
+            onDismiss = { showCreateCustomActivity = false },
+            onCreate  = { name, emoji, colorHex ->
+                viewModel.createCustomActivityType(name, emoji, colorHex)
+                showCreateCustomActivity = false
             }
         )
     }
@@ -216,6 +285,7 @@ fun ActivityFeedScreen(
             onDismiss = { showStats = false }
         )
     }
+    } // end CompositionLocalProvider
 }
 
 // endregion
@@ -232,8 +302,9 @@ private fun ActivityUserCard(
     onCardClick: () -> Unit,
     onHistoryClick: () -> Unit
 ) {
+    val customTypes = LocalCustomActivityTypes.current
     val totalMin = activities.sumOf { it.durationMinutes }
-    val lastDef  = activities.maxByOrNull { it.id }?.let { activityDef(it.activityType) }
+    val lastDef  = activities.maxByOrNull { it.id }?.let { activityDef(it.activityType, customTypes) }
 
     Card(
         modifier = modifier.aspectRatio(0.85f).clickable { onCardClick() },
@@ -273,8 +344,7 @@ private fun ActivityUserCard(
                     Box(modifier = Modifier.size(52.dp).clip(CircleShape)
                             .background(lastDef.color.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center) {
-                        Icon(lastDef.icon, contentDescription = lastDef.label,
-                            tint = lastDef.color, modifier = Modifier.size(30.dp))
+                        ActivityIconView(lastDef, 30f, lastDef.color)
                     }
                     Spacer(Modifier.height(6.dp))
                     Text(lastDef.label, style = MaterialTheme.typography.bodySmall,
@@ -317,7 +387,8 @@ private fun ActivityUserCard(
 
 @Composable
 private fun ActivityRow(activity: ActivityResponse, onDelete: (() -> Unit)?) {
-    val def = activityDef(activity.activityType)
+    val customTypes = LocalCustomActivityTypes.current
+    val def = activityDef(activity.activityType, customTypes)
     Card(
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
@@ -328,12 +399,16 @@ private fun ActivityRow(activity: ActivityResponse, onDelete: (() -> Unit)?) {
             Box(modifier = Modifier.size(36.dp).clip(CircleShape)
                     .background(def.color.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center) {
-                Icon(def.icon, contentDescription = def.label,
-                    tint = def.color, modifier = Modifier.size(20.dp))
+                ActivityIconView(def, 20f, def.color)
             }
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(def.label, style = MaterialTheme.typography.bodyMedium,
+                // For custom activity types, prefer the stored title; for built-in, use def.label
+                val displayLabel = if (activity.activityType.startsWith("c_"))
+                    activity.title.ifBlank { def.label }
+                else
+                    def.label
+                Text(displayLabel, style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium)
             val meta = remember(activity.startTime, activity.durationMinutes, activity.note) {
                 buildString {
@@ -372,14 +447,23 @@ private fun ActivityRow(activity: ActivityResponse, onDelete: (() -> Unit)?) {
 @Composable
 private fun ActivityPickerSheet(
     onDismiss: () -> Unit,
+    onCreateCustom: () -> Unit,
     onSave: (type: String, durationMinutes: Int, startTime: String, note: String) -> Unit
 ) {
+    val customTypes = LocalCustomActivityTypes.current
+    val customDefs  = customTypes.map { customActivityDef(it) }
+
     var selectedType      by remember { mutableStateOf("") }
     var durationHoursText by remember { mutableStateOf("") }
     var durationMinsText  by remember { mutableStateOf("") }
     var startTime         by remember { mutableStateOf("") }
     var note          by remember { mutableStateOf("") }
     var showTimePicker by remember { mutableStateOf(false) }
+
+    // total chips = built-in + custom + 1 "add" chip; each row has 5
+    val allDefs   = ACTIVITY_TYPES + customDefs
+    val gridRows  = ((allDefs.size + 1) + 4) / 5   // ceil((items+1)/5)
+    val gridHeight = (gridRows * 76).dp
 
     ModalBottomSheet(onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
@@ -393,13 +477,37 @@ private fun ActivityPickerSheet(
             Text("Записать активность", style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
 
-            LazyVerticalGrid(columns = GridCells.Fixed(5),
-                modifier = Modifier.height(160.dp),
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(5),
+                modifier = Modifier.height(gridHeight),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(ACTIVITY_TYPES) { def ->
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(allDefs) { def ->
                     ActivityTypeChip(def = def, selected = selectedType == def.key,
                         onClick = { selectedType = def.key })
+                }
+                // "+" chip to create a new custom activity type
+                item {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable { onCreateCustom() }
+                    ) {
+                        Box(
+                            modifier = Modifier.size(44.dp).clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Своя активность",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp))
+                        }
+                        Text(
+                            "Своя", style = MaterialTheme.typography.labelSmall,
+                            textAlign = TextAlign.Center, maxLines = 1,
+                            overflow = TextOverflow.Ellipsis, fontSize = 9.sp
+                        )
+                    }
                 }
             }
 
@@ -520,13 +628,168 @@ private fun ActivityTypeChip(def: ActivityDef, selected: Boolean, onClick: () ->
         Box(modifier = Modifier.size(44.dp).clip(CircleShape)
                 .background(if (selected) def.color else def.color.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center) {
-            Icon(def.icon, contentDescription = def.label,
-                tint = if (selected) Color.White else def.color,
-                modifier = Modifier.size(22.dp))
+            ActivityIconView(
+                def  = def,
+                sizeDp = 22f,
+                tint = if (selected) Color.White else def.color
+            )
         }
         Text(def.label, style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center, maxLines = 1,
             overflow = TextOverflow.Ellipsis, fontSize = 9.sp)
+    }
+}
+
+// endregion
+
+// region Create Custom Activity Sheet
+
+private val CUSTOM_EMOJI_OPTIONS = listOf(
+    "🎮","🎨","🎵","🎬","📸","🏋️","🎯","🧘","🚴","🏊",
+    "🛒","🍳","🧹","🌱","✈️","🎭","🎲","🏃","💃","🎤",
+    "🧩","🦴","🌸","🎸","🐕","🐈","✍️","🎻","🏄","🛁"
+)
+
+private val CUSTOM_COLOR_OPTIONS = listOf(
+    "#E53935","#D81B60","#8E24AA","#5E35B1","#3949AB",
+    "#1E88E5","#039BE5","#00ACC1","#00897B","#43A047",
+    "#7CB342","#F9A825","#FB8C00","#F4511E","#6D4C41"
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CreateCustomActivitySheet(
+    onDismiss: () -> Unit,
+    onCreate: (name: String, emoji: String, colorHex: String) -> Unit
+) {
+    var name          by remember { mutableStateOf("") }
+    var selectedEmoji by remember { mutableStateOf(CUSTOM_EMOJI_OPTIONS.first()) }
+    var selectedColor by remember { mutableStateOf(CUSTOM_COLOR_OPTIONS.first()) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Text(
+                "Создать свою активность",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+
+            // ── Name field ──────────────────────────────────────────
+            OutlinedTextField(
+                value          = name,
+                onValueChange  = { if (it.length <= 30) name = it },
+                label          = { Text("Название") },
+                singleLine     = true,
+                leadingIcon    = {
+                    Text(selectedEmoji, fontSize = 18.sp,
+                        modifier = Modifier.padding(start = 4.dp))
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // ── Emoji picker ────────────────────────────────────────
+            Text("Иконка", style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold)
+            LazyVerticalGrid(
+                columns               = GridCells.Fixed(6),
+                modifier              = Modifier.height(148.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement   = Arrangement.spacedBy(6.dp)
+            ) {
+                items(CUSTOM_EMOJI_OPTIONS) { emoji ->
+                    val isSelected = emoji == selectedEmoji
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (isSelected) parseHexColor(selectedColor).copy(alpha = 0.3f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .clickable { selectedEmoji = emoji }
+                    ) {
+                        Text(emoji, fontSize = 22.sp, textAlign = TextAlign.Center)
+                    }
+                }
+            }
+
+            // ── Color picker ────────────────────────────────────────
+            Text("Цвет", style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold)
+            LazyVerticalGrid(
+                columns               = GridCells.Fixed(5),
+                modifier              = Modifier.height(96.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement   = Arrangement.spacedBy(8.dp)
+            ) {
+                items(CUSTOM_COLOR_OPTIONS) { hex ->
+                    val isSelected = hex == selectedColor
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(parseHexColor(hex))
+                            .clickable { selectedColor = hex }
+                    ) {
+                        if (isSelected) {
+                            Icon(
+                                Icons.Default.Check, contentDescription = null,
+                                tint = Color.White, modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ── Preview ─────────────────────────────────────────────
+            if (name.isNotBlank()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.size(40.dp).clip(CircleShape)
+                            .background(parseHexColor(selectedColor).copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) { Text(selectedEmoji, fontSize = 20.sp) }
+                    Text(name, style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium)
+                }
+            }
+
+            // ── Buttons ──────────────────────────────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                    Text("Отмена")
+                }
+                Button(
+                    onClick  = { onCreate(name.trim(), selectedEmoji, selectedColor) },
+                    modifier = Modifier.weight(1f),
+                    enabled  = name.isNotBlank()
+                ) { Text("Сохранить") }
+            }
+        }
     }
 }
 
@@ -747,12 +1010,13 @@ private fun ActivityStatsSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 16.dp))
             } else {
+                val customTypes = LocalCustomActivityTypes.current
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     LegendChip(color = MaterialTheme.colorScheme.primary, label = myName)
                     LegendChip(color = MaterialTheme.colorScheme.secondary, label = partnerName)
                 }
                 allKeys.forEach { key ->
-                    val def   = activityDef(key)
+                    val def   = activityDef(key, customTypes)
                     val myMin = myByType[key]?.sumOf { it.durationMinutes } ?: 0
                     val ptMin = ptByType[key]?.sumOf { it.durationMinutes } ?: 0
                     StatsBar(def = def, myMin = myMin, ptMin = ptMin, maxMin = maxMin,
@@ -780,8 +1044,7 @@ private fun StatsBar(
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(def.icon, contentDescription = def.label,
-                tint = def.color, modifier = Modifier.size(18.dp))
+            ActivityIconView(def, 18f, def.color)
             Text(def.label, style = MaterialTheme.typography.bodySmall)
         }
         if (myMin > 0) {

@@ -2,6 +2,8 @@ package com.example.loveapp.data.api
 
 import com.example.loveapp.data.api.models.ActivityRequest
 import com.example.loveapp.data.api.models.ActivityResponse
+import com.example.loveapp.data.api.models.CustomActivityTypeRequest
+import com.example.loveapp.data.api.models.CustomActivityTypeResponse
 import com.example.loveapp.data.api.models.ApiResponse
 import com.example.loveapp.data.api.models.AuthResponse
 import com.example.loveapp.data.api.models.CycleRequest
@@ -212,6 +214,24 @@ interface LoveAppApiService {
 
     @DELETE("activities/{id}")
     suspend fun deleteActivity(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): ApiResponse<Any?>
+
+    // ==================== Custom Activity Type Endpoints ====================
+    @POST("custom-activity-types")
+    suspend fun createCustomActivityType(
+        @Header("Authorization") token: String,
+        @Body request: CustomActivityTypeRequest
+    ): ApiResponse<CustomActivityTypeResponse>
+
+    @GET("custom-activity-types")
+    suspend fun getCustomActivityTypes(
+        @Header("Authorization") token: String
+    ): ApiResponse<List<CustomActivityTypeResponse>>
+
+    @DELETE("custom-activity-types/{id}")
+    suspend fun deleteCustomActivityType(
         @Header("Authorization") token: String,
         @Path("id") id: Int
     ): ApiResponse<Any?>

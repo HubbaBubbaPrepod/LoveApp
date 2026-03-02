@@ -94,8 +94,8 @@ object WidgetIconPreparer {
         val out = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(out)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        // White background circle
-        paint.color = android.graphics.Color.argb(30, 30, 144, 255) // accent tint bg
+        // Fully opaque white mask circle — SRC_IN will clip the source at full 100% opacity
+        paint.color = android.graphics.Color.WHITE
         canvas.drawCircle(s / 2f, s / 2f, s / 2f, paint)
         // Clip-in the scaled source
         paint.reset()

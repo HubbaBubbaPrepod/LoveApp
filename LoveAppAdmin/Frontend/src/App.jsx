@@ -1,35 +1,80 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Admin, Resource, CustomRoutes } from 'react-admin'
+import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles'
+import { CssBaseline } from '@mui/material'
+import { SnackbarProvider } from 'notistack'
 
-function App() {
-  const [count, setCount] = useState(0)
+import dataProvider  from './api/dataProvider'
+import authProvider  from './api/authProvider'
+import adminTheme    from './theme/muiTheme'
+import AdminLayout   from './layout/AdminLayout'
 
+import Dashboard     from './pages/Dashboard'
+
+import UserList      from './resources/users/UserList'
+import UserShow      from './resources/users/UserShow'
+import ActivityList  from './resources/activities/ActivityList'
+import MoodList      from './resources/moods/MoodList'
+import NoteList      from './resources/notes/NoteList'
+import WishList      from './resources/wishes/WishList'
+
+import PeopleIcon        from '@mui/icons-material/People'
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun'
+import MoodIcon          from '@mui/icons-material/Mood'
+import NotesIcon         from '@mui/icons-material/Notes'
+import CardGiftcardIcon  from '@mui/icons-material/CardGiftcard'
+
+export default function App () {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <StyledEngineProvider injectFirst>
+      <ThemeProvider theme={adminTheme}>
+        <CssBaseline />
+        <SnackbarProvider maxSnack={4} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+          <Admin
+            dataProvider={dataProvider}
+            authProvider={authProvider}
+            layout={AdminLayout}
+            dashboard={Dashboard}
+            theme={adminTheme}
+            title="LoveApp Admin"
+            requireAuth
+            disableTelemetry
+            loginPage={false}   /* uses default ra LoginForm; theme handles styling */
+          >
+            <Resource
+              name="users"
+              options={{ label: 'Пользователи' }}
+              icon={PeopleIcon}
+              list={UserList}
+              show={UserShow}
+            />
+            <Resource
+              name="activities"
+              options={{ label: 'Активности' }}
+              icon={DirectionsRunIcon}
+              list={ActivityList}
+            />
+            <Resource
+              name="moods"
+              options={{ label: 'Настроения' }}
+              icon={MoodIcon}
+              list={MoodList}
+            />
+            <Resource
+              name="notes"
+              options={{ label: 'Заметки' }}
+              icon={NotesIcon}
+              list={NoteList}
+            />
+            <Resource
+              name="wishes"
+              options={{ label: 'Желания' }}
+              icon={CardGiftcardIcon}
+              list={WishList}
+            />
+          </Admin>
+        </SnackbarProvider>
+      </ThemeProvider>
+    </StyledEngineProvider>
   )
 }
 
-export default App

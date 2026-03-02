@@ -1721,6 +1721,280 @@ app.post('/api/partner/link', authenticateToken, async (req, res) => {
   }
 });
 
+// ==================== ADMIN PANEL ====================
+
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'loveapp_admin_2026';
+const ADMIN_SECRET   = process.env.ADMIN_JWT_SECRET || (JWT_SECRET + '_admin_panel');
+
+const generateAdminToken = () =>
+  jwt.sign({ admin: true }, ADMIN_SECRET, { expiresIn: '12h' });
+
+const authenticateAdmin = (req, res, next) => {
+  const token = (req.headers['authorization'] || '').replace('Bearer ', '');
+  if (!token) return res.status(401).json({ success: false, message: 'Admin token required' });
+  try {
+    const dec = jwt.verify(token, ADMIN_SECRET);
+    if (!dec.admin) throw new Error('not admin');
+    next();
+  } catch {
+    res.status(403).json({ success: false, message: 'Invalid or expired admin token' });
+  }
+};
+
+// POST /api/admin/login
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body || {};
+  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    sendResponse(res, true, 'Logged in', { token: generateAdminToken(), username: ADMIN_USERNAME });
+  } else {
+    sendResponse(res, false, 'Invalid credentials', null, 401);
+  }
+});
+
+// GET /api/admin/stats
+app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
+  try {
+    const [[users], [activities], [moods], [notes], [wishes], [couples], [custom_types]] =
+      await Promise.all([
+        pool.query('SELECT COUNT(*) FROM users'),
+        pool.query('SELECT COUNT(*) FROM activity_logs'),
+        pool.query('SELECT COUNT(*) FROM moods'),
+        pool.query('SELECT COUNT(*) FROM notes'),
+        pool.query('SELECT COUNT(*) FROM wishes'),
+        pool.query('SELECT COUNT(*) FROM relationship_info WHERE partner_user_id IS NOT NULL'),
+        pool.query('SELECT COUNT(*) FROM custom_activity_types'),
+      ].map(p => p.then(r => [r])));
+    sendResponse(res, true, 'Stats', {
+      users:        parseInt(users.rows[0].count),
+      activities:   parseInt(activities.rows[0].count),
+      moods:        parseInt(moods.rows[0].count),
+      notes:        parseInt(notes.rows[0].count),
+      wishes:       parseInt(wishes.rows[0].count),
+      couples:      parseInt(couples.rows[0].count),
+      custom_types: parseInt(custom_types.rows[0].count),
+    });
+  } catch (err) {
+    console.error('Admin stats error:', err);
+    sendResponse(res, false, 'Server error', null, 500);
+  }
+});
+
+// GET /api/admin/stats/timeline  – registrations per day, last 30 days
+app.get('/api/admin/stats/timeline', authenticateAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT date_trunc('day', created_at)::date AS day,
+             COUNT(*)::int                       AS count
+      FROM users
+      WHERE created_at >= NOW() - INTERVAL '30 days'
+      GROUP BY day
+      ORDER BY day
+    `);
+    sendResponse(res, true, 'Timeline', result.rows);
+  } catch (err) {
+    sendResponse(res, false, 'Server error', null, 500);
+  }
+});
+
+// GET /api/admin/stats/activities-by-type
+app.get('/api/admin/stats/activities-by-type', authenticateAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT activity_type, COUNT(*)::int AS count
+      FROM activity_logs
+      GROUP BY activity_type
+      ORDER BY count DESC
+      LIMIT 10
+    `);
+    sendResponse(res, true, 'By type', result.rows);
+  } catch (err) {
+    sendResponse(res, false, 'Server error', null, 500);
+  }
+});
+
+// GET /api/admin/users  (paginated + search)
+app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
+  try {
+    const { _start = 0, _end = 50, _sort = 'created_at', _order = 'DESC', q = '', id } = req.query;
+    if (id !== undefined) {
+      // Single record fetch (React Admin getOne)
+      const r = await pool.query(
+        `SELECT u.*, r.partner_user_id,
+                (SELECT COUNT(*) FROM activity_logs WHERE user_id = u.id)::int AS activity_count,
+                (SELECT COUNT(*) FROM moods WHERE user_id = u.id)::int AS mood_count,
+                (SELECT COUNT(*) FROM notes WHERE user_id = u.id)::int AS note_count,
+                (SELECT COUNT(*) FROM wishes WHERE user_id = u.id)::int AS wish_count
+         FROM users u LEFT JOIN relationship_info r ON r.user_id = u.id
+         WHERE u.id = $1`, [id]);
+      return sendResponse(res, true, 'User', r.rows[0] || null);
+    }
+    const limit  = parseInt(_end) - parseInt(_start);
+    const offset = parseInt(_start);
+    const search = `%${q}%`;
+    const count  = await pool.query(
+      `SELECT COUNT(*) FROM users WHERE display_name ILIKE $1 OR email ILIKE $1 OR username ILIKE $1`,
+      [search]);
+    const rows = await pool.query(
+      `SELECT u.id, u.username, u.email, u.display_name, u.gender, u.created_at,
+              r.partner_user_id,
+              (SELECT COUNT(*) FROM activity_logs WHERE user_id = u.id)::int AS activity_count,
+              (SELECT COUNT(*) FROM moods WHERE user_id = u.id)::int AS mood_count
+       FROM users u
+       LEFT JOIN relationship_info r ON r.user_id = u.id
+       WHERE u.display_name ILIKE $1 OR u.email ILIKE $1 OR u.username ILIKE $1
+       ORDER BY u.${_sort === 'id' ? 'id' : 'created_at'} ${_order === 'ASC' ? 'ASC' : 'DESC'}
+       LIMIT $2 OFFSET $3`,
+      [search, limit, offset]);
+    res.set('X-Total-Count', count.rows[0].count);
+    res.set('Access-Control-Expose-Headers', 'X-Total-Count');
+    res.json(rows.rows);
+  } catch (err) {
+    console.error('Admin users error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE /api/admin/users/:id
+app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+    sendResponse(res, true, 'User deleted', { id: parseInt(req.params.id) });
+  } catch (err) {
+    sendResponse(res, false, 'Server error', null, 500);
+  }
+});
+
+// GET /api/admin/activities
+app.get('/api/admin/activities', authenticateAdmin, async (req, res) => {
+  try {
+    const { _start = 0, _end = 50, _sort = 'created_at', _order = 'DESC', q = '', user_id } = req.query;
+    const limit  = parseInt(_end) - parseInt(_start);
+    const offset = parseInt(_start);
+    const conditions = []; const params = [];
+    if (q) { params.push(`%${q}%`); conditions.push(`(a.title ILIKE $${params.length} OR a.activity_type ILIKE $${params.length})`); }
+    if (user_id) { params.push(user_id); conditions.push(`a.user_id = $${params.length}`); }
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+    const countRes = await pool.query(`SELECT COUNT(*) FROM activity_logs a ${where}`, params);
+    params.push(limit, offset);
+    const rows = await pool.query(
+      `SELECT a.*, u.display_name, u.username
+       FROM activity_logs a JOIN users u ON u.id = a.user_id
+       ${where}
+       ORDER BY a.created_at DESC
+       LIMIT $${params.length - 1} OFFSET $${params.length}`, params);
+    res.set('X-Total-Count', countRes.rows[0].count);
+    res.set('Access-Control-Expose-Headers', 'X-Total-Count');
+    res.json(rows.rows);
+  } catch (err) {
+    console.error('Admin activities error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE /api/admin/activities/:id
+app.delete('/api/admin/activities/:id', authenticateAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM activity_logs WHERE id = $1', [req.params.id]);
+    sendResponse(res, true, 'Deleted', { id: parseInt(req.params.id) });
+  } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
+});
+
+// GET /api/admin/moods
+app.get('/api/admin/moods', authenticateAdmin, async (req, res) => {
+  try {
+    const { _start = 0, _end = 50, q = '' } = req.query;
+    const limit = parseInt(_end) - parseInt(_start);
+    const offset = parseInt(_start);
+    const search = `%${q}%`;
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM moods m WHERE m.mood_type ILIKE $1 OR m.note ILIKE $1`, [search]);
+    const rows = await pool.query(
+      `SELECT m.*, u.display_name, u.username FROM moods m
+       JOIN users u ON u.id = m.user_id
+       WHERE m.mood_type ILIKE $1 OR m.note ILIKE $1
+       ORDER BY m.created_at DESC LIMIT $2 OFFSET $3`, [search, limit, offset]);
+    res.set('X-Total-Count', countRes.rows[0].count);
+    res.set('Access-Control-Expose-Headers', 'X-Total-Count');
+    res.json(rows.rows);
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+// DELETE /api/admin/moods/:id
+app.delete('/api/admin/moods/:id', authenticateAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM moods WHERE id = $1', [req.params.id]);
+    sendResponse(res, true, 'Deleted', { id: parseInt(req.params.id) });
+  } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
+});
+
+// GET /api/admin/notes
+app.get('/api/admin/notes', authenticateAdmin, async (req, res) => {
+  try {
+    const { _start = 0, _end = 50, q = '' } = req.query;
+    const limit = parseInt(_end) - parseInt(_start);
+    const offset = parseInt(_start);
+    const search = `%${q}%`;
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM notes n WHERE n.title ILIKE $1 OR n.content ILIKE $1`, [search]);
+    const rows = await pool.query(
+      `SELECT n.*, u.display_name, u.username FROM notes n
+       JOIN users u ON u.id = n.user_id
+       WHERE n.title ILIKE $1 OR n.content ILIKE $1
+       ORDER BY n.created_at DESC LIMIT $2 OFFSET $3`, [search, limit, offset]);
+    res.set('X-Total-Count', countRes.rows[0].count);
+    res.set('Access-Control-Expose-Headers', 'X-Total-Count');
+    res.json(rows.rows);
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+// DELETE /api/admin/notes/:id
+app.delete('/api/admin/notes/:id', authenticateAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM notes WHERE id = $1', [req.params.id]);
+    sendResponse(res, true, 'Deleted', { id: parseInt(req.params.id) });
+  } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
+});
+
+// GET /api/admin/wishes
+app.get('/api/admin/wishes', authenticateAdmin, async (req, res) => {
+  try {
+    const { _start = 0, _end = 50, q = '' } = req.query;
+    const limit = parseInt(_end) - parseInt(_start);
+    const offset = parseInt(_start);
+    const search = `%${q}%`;
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM wishes w WHERE w.title ILIKE $1 OR w.category ILIKE $1`, [search]);
+    const rows = await pool.query(
+      `SELECT w.*, u.display_name, u.username FROM wishes w
+       JOIN users u ON u.id = w.user_id
+       WHERE w.title ILIKE $1 OR w.category ILIKE $1
+       ORDER BY w.created_at DESC LIMIT $2 OFFSET $3`, [search, limit, offset]);
+    res.set('X-Total-Count', countRes.rows[0].count);
+    res.set('Access-Control-Expose-Headers', 'X-Total-Count');
+    res.json(rows.rows);
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+// DELETE /api/admin/wishes/:id
+app.delete('/api/admin/wishes/:id', authenticateAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM wishes WHERE id = $1', [req.params.id]);
+    sendResponse(res, true, 'Deleted', { id: parseInt(req.params.id) });
+  } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
+});
+
+// ==================== ADMIN PANEL STATIC ====================
+
+const distPath = path.join(__dirname, 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  // SPA fallback — serve index.html for any non-API route
+  app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
 // ==================== ERROR HANDLING ====================
 
 app.use((req, res) => {

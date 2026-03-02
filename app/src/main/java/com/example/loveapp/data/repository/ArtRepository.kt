@@ -1,0 +1,54 @@
+package com.example.loveapp.data.repository
+
+import android.content.Context
+import android.graphics.Bitmap
+import com.example.loveapp.data.api.LoveAppApiService
+import com.example.loveapp.data.api.models.ArtCanvasRequest
+import com.example.loveapp.data.api.models.ArtCanvasResponse
+import com.example.loveapp.data.api.models.ArtCanvasUpdateRequest
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.ByteArrayOutputStream
+import javax.inject.Inject
+
+class ArtRepository @Inject constructor(
+    private val apiService: LoveAppApiService,
+    private val authRepository: AuthRepository
+) {
+    private suspend fun token() = "Bearer ${authRepository.getToken() ?: error("No token")}"
+
+    suspend fun getCanvases(): Result<List<ArtCanvasResponse>> = try {
+        val r = apiService.getCanvases(token())
+        if (r.success && r.data != null) Result.success(r.data)
+        else Result.failure(Exception(r.message ?: "Failed"))
+    } catch (e: Exception) { Result.failure(e) }
+
+    suspend fun createCanvas(title: String = "Без названия"): Result<ArtCanvasResponse> = try {
+        val r = apiService.createCanvas(token(), ArtCanvasRequest(title))
+        if (r.success && r.data != null) Result.success(r.data)
+        else Result.failure(Exception(r.message ?: "Failed"))
+    } catch (e: Exception) { Result.failure(e) }
+
+    suspend fun updateCanvas(id: Int, title: String): Result<ArtCanvasResponse> = try {
+        val r = apiService.updateCanvas(token(), id, ArtCanvasUpdateRequest(title))
+        if (r.success && r.data != null) Result.success(r.data)
+        else Result.failure(Exception(r.message ?: "Failed"))
+    } catch (e: Exception) { Result.failure(e) }
+
+    suspend fun deleteCanvas(id: Int): Result<Unit> = try {
+        apiService.deleteCanvas(token(), id)
+        Result.success(Unit)
+    } catch (e: Exception) { Result.failure(e) }
+
+    suspend fun uploadThumbnail(canvasId: Int, bitmap: Bitmap): Result<String> = try {
+        val baos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 85, baos)
+        val bytes = baos.toByteArray()
+        val rb = bytes.toRequestBody("image/png".toMediaTypeOrNull())
+        val part = MultipartBody.Part.createFormData("thumbnail", "canvas_${canvasId}.png", rb)
+        val r = apiService.uploadCanvasThumbnail(token(), canvasId, part)
+        if (r.success && r.data != null) Result.success(r.data.thumbnailUrl)
+        else Result.failure(Exception(r.message ?: "Upload failed"))
+    } catch (e: Exception) { Result.failure(e) }
+}

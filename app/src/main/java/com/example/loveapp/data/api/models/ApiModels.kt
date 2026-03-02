@@ -386,3 +386,36 @@ data class LinkPartnerResponse(
     @SerializedName("partner_username")
     val partnerUsername: String
 )
+
+// ==================== Art Canvas Models ====================
+
+data class ArtCanvasResponse(
+    val id: Int,
+    @SerializedName("couple_key")
+    val coupleKey: String = "",
+    val title: String,
+    @SerializedName("created_by")
+    val createdBy: Int,
+    @SerializedName("thumbnail_url")
+    val thumbnailUrl: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String = "",
+    @SerializedName("created_at")
+    val createdAt: String = ""
+)
+
+data class ArtCanvasRequest(
+    val title: String = "Без названия"
+)
+
+data class ArtCanvasUpdateRequest(
+    val title: String
+)
+
+data class ArtCanvasThumbnailResponse(
+    val id: Int,
+    @SerializedName("thumbnail_url")
+    val thumbnailUrl: String,
+    @SerializedName("updated_at")
+    val updatedAt: String = ""
+)

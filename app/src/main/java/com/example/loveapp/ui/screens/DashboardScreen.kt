@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoGraph
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.DateRange
@@ -66,7 +67,8 @@ fun DashboardScreen(
     onNavigateToMenstrual: () -> Unit,
     onNavigateToCalendars: () -> Unit,
     onNavigateToRelationship: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToArt: () -> Unit = {}
 ) {
     // Pre-compute string resources (stable across recompositions)
     val lNotes     = stringResource(R.string.notes)
@@ -77,13 +79,14 @@ fun DashboardScreen(
     val lCalendars = stringResource(R.string.calendars)
     val lRelation  = stringResource(R.string.relationship)
     val lSettings  = stringResource(R.string.settings)
+    val lArt       = stringResource(R.string.art)
     val r = rememberResponsiveConfig()
 
     // Tiles are static — remember them so IOSTile can be skipped on recomposition
     val tiles = remember(
         onNavigateToNotes, onNavigateToWishes, onNavigateToMood,
         onNavigateToActivity, onNavigateToMenstrual, onNavigateToCalendars,
-        onNavigateToRelationship, onNavigateToSettings
+        onNavigateToRelationship, onNavigateToSettings, onNavigateToArt
     ) {
         listOf(
             MenutileData(lNotes,      Icons.Default.Description,     iOSPrimaryPink,      onNavigateToNotes),
@@ -93,6 +96,7 @@ fun DashboardScreen(
             MenutileData(lCycle,      Icons.Default.AutoGraph,        iOSActivityPurple,   onNavigateToMenstrual),
             MenutileData(lCalendars,  Icons.Default.CalendarMonth,    iOSTertiaryCoral,    onNavigateToCalendars),
             MenutileData(lRelation,   Icons.Default.People,           iOSActivityGreen,    onNavigateToRelationship),
+            MenutileData(lArt,        Icons.Default.Brush,            Color(0xFF9C27B0),   onNavigateToArt),
             MenutileData(lSettings,   Icons.Default.Settings,         Color(0xFF607D8B),   onNavigateToSettings),
         )
     }

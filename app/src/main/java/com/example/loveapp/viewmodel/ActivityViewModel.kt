@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.loveapp.data.api.models.ActivityResponse
 import com.example.loveapp.data.api.models.CustomActivityTypeResponse
 import com.example.loveapp.data.repository.ActivityRepository
+import com.example.loveapp.data.repository.AuthRepository
+import com.example.loveapp.data.repository.RelationshipRepository
 import com.example.loveapp.ui.screens.CUSTOM_ICON_MAP
 import com.example.loveapp.widget.WidgetActivityIcons
 import com.example.loveapp.widget.WidgetIconPreparer
@@ -25,7 +27,9 @@ import javax.inject.Inject
 class ActivityViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val activityRepository: ActivityRepository,
-    private val widgetUpdater: WidgetUpdater
+    private val widgetUpdater: WidgetUpdater,
+    private val authRepository: AuthRepository,
+    private val relationshipRepository: RelationshipRepository
 ) : ViewModel() {
 
     // Shared class-level formatter — not created on every loadCalendarMonth() call
@@ -80,7 +84,26 @@ class ActivityViewModel @Inject constructor(
     private val _customActivityTypes = MutableStateFlow<List<CustomActivityTypeResponse>>(emptyList())
     val customActivityTypes: StateFlow<List<CustomActivityTypeResponse>> = _customActivityTypes.asStateFlow()
 
-    init { loadToday(); loadCustomActivityTypes() }
+    init { loadUserInfo(); loadToday(); loadCustomActivityTypes() }
+
+    private fun loadUserInfo() {
+        viewModelScope.launch {
+            val profileDef = async { authRepository.getProfile() }
+            val relDef     = async { relationshipRepository.getRelationship() }
+            profileDef.await().onSuccess {
+                _myName.value   = it.displayName
+                _myAvatar.value = it.profileImage
+            }
+            relDef.await().onSuccess {
+                if (!it.partnerDisplayName.isNullOrBlank())
+                    _partnerName.value = it.partnerDisplayName
+                if (!it.partnerAvatar.isNullOrBlank())
+                    _partnerAvatar.value = it.partnerAvatar
+                if (_myAvatar.value.isNullOrBlank() && !it.myAvatar.isNullOrBlank())
+                    _myAvatar.value = it.myAvatar
+            }
+        }
+    }
 
     fun loadToday() {
         viewModelScope.launch {
@@ -92,13 +115,17 @@ class ActivityViewModel @Inject constructor(
             val ptResult   = partnerDef.await()
             myResult.onSuccess { list ->
                 _myTodayActivities.value = list
-                if (_myName.value == null) _myName.value = list.firstOrNull()?.displayName
-                if (_myAvatar.value == null) _myAvatar.value = list.firstOrNull()?.userAvatar
+                list.firstOrNull()?.let { a ->
+                    if (!a.displayName.isNullOrBlank()) _myName.value = a.displayName
+                    if (!a.userAvatar.isNullOrBlank())  _myAvatar.value = a.userAvatar
+                }
             }
             ptResult.onSuccess { list ->
                 _partnerTodayActivities.value = list
-                if (_partnerName.value == null) _partnerName.value = list.firstOrNull()?.displayName
-                if (_partnerAvatar.value == null) _partnerAvatar.value = list.firstOrNull()?.userAvatar
+                list.firstOrNull()?.let { a ->
+                    if (!a.displayName.isNullOrBlank()) _partnerName.value = a.displayName
+                    if (!a.userAvatar.isNullOrBlank())  _partnerAvatar.value = a.userAvatar
+                }
             }.onFailure { /* no partner is ok */ }
             // Push both users' activities to the home-screen widget after both loads finish
             val my      = myResult.getOrElse { emptyList() }

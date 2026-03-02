@@ -50,6 +50,16 @@ class WidgetUpdater @Inject constructor(
         // Activity widget avatar paths
         val KEY_ACT_MY_AVATAR = stringPreferencesKey("act_my_avatar")
         val KEY_ACT_PT_AVATAR = stringPreferencesKey("act_pt_avatar")
+
+        // Art widget keys – partner's latest canvas
+        val KEY_ART_THUMB_PATH      = stringPreferencesKey("art_thumb_path")
+        val KEY_ART_CANVAS_TITLE    = stringPreferencesKey("art_canvas_title")
+        val KEY_ART_CANVAS_ID       = intPreferencesKey("art_canvas_id")
+        val KEY_ART_PARTNER_NAME    = stringPreferencesKey("art_partner_name")
+        val KEY_ART_UPDATED_AT      = stringPreferencesKey("art_updated_at")
+        // Art widget keys – user's own latest canvas
+        val KEY_ART_MY_THUMB_PATH   = stringPreferencesKey("art_my_thumb_path")
+        val KEY_ART_MY_CANVAS_TITLE = stringPreferencesKey("art_my_canvas_title")
     }
 
     /**
@@ -125,5 +135,50 @@ class WidgetUpdater @Inject constructor(
         updateClass(ActivityWidgetSmall(),  ActivityWidgetSmall::class.java)
         updateClass(ActivityDayWidget(),    ActivityDayWidget::class.java)
         updateClass(ActivityWidgetLarge(),  ActivityWidgetLarge::class.java)
+    }
+
+    /**
+     * Pushes partner's latest canvas thumbnail and basic info to all 3 art widgets.
+     * Called from [com.example.loveapp.viewmodel.ArtViewModel] after a canvas is saved or loaded.
+     *
+     * @param partnerThumbPath  absolute local file path for partner's thumbnail (or empty)
+     * @param partnerTitle      title of partner's latest canvas
+     * @param partnerCanvasId   DB id of partner's latest canvas
+     * @param partnerName       partner's display name
+     * @param updatedAt         human-readable last-update string (e.g. "5 min ago")
+     * @param myThumbPath       absolute local file path for the user's own thumbnail (or empty)
+     * @param myTitle           title of the user's own latest canvas
+     */
+    suspend fun pushArtUpdate(
+        partnerThumbPath: String = "",
+        partnerTitle: String = "",
+        partnerCanvasId: Int = -1,
+        partnerName: String = "",
+        updatedAt: String = "",
+        myThumbPath: String = "",
+        myTitle: String = ""
+    ) = runCatching {
+        val mgr = GlanceAppWidgetManager(context)
+
+        suspend fun <T : androidx.glance.appwidget.GlanceAppWidget> updateClass(
+            widget: T, cls: Class<T>
+        ) = mgr.getGlanceIds(cls).forEach { id ->
+            updateAppWidgetState(context, PreferencesGlanceStateDefinition, id) { prefs: Preferences ->
+                prefs.toMutablePreferences().apply {
+                    this[KEY_ART_THUMB_PATH]      = partnerThumbPath
+                    this[KEY_ART_CANVAS_TITLE]    = partnerTitle
+                    this[KEY_ART_CANVAS_ID]       = partnerCanvasId
+                    this[KEY_ART_PARTNER_NAME]    = partnerName
+                    this[KEY_ART_UPDATED_AT]      = updatedAt
+                    this[KEY_ART_MY_THUMB_PATH]   = myThumbPath
+                    this[KEY_ART_MY_CANVAS_TITLE] = myTitle
+                }
+            }
+            widget.update(context, id)
+        }
+
+        updateClass(ArtWidgetSmall(),  ArtWidgetSmall::class.java)
+        updateClass(ArtWidgetMedium(), ArtWidgetMedium::class.java)
+        updateClass(ArtWidgetLarge(),  ArtWidgetLarge::class.java)
     }
 }

@@ -1,5 +1,9 @@
 package com.example.loveapp.data.api
 
+import com.example.loveapp.data.api.models.ArtCanvasRequest
+import com.example.loveapp.data.api.models.ArtCanvasResponse
+import com.example.loveapp.data.api.models.ArtCanvasThumbnailResponse
+import com.example.loveapp.data.api.models.ArtCanvasUpdateRequest
 import com.example.loveapp.data.api.models.AvatarUploadResponse
 import com.example.loveapp.data.api.models.ActivityRequest
 import com.example.loveapp.data.api.models.ActivityResponse
@@ -378,4 +382,43 @@ interface LoveAppApiService {
         @Header("Authorization") token: String,
         @Body request: LinkPartnerRequest
     ): ApiResponse<LinkPartnerResponse>
+
+    // ==================== Art Canvases ====================
+    @GET("art/canvases")
+    suspend fun getCanvases(
+        @Header("Authorization") token: String
+    ): ApiResponse<List<ArtCanvasResponse>>
+
+    @POST("art/canvases")
+    suspend fun createCanvas(
+        @Header("Authorization") token: String,
+        @Body request: ArtCanvasRequest
+    ): ApiResponse<ArtCanvasResponse>
+
+    @GET("art/canvases/{id}")
+    suspend fun getCanvas(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): ApiResponse<ArtCanvasResponse>
+
+    @PUT("art/canvases/{id}")
+    suspend fun updateCanvas(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int,
+        @Body request: ArtCanvasUpdateRequest
+    ): ApiResponse<ArtCanvasResponse>
+
+    @DELETE("art/canvases/{id}")
+    suspend fun deleteCanvas(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): ApiResponse<Any?>
+
+    @Multipart
+    @POST("art/canvases/{id}/thumbnail")
+    suspend fun uploadCanvasThumbnail(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int,
+        @Part thumbnail: MultipartBody.Part
+    ): ApiResponse<ArtCanvasThumbnailResponse>
 }

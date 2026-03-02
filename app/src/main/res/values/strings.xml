@@ -16,6 +16,12 @@
     <string name="widget_activity_small_label">🏃 Активности · Мини</string>
     <string name="widget_activity_medium_label">🏃 Активности · Стандарт</string>
     <string name="widget_activity_large_label">🏃 Активности · Большой</string>
+    <string name="widget_art_small_description">Художества (мини)</string>
+    <string name="widget_art_medium_description">Художества (средний)</string>
+    <string name="widget_art_large_description">Художества (большой)</string>
+    <string name="widget_art_small_label">🎨 Художества · Мини</string>
+    <string name="widget_art_medium_label">🎨 Художества · Стандарт</string>
+    <string name="widget_art_large_label">🎨 Художества · Большой</string>
     
     <!-- Auth -->
     <string name="login">Вход</string>
@@ -33,6 +39,9 @@
     <string name="create_account">Создать аккаунт</string>
     <string name="sign_up">Зарегистрироваться</string>
     
+    <!-- Art -->
+    <string name="art">Художества</string>
+
     <!-- Dashboard -->
     <string name="dashboard">Главная</string>
     <string name="notes">Заметки</string>

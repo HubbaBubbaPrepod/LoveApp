@@ -49,6 +49,8 @@ import com.example.loveapp.viewmodel.AuthViewModel
 import com.example.loveapp.viewmodel.SettingsViewModel
 import com.example.loveapp.navigation.Screen
 import com.example.loveapp.ui.screens.ActivityFeedScreen
+import com.example.loveapp.ui.screens.ArtGalleryScreen
+import com.example.loveapp.ui.screens.CanvasEditorScreen
 import com.example.loveapp.ui.screens.CustomCalendarsScreen
 import com.example.loveapp.ui.screens.DashboardScreen
 import com.example.loveapp.ui.screens.LoginScreen
@@ -221,7 +223,8 @@ fun LoveAppNavigation(
                 onNavigateToMenstrual = { navController.navigate(Screen.MenstrualCalendar.route) },
                 onNavigateToCalendars = { navController.navigate(Screen.CustomCalendars.route) },
                 onNavigateToRelationship = { navController.navigate(Screen.RelationshipDashboard.route) },
-                onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
+                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                onNavigateToArt = { navController.navigate(Screen.ArtGallery.route) }
             )
         }
 
@@ -316,6 +319,26 @@ fun LoveAppNavigation(
                         popUpTo(Screen.ProfileSetup.route) { inclusive = true }
                     }
                 }
+            )
+        }
+
+        composable(Screen.ArtGallery.route) {
+            ArtGalleryScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenCanvas = { canvas ->
+                    navController.navigate(Screen.CanvasEditor.createRoute(canvas.id))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.CanvasEditor.route,
+            arguments = listOf(navArgument("canvasId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val canvasId = backStackEntry.arguments?.getInt("canvasId") ?: -1
+            CanvasEditorScreen(
+                canvasId = canvasId,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         }

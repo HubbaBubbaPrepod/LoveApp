@@ -106,6 +106,11 @@ dependencies {
     // Glance App Widgets
     implementation(libs.glance.appwidget)
 
+    // Socket.IO client for real-time drawing sync
+    implementation("io.socket:socket.io-client:2.1.0") {
+        exclude(group = "org.json", module = "json")
+    }
+
     // Firebase Cloud Messaging
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)

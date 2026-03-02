@@ -1,6 +1,7 @@
 // server.js - Express Backend for LoveApp
 
 const express = require('express');
+const http    = require('http');
 const pg = require('pg');
 const cors = require('cors');
 const dotenv = require('dotenv');
@@ -17,7 +18,62 @@ dotenv.config();
 // instead of JavaScript Date objects (which cause timezone offset shifts)
 pg.types.setTypeParser(1082, val => val);
 
-const app = express();
+const app    = express();
+const server = http.createServer(app);
+
+// ── Socket.IO (real-time drawing sync) ──────────────────────────────────────
+let io;
+try {
+  const { Server } = require('socket.io');
+  io = new Server(server, { cors: { origin: '*', methods: ['GET', 'POST'] } });
+
+  // JWT auth middleware
+  io.use(async (socket, next) => {
+    const token = socket.handshake.auth && socket.handshake.auth.token;
+    if (!token) return next(new Error('Unauthorized'));
+    const decoded = verifyToken(token);
+    if (!decoded) return next(new Error('Unauthorized'));
+    socket.userId = decoded.userId;
+    try {
+      const rel = await pool.query(
+        'SELECT partner_user_id FROM relationship_info WHERE user_id = $1 LIMIT 1',
+        [decoded.userId]
+      );
+      const partnerId = rel.rows[0] && rel.rows[0].partner_user_id;
+      const min = partnerId ? Math.min(decoded.userId, partnerId) : decoded.userId;
+      const max = partnerId ? Math.max(decoded.userId, partnerId) : decoded.userId;
+      socket.coupleKey = `${min}_${max}`;
+    } catch (e) {
+      socket.coupleKey = `solo_${decoded.userId}`;
+    }
+    next();
+  });
+
+  io.on('connection', (socket) => {
+    socket.join(`couple:${socket.coupleKey}`);
+
+    socket.on('join-canvas', (canvasId) => {
+      socket.currentCanvasId = canvasId;
+      socket.join(`canvas:${canvasId}`);
+    });
+
+    socket.on('leave-canvas', (canvasId) => {
+      socket.leave(`canvas:${canvasId}`);
+    });
+
+    socket.on('draw-action', (data) => {
+      if (!data || !data.canvasId) return;
+      socket.to(`canvas:${data.canvasId}`).emit('draw-action', {
+        ...data,
+        senderId: socket.userId,
+      });
+    });
+  });
+  console.log('Socket.IO initialised — real-time drawing enabled');
+} catch (e) {
+  console.warn('Socket.IO NOT available:', e.message);
+  console.warn('Run: npm install socket.io');
+}
 
 // Middleware
 app.use(cors());
@@ -2057,6 +2113,95 @@ app.delete('/api/admin/wishes/:id', authenticateAdmin, async (req, res) => {
   } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
 });
 
+// ==================== ART CANVASES ====================
+
+// Helper: get couple_key for the current user
+async function getCoupleKey(userId) {
+  const rel = await pool.query(
+    'SELECT partner_user_id FROM relationship_info WHERE user_id = $1 LIMIT 1', [userId]);
+  const partnerId = rel.rows[0] && rel.rows[0].partner_user_id;
+  const min = partnerId ? Math.min(userId, partnerId) : userId;
+  const max = partnerId ? Math.max(userId, partnerId) : userId;
+  return `${min}_${max}`;
+}
+
+// GET /api/art/canvases
+app.get('/api/art/canvases', authenticateToken, async (req, res) => {
+  try {
+    const coupleKey = await getCoupleKey(req.userId);
+    const result = await pool.query(
+      `SELECT id, couple_key, title, created_by, thumbnail_url, updated_at, created_at
+       FROM art_canvases WHERE couple_key = $1 ORDER BY updated_at DESC`, [coupleKey]);
+    sendResponse(res, true, 'OK', result.rows);
+  } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
+});
+
+// POST /api/art/canvases
+app.post('/api/art/canvases', authenticateToken, async (req, res) => {
+  try {
+    const { title = 'Без названия' } = req.body;
+    const coupleKey = await getCoupleKey(req.userId);
+    const result = await pool.query(
+      `INSERT INTO art_canvases (couple_key, title, created_by) VALUES ($1, $2, $3)
+       RETURNING id, couple_key, title, created_by, thumbnail_url, updated_at, created_at`,
+      [coupleKey, title, req.userId]);
+    sendResponse(res, true, 'Canvas created', result.rows[0], 201);
+  } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
+});
+
+// GET /api/art/canvases/:id
+app.get('/api/art/canvases/:id', authenticateToken, async (req, res) => {
+  try {
+    const coupleKey = await getCoupleKey(req.userId);
+    const result = await pool.query(
+      `SELECT id, couple_key, title, created_by, thumbnail_url, updated_at, created_at
+       FROM art_canvases WHERE id = $1 AND couple_key = $2`, [req.params.id, coupleKey]);
+    if (!result.rows.length) return sendResponse(res, false, 'Not found', null, 404);
+    sendResponse(res, true, 'OK', result.rows[0]);
+  } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
+});
+
+// PUT /api/art/canvases/:id  — rename canvas
+app.put('/api/art/canvases/:id', authenticateToken, async (req, res) => {
+  try {
+    const { title } = req.body;
+    const coupleKey = await getCoupleKey(req.userId);
+    const result = await pool.query(
+      `UPDATE art_canvases SET title = $1, updated_at = NOW()
+       WHERE id = $2 AND couple_key = $3
+       RETURNING id, couple_key, title, created_by, thumbnail_url, updated_at, created_at`,
+      [title, req.params.id, coupleKey]);
+    if (!result.rows.length) return sendResponse(res, false, 'Not found', null, 404);
+    sendResponse(res, true, 'Updated', result.rows[0]);
+  } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
+});
+
+// DELETE /api/art/canvases/:id
+app.delete('/api/art/canvases/:id', authenticateToken, async (req, res) => {
+  try {
+    const coupleKey = await getCoupleKey(req.userId);
+    await pool.query(
+      'DELETE FROM art_canvases WHERE id = $1 AND couple_key = $2', [req.params.id, coupleKey]);
+    sendResponse(res, true, 'Deleted');
+  } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
+});
+
+// POST /api/art/canvases/:id/thumbnail  — upload PNG snapshot
+app.post('/api/art/canvases/:id/thumbnail', authenticateToken, upload.single('thumbnail'), async (req, res) => {
+  try {
+    if (!req.file) return sendResponse(res, false, 'No file', null, 400);
+    const coupleKey = await getCoupleKey(req.userId);
+    const url = `${process.env.SERVER_URL || 'http://195.2.71.218:3005'}/uploads/${req.file.filename}`;
+    const result = await pool.query(
+      `UPDATE art_canvases SET thumbnail_url = $1, updated_at = NOW()
+       WHERE id = $2 AND couple_key = $3
+       RETURNING id, thumbnail_url, updated_at`,
+      [url, req.params.id, coupleKey]);
+    if (!result.rows.length) return sendResponse(res, false, 'Not found', null, 404);
+    sendResponse(res, true, 'Thumbnail updated', result.rows[0]);
+  } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
+});
+
 // ==================== ADMIN PANEL STATIC ====================
 
 const distPath = path.join(__dirname, 'dist');
@@ -2149,7 +2294,20 @@ pool.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname
   .then(() => console.log('relationship_info unique user_id constraint ready'))
   .catch(err => console.error('Migration error (relationship_info unique):', err));
 
-app.listen(PORT, () => {
+pool.query(`
+  CREATE TABLE IF NOT EXISTS art_canvases (
+    id            BIGSERIAL PRIMARY KEY,
+    couple_key    VARCHAR(50)  NOT NULL,
+    title         VARCHAR(200) NOT NULL DEFAULT '\u0411\u0435\u0437 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u044f',
+    created_by    INTEGER      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    thumbnail_url TEXT,
+    updated_at    TIMESTAMPTZ  DEFAULT NOW(),
+    created_at    TIMESTAMPTZ  DEFAULT NOW()
+  )
+`).then(() => console.log('art_canvases table ready'))
+  .catch(err => console.error('Migration error (art_canvases):', err));
+
+server.listen(PORT, () => {
   console.log(`LoveApp API Server running on port ${PORT}`);
   console.log(`Database: ${process.env.PGHOST}:${process.env.PGPORT}/${process.env.PGDATABASE}`);
 });

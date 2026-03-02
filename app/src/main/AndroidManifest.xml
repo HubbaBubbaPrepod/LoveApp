@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <!-- Required to post notifications on Android 13+ (API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Keep screen on for lock-screen drawing -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Required for WorkManager to run as a foreground service (API 28+, Xiaomi MIUI) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- Allows WorkManager to re-schedule workers after device reboot -->
@@ -117,6 +119,53 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/activity_widget_large_info" />
+        </receiver>
+
+        <!-- Lock-screen drawing activity -->
+        <activity
+            android:name=".ui.art.LockScreenDrawingActivity"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:exported="false"
+            android:theme="@style/Theme.LoveApp" />
+
+        <!-- Art widget – Small (2×2) -->
+        <receiver
+            android:name=".widget.ArtWidgetSmallReceiver"
+            android:exported="true"
+            android:label="@string/widget_art_small_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/art_widget_small_info" />
+        </receiver>
+
+        <!-- Art widget – Medium (3×3) -->
+        <receiver
+            android:name=".widget.ArtWidgetMediumReceiver"
+            android:exported="true"
+            android:label="@string/widget_art_medium_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/art_widget_medium_info" />
+        </receiver>
+
+        <!-- Art widget – Large (4×4) -->
+        <receiver
+            android:name=".widget.ArtWidgetLargeReceiver"
+            android:exported="true"
+            android:label="@string/widget_art_large_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/art_widget_large_info" />
         </receiver>
 
         <!-- Firebase Cloud Messaging -->

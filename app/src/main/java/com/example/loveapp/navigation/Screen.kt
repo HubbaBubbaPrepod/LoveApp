@@ -22,4 +22,8 @@ sealed class Screen(val route: String) {
     object PrivacyPolicy : Screen("privacy_policy")
     object TermsOfUse : Screen("terms_of_use")
     object ProfileSetup : Screen("profile_setup")
+    object ArtGallery : Screen("art_gallery")
+    object CanvasEditor : Screen("canvas_editor/{canvasId}") {
+        fun createRoute(canvasId: Int) = "canvas_editor/$canvasId"
+    }
 }

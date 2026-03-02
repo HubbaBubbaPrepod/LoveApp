@@ -3,7 +3,9 @@ package com.example.loveapp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.loveapp.data.api.models.MoodResponse
+import com.example.loveapp.data.repository.AuthRepository
 import com.example.loveapp.data.repository.MoodRepository
+import com.example.loveapp.data.repository.RelationshipRepository
 import com.example.loveapp.utils.DateUtils
 import com.example.loveapp.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +22,9 @@ import javax.inject.Inject
 @HiltViewModel
 class MoodViewModel @Inject constructor(
     private val moodRepository: MoodRepository,
-    private val widgetUpdater: WidgetUpdater
+    private val widgetUpdater: WidgetUpdater,
+    private val authRepository: AuthRepository,
+    private val relationshipRepository: RelationshipRepository
 ) : ViewModel() {
 
     private val _myTodayMoods = MutableStateFlow<List<MoodResponse>>(emptyList())
@@ -70,7 +74,27 @@ class MoodViewModel @Inject constructor(
     val moods: StateFlow<List<MoodResponse>> get() = _myTodayMoods
 
     init {
+        loadUserInfo()
         loadToday()
+    }
+
+    private fun loadUserInfo() {
+        viewModelScope.launch {
+            val profileDef = async { authRepository.getProfile() }
+            val relDef     = async { relationshipRepository.getRelationship() }
+            profileDef.await().onSuccess {
+                _myName.value   = it.displayName
+                _myAvatar.value = it.profileImage
+            }
+            relDef.await().onSuccess {
+                if (!it.partnerDisplayName.isNullOrBlank())
+                    _partnerName.value = it.partnerDisplayName
+                if (!it.partnerAvatar.isNullOrBlank())
+                    _partnerAvatar.value = it.partnerAvatar
+                if (_myAvatar.value.isNullOrBlank() && !it.myAvatar.isNullOrBlank())
+                    _myAvatar.value = it.myAvatar
+            }
+        }
     }
 
     fun loadToday() {
@@ -83,13 +107,17 @@ class MoodViewModel @Inject constructor(
             val ptResult   = partnerDef.await()
             myResult.onSuccess {
                 _myTodayMoods.value = it
-                if (_myName.value == null) _myName.value = it.firstOrNull()?.displayName
-                if (_myAvatar.value == null) _myAvatar.value = it.firstOrNull()?.userAvatar
+                it.firstOrNull()?.let { m ->
+                    if (!m.displayName.isNullOrBlank()) _myName.value = m.displayName
+                    if (!m.userAvatar.isNullOrBlank())  _myAvatar.value = m.userAvatar
+                }
             }
             ptResult.onSuccess { moods ->
                 _partnerTodayMoods.value = moods
-                if (_partnerName.value == null) _partnerName.value = moods.firstOrNull()?.displayName
-                if (_partnerAvatar.value == null) _partnerAvatar.value = moods.firstOrNull()?.userAvatar
+                moods.firstOrNull()?.let { m ->
+                    if (!m.displayName.isNullOrBlank()) _partnerName.value = m.displayName
+                    if (!m.userAvatar.isNullOrBlank())  _partnerAvatar.value = m.userAvatar
+                }
             }.onFailure { /* no partner is ok */ }
             // Push both users' moods to the home-screen widget after both loads finish
             val my      = myResult.getOrElse { emptyList() }

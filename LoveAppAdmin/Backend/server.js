@@ -1987,13 +1987,14 @@ app.delete('/api/admin/wishes/:id', authenticateAdmin, async (req, res) => {
 // ==================== ADMIN PANEL STATIC ====================
 
 const distPath = path.join(__dirname, 'dist');
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
-  // SPA fallback — serve index.html for any non-API route
-  app.get(/^(?!\/api).*/, (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
+app.use(express.static(distPath));
+// SPA fallback — serve index.html for any non-API route
+app.get(/^(?!\/api).*/, (req, res) => {
+  const indexFile = path.join(distPath, 'index.html');
+  res.sendFile(indexFile, (err) => {
+    if (err) sendResponse(res, false, 'Endpoint not found', null, 404);
   });
-}
+});
 
 // ==================== ERROR HANDLING ====================
 

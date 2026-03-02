@@ -14,5 +14,10 @@ data class MenstrualCycleEntry(
     val lastUpdated: Long = System.currentTimeMillis(),
     val symptoms: String = "", // comma-separated symptoms
     val mood: String = "", // associated mood
-    val notes: String = ""
+    val notes: String = "",
+    // ── Sync metadata ──────────────────────────────────────
+    val serverId: Int? = null,
+    val syncPending: Boolean = true,
+    val serverUpdatedAt: Long? = null,
+    val deletedAt: Long? = null
 )

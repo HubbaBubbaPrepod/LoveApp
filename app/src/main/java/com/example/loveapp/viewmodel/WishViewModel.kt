@@ -96,10 +96,10 @@ class WishViewModel @Inject constructor(
             _isLoading.value = true
             _errorMessage.value = null
             val result = wishRepository.createWish(title, description, priority, category, isPrivate, imageUrls, emoji)
-            result.onSuccess { wish ->
-                _wishes.value = listOf(wish) + _wishes.value
+            result.onSuccess {
                 _successMessage.value = "Wish created"
                 _isLoading.value = false
+                loadWishes()
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Failed to create wish"
                 _isLoading.value = false
@@ -128,10 +128,10 @@ class WishViewModel @Inject constructor(
                 emoji = emoji
             )
             val result = wishRepository.updateWish(id, request)
-            result.onSuccess { updated ->
-                _wishes.value = _wishes.value.map { if (it.id == id) updated else it }
+            result.onSuccess {
                 _successMessage.value = "Wish updated"
                 _isLoading.value = false
+                loadWishes()
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Failed to update wish"
                 _isLoading.value = false
@@ -144,10 +144,10 @@ class WishViewModel @Inject constructor(
             _isLoading.value = true
             _errorMessage.value = null
             val result = wishRepository.completeWish(id)
-            result.onSuccess { updatedWish ->
-                _wishes.value = _wishes.value.map { if (it.id == id) updatedWish else it }
+            result.onSuccess {
                 _successMessage.value = "Wish completed!"
                 _isLoading.value = false
+                loadWishes()
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Failed to complete wish"
                 _isLoading.value = false

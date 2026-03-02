@@ -139,9 +139,9 @@ class CalendarViewModel @Inject constructor(
     fun createCalendar(name: String, color: String) {
         viewModelScope.launch {
             _isLoading.value = true
-            calendarRepository.createCalendar(name, "custom", color).onSuccess { cal ->
-                _calendars.value = listOf(cal) + _calendars.value
+            calendarRepository.createCalendar(name, "custom", color).onSuccess {
                 _successMessage.value = "Создан $name"
+                loadCalendars()
             }.onFailure {
                 _errorMessage.value = it.message ?: "Ошибка создания"
             }

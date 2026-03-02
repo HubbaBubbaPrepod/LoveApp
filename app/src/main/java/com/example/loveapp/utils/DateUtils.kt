@@ -48,4 +48,18 @@ object DateUtils {
         }
         return dates
     }
+
+    /** Parse ISO-8601 server timestamp (with or without milliseconds) to epoch millis. */
+    fun parseIsoTs(s: String?): Long {
+        if (s.isNullOrBlank()) return System.currentTimeMillis()
+        return try {
+            val fmtMs = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+            fmtMs.timeZone = java.util.TimeZone.getTimeZone("UTC")
+            fmtMs.parse(s)?.time ?: run {
+                val fmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
+                fmt.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                fmt.parse(s)?.time ?: System.currentTimeMillis()
+            }
+        } catch (e: Exception) { System.currentTimeMillis() }
+    }
 }

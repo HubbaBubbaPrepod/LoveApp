@@ -1,0 +1,120 @@
+# fastlane/Fastfile
+# Automated Android build & deploy pipeline for LoveApp
+#
+# Prerequisites:
+#   gem install fastlane
+#   fastlane supply init          # first-time setup of Play Store metadata
+#   Set KEYSTORE_PATH, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD env vars
+#   Set PLAY_STORE_JSON_KEY env var pointing to service-account JSON
+#
+# Usage:
+#   fastlane beta          # build + upload to Play Store internal track
+#   fastlane deploy        # promote internal → production
+#   fastlane increment     # bump versionCode only
+#   fastlane test          # run unit tests
+
+default_platform(:android)
+
+platform :android do
+
+  # ── Before each lane ────────────────────────────────────────────────────
+  before_all do
+    ensure_env_vars(
+      env_vars: ['KEYSTORE_PATH', 'KEYSTORE_PASSWORD', 'KEY_ALIAS', 'KEY_PASSWORD']
+    )
+  end
+
+  # ── increment — bump versionCode ────────────────────────────────────────
+  desc "Increment versionCode in gradle.properties"
+  lane :increment do
+    increment_version_code(
+      gradle_file_path: "app/build.gradle.kts"
+    )
+  end
+
+  # ── test — run unit tests ────────────────────────────────────────────────
+  desc "Run unit tests"
+  lane :test do
+    gradle(
+      task:       "test",
+      build_type: "Debug"
+    )
+  end
+
+  # ── build_release — assemble signed AAB ────────────────────────────────
+  desc "Build signed release AAB"
+  private_lane :build_release do
+    gradle(
+      task:                      "bundle",
+      build_type:                "Release",
+      print_command:             false,
+      properties: {
+        "android.injected.signing.store.file"     => ENV["KEYSTORE_PATH"],
+        "android.injected.signing.store.password" => ENV["KEYSTORE_PASSWORD"],
+        "android.injected.signing.key.alias"      => ENV["KEY_ALIAS"],
+        "android.injected.signing.key.password"   => ENV["KEY_PASSWORD"],
+      }
+    )
+  end
+
+  # ── beta — build + upload to internal track ──────────────────────────────
+  desc "Build and upload to Play Store internal test track"
+  lane :beta do
+    increment
+    build_release
+    upload_to_play_store(
+      track:            "internal",
+      release_status:   "draft",
+      skip_upload_apk:  true,
+      skip_upload_metadata: true,
+      skip_upload_images:   true,
+      skip_upload_screenshots: true
+    )
+    slack_notify("LoveApp internal build uploaded to Play Store ✅") if ENV["SLACK_WEBHOOK_URL"]
+  end
+
+  # ── deploy — promote internal → production ───────────────────────────────
+  desc "Promote the latest internal build to production"
+  lane :deploy do
+    upload_to_play_store(
+      track:                "internal",
+      track_promote_to:     "production",
+      skip_upload_aab:      true,
+      skip_upload_apk:      true,
+      skip_upload_metadata: false,    # update store listing
+      skip_upload_images:   false,
+      skip_upload_screenshots: false
+    )
+    slack_notify("LoveApp promoted to production 🚀") if ENV["SLACK_WEBHOOK_URL"]
+  end
+
+  # ── screenshots — capture Fastlane screenshots (optional) ────────────────
+  desc "Capture Play Store screenshots"
+  lane :screenshots do
+    capture_android_screenshots
+    upload_to_play_store(
+      skip_upload_aab:  true,
+      skip_upload_apk:  true,
+      skip_upload_metadata: true
+    )
+  end
+
+  # ── Helper: send Slack notification ──────────────────────────────────────
+  private_lane :slack_notify do |options|
+    slack(
+      message:     options[:message] || "Fastlane action completed",
+      webhook_url: ENV["SLACK_WEBHOOK_URL"],
+      success:     true
+    )
+  end
+
+  # ── On error ─────────────────────────────────────────────────────────────
+  error do |lane, exception|
+    slack(
+      message:     "Fastlane error in lane *#{lane}*: #{exception.message}",
+      webhook_url: ENV["SLACK_WEBHOOK_URL"],
+      success:     false
+    ) if ENV["SLACK_WEBHOOK_URL"]
+  end
+
+end

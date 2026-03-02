@@ -2,6 +2,7 @@ package com.example.loveapp.di
 
 import android.content.Context
 import com.example.loveapp.data.LoveAppDatabase
+import com.example.loveapp.data.dao.OutboxDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -56,4 +57,8 @@ object DatabaseModule {
     @Singleton
     @Provides
     fun provideRelationshipInfoDao(database: LoveAppDatabase) = database.relationshipInfoDao()
+
+    @Singleton
+    @Provides
+    fun provideOutboxDao(database: LoveAppDatabase): OutboxDao = database.outboxDao()
 }

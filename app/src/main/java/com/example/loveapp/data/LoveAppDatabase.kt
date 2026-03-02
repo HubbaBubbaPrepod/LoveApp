@@ -4,12 +4,15 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.loveapp.data.dao.ActivityLogDao
 import com.example.loveapp.data.dao.CustomCalendarDao
 import com.example.loveapp.data.dao.CustomCalendarEventDao
 import com.example.loveapp.data.dao.MenstrualCycleDao
 import com.example.loveapp.data.dao.MoodEntryDao
 import com.example.loveapp.data.dao.NoteDao
+import com.example.loveapp.data.dao.OutboxDao
 import com.example.loveapp.data.dao.RelationshipInfoDao
 import com.example.loveapp.data.dao.UserDao
 import com.example.loveapp.data.dao.WishDao
@@ -19,6 +22,7 @@ import com.example.loveapp.data.entity.CustomCalendarEvent
 import com.example.loveapp.data.entity.MenstrualCycleEntry
 import com.example.loveapp.data.entity.MoodEntry
 import com.example.loveapp.data.entity.Note
+import com.example.loveapp.data.entity.OutboxEntry
 import com.example.loveapp.data.entity.RelationshipInfo
 import com.example.loveapp.data.entity.User
 import com.example.loveapp.data.entity.Wish
@@ -33,9 +37,10 @@ import com.example.loveapp.data.entity.Wish
         MenstrualCycleEntry::class,
         CustomCalendar::class,
         CustomCalendarEvent::class,
-        RelationshipInfo::class
+        RelationshipInfo::class,
+        OutboxEntry::class          // offline sync queue
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class LoveAppDatabase : RoomDatabase() {
@@ -48,10 +53,61 @@ abstract class LoveAppDatabase : RoomDatabase() {
     abstract fun customCalendarDao(): CustomCalendarDao
     abstract fun customCalendarEventDao(): CustomCalendarEventDao
     abstract fun relationshipInfoDao(): RelationshipInfoDao
+    abstract fun outboxDao(): OutboxDao
 
     companion object {
         @Volatile
         private var Instance: LoveAppDatabase? = null
+
+        /**
+         * Migration 2 → 3:
+         *  - Adds sync-metadata columns (serverId, syncPending, serverUpdatedAt, deletedAt)
+         *    to all entity tables.
+         *  - Creates the outbox table for offline sync.
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            private val syncColumns = """
+                ADD COLUMN serverId INTEGER DEFAULT NULL,
+                ADD COLUMN syncPending INTEGER NOT NULL DEFAULT 1,
+                ADD COLUMN serverUpdatedAt INTEGER DEFAULT NULL,
+                ADD COLUMN deletedAt INTEGER DEFAULT NULL
+            """.trimIndent()
+
+            private val tables = listOf(
+                "notes", "wishes", "mood_entries", "activity_logs",
+                "menstrual_cycle", "custom_calendars",
+                "custom_calendar_events", "relationship_info"
+            )
+
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // SQLite does not support multiple ADD COLUMN in one ALTER TABLE;
+                // issue a separate statement per column per table.
+                for (table in tables) {
+                    db.execSQL("ALTER TABLE `$table` ADD COLUMN serverId INTEGER DEFAULT NULL")
+                    db.execSQL("ALTER TABLE `$table` ADD COLUMN syncPending INTEGER NOT NULL DEFAULT 1")
+                    db.execSQL("ALTER TABLE `$table` ADD COLUMN serverUpdatedAt INTEGER DEFAULT NULL")
+                    db.execSQL("ALTER TABLE `$table` ADD COLUMN deletedAt INTEGER DEFAULT NULL")
+                }
+
+                // Outbox table for queuing offline mutations
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS outbox (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        entityType TEXT NOT NULL,
+                        action TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        localId INTEGER NOT NULL,
+                        serverId INTEGER DEFAULT NULL,
+                        createdAt INTEGER NOT NULL,
+                        retryCount INTEGER NOT NULL DEFAULT 0,
+                        retryAfter INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_outbox_entity ON outbox (entityType, localId)")
+            }
+        }
 
         fun getDatabase(context: Context): LoveAppDatabase {
             return Instance ?: synchronized(this) {
@@ -59,8 +115,11 @@ abstract class LoveAppDatabase : RoomDatabase() {
                     context.applicationContext,
                     LoveAppDatabase::class.java,
                     "loveapp_database"
-                ).fallbackToDestructiveMigration()
-                    .build().also { Instance = it }
+                )
+                    .addMigrations(MIGRATION_2_3)
+                    .fallbackToDestructiveMigration() // safety net for dev builds
+                    .build()
+                    .also { Instance = it }
             }
         }
     }

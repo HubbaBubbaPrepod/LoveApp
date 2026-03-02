@@ -15,6 +15,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- Allows WorkManager to re-schedule workers after device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- System calendar access for CalendarExportManager -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
 
     <application
         android:name=".SimpleApplication"
@@ -27,6 +30,14 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.LoveApp">
+
+        <!-- Sentry: replace value with your actual DSN from sentry.io -->
+        <meta-data
+            android:name="io.sentry.dsn"
+            android:value="https://your_key@oXXXXXX.ingest.sentry.io/XXXXXXX" />
+        <meta-data android:name="io.sentry.traces-sample-rate" android:value="0.2" />
+        <meta-data android:name="io.sentry.environment" android:value="production" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -176,6 +187,23 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!--
+          Disable the default WorkManager auto-initializer so that our
+          custom Hilt-aware Configuration.Provider (in SimpleApplication) is
+          used instead.  Without this the default initializer runs first and
+          ignores our HiltWorkerFactory.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.impl.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
     </application>
 

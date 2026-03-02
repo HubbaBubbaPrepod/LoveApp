@@ -1,5 +1,8 @@
 // server.js - Express Backend for LoveApp
 
+// Sentry must be initialised before any other require
+require('./src/instrumentation');
+
 const express = require('express');
 const http    = require('http');
 const pg = require('pg');
@@ -2306,6 +2309,10 @@ pool.query(`
   )
 `).then(() => console.log('art_canvases table ready'))
   .catch(err => console.error('Migration error (art_canvases):', err));
+
+// Sentry error handler — must come after all routes/middleware
+const Sentry = require('@sentry/node');
+app.use(Sentry.expressErrorHandler());
 
 server.listen(PORT, () => {
   console.log(`LoveApp API Server running on port ${PORT}`);

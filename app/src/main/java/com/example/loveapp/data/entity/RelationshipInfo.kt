@@ -14,5 +14,10 @@ data class RelationshipInfo(
     val userId2: Int,
     val nickname1: String = "", // nicknames for each person
     val nickname2: String = "",
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    // ── Sync metadata ──────────────────────────────────────
+    val serverId: Int? = null,
+    val syncPending: Boolean = true,
+    val serverUpdatedAt: Long? = null,
+    val deletedAt: Long? = null
 )

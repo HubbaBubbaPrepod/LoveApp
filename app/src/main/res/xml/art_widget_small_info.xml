@@ -7,5 +7,5 @@
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:description="@string/widget_art_small_description"
-    android:resizeMode="both"
+    android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />

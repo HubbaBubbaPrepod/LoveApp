@@ -19,8 +19,8 @@ android {
         applicationId = "com.example.loveapp"
         minSdk = 23
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.0.4"
+        versionCode = 6
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -119,6 +119,21 @@ dependencies {
     implementation(libs.credentials)
     implementation(libs.credentials.play.services.auth)
     implementation(libs.googleid)
+
+    // Hilt WorkManager integration (required for @HiltWorker)
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    kapt("androidx.hilt:hilt-compiler:1.2.0")
+
+    // Biometric authentication
+    implementation("androidx.biometric:biometric-ktx:1.4.0-alpha02")
+
+    // Paging 3
+    implementation("androidx.paging:paging-runtime-ktx:3.3.6")
+    implementation("androidx.paging:paging-compose:3.3.6")
+
+    // Sentry crash reporting
+    implementation("io.sentry:sentry-android:7.9.0")
+    implementation("io.sentry:sentry-android-timber:7.9.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

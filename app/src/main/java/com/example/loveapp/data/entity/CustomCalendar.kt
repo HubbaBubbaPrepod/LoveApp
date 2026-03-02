@@ -13,5 +13,10 @@ data class CustomCalendar(
     val colorHex: String,
     val icon: String = "",
     val createdAt: Long = System.currentTimeMillis(),
-    val userId: Int
+    val userId: Int,
+    // ── Sync metadata ──────────────────────────────────────
+    val serverId: Int? = null,
+    val syncPending: Boolean = true,
+    val serverUpdatedAt: Long? = null,
+    val deletedAt: Long? = null
 )

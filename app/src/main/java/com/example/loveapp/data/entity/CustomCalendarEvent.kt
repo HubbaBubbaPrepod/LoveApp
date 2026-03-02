@@ -14,5 +14,10 @@ data class CustomCalendarEvent(
     val eventType: String, // "special_date", "relationship_milestone", "sex_calendar", "sports", "other"
     val imageUrl: String? = null,
     val markedDate: String = "", // YYYY-MM-DD format,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    // ── Sync metadata ──────────────────────────────────────
+    val serverId: Int? = null,
+    val syncPending: Boolean = true,
+    val serverUpdatedAt: Long? = null,
+    val deletedAt: Long? = null
 )

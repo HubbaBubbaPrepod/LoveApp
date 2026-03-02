@@ -87,10 +87,10 @@ class NoteViewModel @Inject constructor(
                 tags = tags
             )
             
-            result.onSuccess { note ->
-                _notes.value = listOf(note) + _notes.value
+            result.onSuccess {
                 _successMessage.value = "Note created successfully"
                 _isLoading.value = false
+                loadNotes()
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Failed to create note"
                 _isLoading.value = false
@@ -109,14 +109,12 @@ class NoteViewModel @Inject constructor(
                 isPrivate = isPrivate
             )
             
-            val result = noteRepository.updateNote(id, noteRequest)
+            val result = noteRepository.updateNote(id, noteRequest.title, noteRequest.content, noteRequest.isPrivate, noteRequest.tags)
             
-            result.onSuccess { updatedNote ->
-                _notes.value = _notes.value.map {
-                    if (it.id == id) updatedNote else it
-                }
+            result.onSuccess {
                 _successMessage.value = "Note updated successfully"
                 _isLoading.value = false
+                loadNotes()
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Failed to update note"
                 _isLoading.value = false

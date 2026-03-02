@@ -12,5 +12,10 @@ data class MoodEntry(
     val timestamp: Long = System.currentTimeMillis(),
     val date: String, // YYYY-MM-DD format
     val note: String = "",
-    val color: String = "" // hex color code
+    val color: String = "", // hex color code
+    // ── Sync metadata ──────────────────────────────────────
+    val serverId: Int? = null,
+    val syncPending: Boolean = true,
+    val serverUpdatedAt: Long? = null,
+    val deletedAt: Long? = null
 )

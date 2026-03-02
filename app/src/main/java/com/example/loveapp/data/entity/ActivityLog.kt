@@ -14,5 +14,10 @@ data class ActivityLog(
     val date: String, // YYYY-MM-DD format
     val imageUrls: String = "", // comma-separated URLs
     val category: String = "", // e.g., "adventure", "movies", "food", etc.
-    val photoPath: String? = null // local path to photo
+    val photoPath: String? = null, // local path to photo
+    // ── Sync metadata ──────────────────────────────────────
+    val serverId: Int? = null,
+    val syncPending: Boolean = true,
+    val serverUpdatedAt: Long? = null,
+    val deletedAt: Long? = null
 )

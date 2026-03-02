@@ -15,5 +15,10 @@ data class Note(
     val isPrivate: Boolean = false,
     val tags: String = "", // comma-separated tags
     val dueDate: Long? = null,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    // ── Sync metadata ──────────────────────────────────────
+    val serverId: Int? = null,          // server-assigned ID after first sync
+    val syncPending: Boolean = true,    // true = not yet confirmed by server
+    val serverUpdatedAt: Long? = null,  // server timestamp of last successful write
+    val deletedAt: Long? = null         // soft-delete: non-null means deleted
 )

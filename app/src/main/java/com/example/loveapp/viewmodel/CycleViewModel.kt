@@ -139,11 +139,9 @@ class CycleViewModel @Inject constructor(
                 cycleStartDate = date,
                 cycleDuration  = avgDur,
                 periodDuration = avgPer
-            ).onSuccess { newCycle ->
-                val updated = (listOf(newCycle) + _cycles.value).sortedByDescending { it.cycleStartDate }
-                _cycles.value = updated
-                recompute(updated)
+            ).onSuccess {
                 _successMessage.value = "Начало цикла отмечено"
+                loadAll()
             }.onFailure { _errorMessage.value = it.message }
             _isLoading.value = false
         }
@@ -187,7 +185,7 @@ class CycleViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             cycleRepository.updateCycle(
-                id = latest.id,
+                localId = latest.id,
                 cycle = com.example.loveapp.data.api.models.CycleRequest(
                     cycleStartDate = latest.cycleStartDate,
                     cycleDuration  = cycleDuration,
@@ -196,12 +194,9 @@ class CycleViewModel @Inject constructor(
                     mood           = latest.mood,
                     notes          = latest.notes
                 )
-            ).onSuccess { updated ->
-                val list = _cycles.value.map { if (it.id == updated.id) updated else it }
-                    .sortedByDescending { it.cycleStartDate }
-                _cycles.value = list
-                recompute(list)
+            ).onSuccess {
                 _successMessage.value = "Настройки цикла сохранены"
+                loadAll()
             }.onFailure { _errorMessage.value = it.message }
             _isLoading.value = false
         }

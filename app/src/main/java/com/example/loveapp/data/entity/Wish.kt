@@ -16,5 +16,10 @@ data class Wish(
     val priority: Int = 0, // 0=low, 1=medium, 2=high
     val imageUrl: String? = null,
     val category: String = "", // e.g., "gift", "experience", "date idea"
-    val dueDate: Long? = null
+    val dueDate: Long? = null,
+    // ── Sync metadata ──────────────────────────────────────
+    val serverId: Int? = null,
+    val syncPending: Boolean = true,
+    val serverUpdatedAt: Long? = null,
+    val deletedAt: Long? = null
 )

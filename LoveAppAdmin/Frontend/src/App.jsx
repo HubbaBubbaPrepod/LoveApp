@@ -10,6 +10,7 @@ import Dashboard     from './pages/Dashboard'
 
 import UserList      from './resources/users/UserList'
 import UserShow      from './resources/users/UserShow'
+import UserEdit      from './resources/users/UserEdit'
 import ActivityList  from './resources/activities/ActivityList'
 import MoodList      from './resources/moods/MoodList'
 import NoteList      from './resources/notes/NoteList'
@@ -40,6 +41,7 @@ export default function App () {
         icon={PeopleIcon}
         list={UserList}
         show={UserShow}
+        edit={UserEdit}
       />
       <Resource
         name="activities"

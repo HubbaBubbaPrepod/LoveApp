@@ -1723,12 +1723,10 @@ app.post('/api/partner/link', authenticateToken, async (req, res) => {
 
 // ==================== ADMIN PANEL ====================
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'loveapp_admin_2026';
-const ADMIN_SECRET   = process.env.ADMIN_JWT_SECRET || (JWT_SECRET + '_admin_panel');
+const ADMIN_SECRET = process.env.ADMIN_JWT_SECRET || (JWT_SECRET + '_admin_panel');
 
-const generateAdminToken = () =>
-  jwt.sign({ admin: true }, ADMIN_SECRET, { expiresIn: '12h' });
+const generateAdminToken = (userId, username) =>
+  jwt.sign({ admin: true, userId, username }, ADMIN_SECRET, { expiresIn: '12h' });
 
 const authenticateAdmin = (req, res, next) => {
   const token = (req.headers['authorization'] || '').replace('Bearer ', '');
@@ -1736,19 +1734,34 @@ const authenticateAdmin = (req, res, next) => {
   try {
     const dec = jwt.verify(token, ADMIN_SECRET);
     if (!dec.admin) throw new Error('not admin');
+    req.adminUser = dec;
     next();
   } catch {
     res.status(403).json({ success: false, message: 'Invalid or expired admin token' });
   }
 };
 
-// POST /api/admin/login
-app.post('/api/admin/login', (req, res) => {
+// POST /api/admin/login  — authenticates from users table (role = 'admin')
+app.post('/api/admin/login', async (req, res) => {
   const { username, password } = req.body || {};
-  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-    sendResponse(res, true, 'Logged in', { token: generateAdminToken(), username: ADMIN_USERNAME });
-  } else {
-    sendResponse(res, false, 'Invalid credentials', null, 401);
+  if (!username || !password) return sendResponse(res, false, 'Username and password required', null, 400);
+  try {
+    const r = await pool.query(
+      `SELECT id, username, display_name, password_hash, role
+       FROM users WHERE username = $1 LIMIT 1`, [username]);
+    const user = r.rows[0];
+    if (!user) return sendResponse(res, false, 'Invalid credentials', null, 401);
+    if (user.role !== 'admin' && user.role !== 'superadmin')
+      return sendResponse(res, false, 'Access denied: not an admin', null, 403);
+    const ok = await bcryptjs.compare(password, user.password_hash);
+    if (!ok) return sendResponse(res, false, 'Invalid credentials', null, 401);
+    sendResponse(res, true, 'Logged in', {
+      token: generateAdminToken(user.id, user.username),
+      username: user.username,
+    });
+  } catch (err) {
+    console.error('Admin login error:', err);
+    sendResponse(res, false, 'Server error', null, 500);
   }
 });
 
@@ -1819,13 +1832,15 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
     const { _start = 0, _end = 50, _sort = 'created_at', _order = 'DESC', q = '', id } = req.query;
     if (id !== undefined) {
       // Single record fetch (React Admin getOne)
-      const r = await pool.query(
-        `SELECT u.*, r.partner_user_id,
+    const r = await pool.query(
+        `SELECT u.*, r.partner_user_id, p.username AS partner_username, p.display_name AS partner_display_name,
                 (SELECT COUNT(*) FROM activity_logs WHERE user_id = u.id)::int AS activity_count,
                 (SELECT COUNT(*) FROM mood_entries WHERE user_id = u.id)::int AS mood_count,
                 (SELECT COUNT(*) FROM notes WHERE user_id = u.id)::int AS note_count,
                 (SELECT COUNT(*) FROM wishes WHERE user_id = u.id)::int AS wish_count
-         FROM users u LEFT JOIN relationship_info r ON r.user_id = u.id
+         FROM users u
+         LEFT JOIN relationship_info r ON r.user_id = u.id
+         LEFT JOIN users p ON p.id = r.partner_user_id
          WHERE u.id = $1`, [id]);
       return sendResponse(res, true, 'User', r.rows[0] || null);
     }
@@ -1836,12 +1851,13 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
       `SELECT COUNT(*) FROM users WHERE display_name ILIKE $1 OR email ILIKE $1 OR username ILIKE $1`,
       [search]);
     const rows = await pool.query(
-      `SELECT u.id, u.username, u.email, u.display_name, u.gender, u.created_at,
-              r.partner_user_id,
+      `SELECT u.id, u.username, u.email, u.display_name, u.gender, u.created_at, u.role,
+              r.partner_user_id, p.username AS partner_username,
               (SELECT COUNT(*) FROM activity_logs WHERE user_id = u.id)::int AS activity_count,
               (SELECT COUNT(*) FROM mood_entries WHERE user_id = u.id)::int AS mood_count
        FROM users u
        LEFT JOIN relationship_info r ON r.user_id = u.id
+       LEFT JOIN users p ON p.id = r.partner_user_id
        WHERE u.display_name ILIKE $1 OR u.email ILIKE $1 OR u.username ILIKE $1
        ORDER BY u.${_sort === 'id' ? 'id' : 'created_at'} ${_order === 'ASC' ? 'ASC' : 'DESC'}
        LIMIT $2 OFFSET $3`,
@@ -1855,12 +1871,63 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
   }
 });
 
+// PUT /api/admin/users/:id — update role and/or display_name/email
+app.put('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { role, display_name, email } = req.body || {};
+    const fields = []; const params = [];
+    if (role !== undefined) {
+      if (!['user', 'admin'].includes(role))
+        return sendResponse(res, false, 'Invalid role', null, 400);
+      params.push(role); fields.push(`role = $${params.length}`);
+    }
+    if (display_name !== undefined) { params.push(display_name); fields.push(`display_name = $${params.length}`); }
+    if (email !== undefined)        { params.push(email);        fields.push(`email = $${params.length}`); }
+    if (!fields.length) return sendResponse(res, false, 'Nothing to update', null, 400);
+    params.push(req.params.id);
+    const r = await pool.query(
+      `UPDATE users SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${params.length} RETURNING id, username, display_name, email, role`,
+      params);
+    if (!r.rows.length) return sendResponse(res, false, 'User not found', null, 404);
+    sendResponse(res, true, 'Updated', r.rows[0]);
+  } catch (err) {
+    console.error('Admin update user error:', err);
+    sendResponse(res, false, 'Server error', null, 500);
+  }
+});
+
 // DELETE /api/admin/users/:id
 app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
     sendResponse(res, true, 'User deleted', { id: parseInt(req.params.id) });
   } catch (err) {
+    sendResponse(res, false, 'Server error', null, 500);
+  }
+});
+
+// PUT /api/admin/users/:id  — update role and/or display_name
+app.put('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { role, display_name, email } = req.body || {};
+    const fields = [];
+    const params = [];
+    if (role !== undefined) {
+      if (!['user', 'admin'].includes(role))
+        return sendResponse(res, false, 'Invalid role', null, 400);
+      params.push(role); fields.push(`role = $${params.length}`);
+    }
+    if (display_name !== undefined) { params.push(display_name); fields.push(`display_name = $${params.length}`); }
+    if (email !== undefined)        { params.push(email);        fields.push(`email = $${params.length}`); }
+    if (!fields.length) return sendResponse(res, false, 'Nothing to update', null, 400);
+    params.push(req.params.id);
+    const r = await pool.query(
+      `UPDATE users SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${params.length} RETURNING id, username, display_name, email, role`,
+      params);
+    if (!r.rows.length) return sendResponse(res, false, 'User not found', null, 404);
+    sendResponse(res, true, 'Updated', r.rows[0]);
+  } catch (err) {
+    console.error('Admin update user error:', err);
     sendResponse(res, false, 'Server error', null, 500);
   }
 });
@@ -2010,6 +2077,10 @@ const PORT = process.env.API_PORT || 3005;
 pool.query(`ALTER TABLE wishes ADD COLUMN IF NOT EXISTS is_private BOOLEAN NOT NULL DEFAULT false`)
   .then(() => console.log('wishes.is_private column ready'))
   .catch(err => console.error('Migration error:', err));
+// Auto-migrate: role column on users
+pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'user'`)
+  .then(() => console.log('users.role column ready'))
+  .catch(err => console.error('Migration error (role):', err));
 pool.query(`ALTER TABLE wishes ADD COLUMN IF NOT EXISTS emoji TEXT NOT NULL DEFAULT ''`)
   .then(() => console.log('wishes.emoji column ready'))
   .catch(err => console.error('Migration error (emoji):', err));

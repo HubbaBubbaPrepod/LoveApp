@@ -1,5 +1,5 @@
 import {
-  List, Datagrid, TextField, DateField,
+  List, Datagrid, TextField,
   SearchInput, FunctionField, DeleteButton, useRecordContext,
 } from 'react-admin'
 import { Chip } from '@mui/material'
@@ -51,7 +51,10 @@ export const MoodList = () => (
       <TextField     source="display_name" label="Пользователь" sortable={false} />
       <TextField     source="username"     label="Username"     sortable={false} />
       <TextField     source="note"         label="Заметка"      sortable={false} />
-      <DateField     source="created_at"   label="Дата"         options={{ dateStyle: 'medium', timeStyle: 'short' }} />
+      <FunctionField   source="created_at"   label="Дата" render={r => {
+        if (!r?.created_at) return '—'
+        return new Date(r.created_at).toLocaleString('ru', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      }} />
       <DeleteButton  label="" mutationMode="pessimistic" />
     </Datagrid>
   </List>

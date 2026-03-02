@@ -45,7 +45,7 @@ export const UserShow = () => (
           {record?.partner_user_id && (
             <Chip
               icon={<FavoriteIcon sx={{ fontSize: 14 }} />}
-              label={`В паре (ID ${record.partner_user_id})`}
+              label={`В паре: @${record.partner_username || record.partner_user_id}`}
               sx={{ bgcolor: 'rgba(233,30,99,0.15)', color: '#f06292', border: '1px solid rgba(233,30,99,0.3)', ml: 'auto', fontWeight: 600 }}
             />
           )}

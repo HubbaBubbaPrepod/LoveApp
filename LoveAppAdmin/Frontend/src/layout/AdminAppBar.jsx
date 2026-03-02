@@ -1,14 +1,21 @@
-import { AppBar, TitlePortal, UserMenu, Logout, useUserMenu } from 'react-admin'
-import { MenuItem, ListItemIcon, ListItemText, Typography, Box, Chip } from '@mui/material'
+import { AppBar, TitlePortal, UserMenu, Logout } from 'react-admin'
+import { Typography, Box, Chip } from '@mui/material'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
 import { useSelector } from 'react-redux'
 import { selectAdminUsername } from '../store/authSlice'
+
+const CustomUserMenu = () => (
+  <UserMenu>
+    <Logout />
+  </UserMenu>
+)
 
 const AdminAppBar = () => {
   const username = useSelector(selectAdminUsername)
 
   return (
     <AppBar
+      userMenu={<CustomUserMenu />}
       sx={{
         background: 'linear-gradient(90deg, #0f3460 0%, #16213e 50%, #1a1a2e 100%)',
         borderBottom: '1px solid rgba(233,30,99,0.3)',
@@ -48,10 +55,6 @@ const AdminAppBar = () => {
           fontWeight: 600,
         }}
       />
-
-      <UserMenu>
-        <Logout />
-      </UserMenu>
     </AppBar>
   )
 }

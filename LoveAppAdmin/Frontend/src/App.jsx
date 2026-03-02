@@ -4,6 +4,7 @@ import dataProvider  from './api/dataProvider'
 import authProvider  from './api/authProvider'
 import adminTheme    from './theme/muiTheme'
 import AdminLayout   from './layout/AdminLayout'
+import LoginPage     from './pages/LoginPage'
 
 import Dashboard     from './pages/Dashboard'
 
@@ -28,6 +29,7 @@ export default function App () {
       layout={AdminLayout}
       dashboard={Dashboard}
       theme={adminTheme}
+      loginPage={LoginPage}
       title="LoveApp Admin"
       requireAuth
       disableTelemetry

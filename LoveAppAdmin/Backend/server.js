@@ -1759,7 +1759,7 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
       await Promise.all([
         pool.query('SELECT COUNT(*) FROM users'),
         pool.query('SELECT COUNT(*) FROM activity_logs'),
-        pool.query('SELECT COUNT(*) FROM moods'),
+        pool.query('SELECT COUNT(*) FROM mood_entries'),
         pool.query('SELECT COUNT(*) FROM notes'),
         pool.query('SELECT COUNT(*) FROM wishes'),
         pool.query('SELECT COUNT(*) FROM relationship_info WHERE partner_user_id IS NOT NULL'),
@@ -1822,7 +1822,7 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
       const r = await pool.query(
         `SELECT u.*, r.partner_user_id,
                 (SELECT COUNT(*) FROM activity_logs WHERE user_id = u.id)::int AS activity_count,
-                (SELECT COUNT(*) FROM moods WHERE user_id = u.id)::int AS mood_count,
+                (SELECT COUNT(*) FROM mood_entries WHERE user_id = u.id)::int AS mood_count,
                 (SELECT COUNT(*) FROM notes WHERE user_id = u.id)::int AS note_count,
                 (SELECT COUNT(*) FROM wishes WHERE user_id = u.id)::int AS wish_count
          FROM users u LEFT JOIN relationship_info r ON r.user_id = u.id
@@ -1839,7 +1839,7 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
       `SELECT u.id, u.username, u.email, u.display_name, u.gender, u.created_at,
               r.partner_user_id,
               (SELECT COUNT(*) FROM activity_logs WHERE user_id = u.id)::int AS activity_count,
-              (SELECT COUNT(*) FROM moods WHERE user_id = u.id)::int AS mood_count
+              (SELECT COUNT(*) FROM mood_entries WHERE user_id = u.id)::int AS mood_count
        FROM users u
        LEFT JOIN relationship_info r ON r.user_id = u.id
        WHERE u.display_name ILIKE $1 OR u.email ILIKE $1 OR u.username ILIKE $1
@@ -1908,9 +1908,9 @@ app.get('/api/admin/moods', authenticateAdmin, async (req, res) => {
     const offset = parseInt(_start);
     const search = `%${q}%`;
     const countRes = await pool.query(
-      `SELECT COUNT(*) FROM moods m WHERE m.mood_type ILIKE $1 OR m.note ILIKE $1`, [search]);
+      `SELECT COUNT(*) FROM mood_entries m WHERE m.mood_type ILIKE $1 OR m.note ILIKE $1`, [search]);
     const rows = await pool.query(
-      `SELECT m.*, u.display_name, u.username FROM moods m
+      `SELECT m.*, u.display_name, u.username FROM mood_entries m
        JOIN users u ON u.id = m.user_id
        WHERE m.mood_type ILIKE $1 OR m.note ILIKE $1
        ORDER BY m.created_at DESC LIMIT $2 OFFSET $3`, [search, limit, offset]);
@@ -1923,7 +1923,7 @@ app.get('/api/admin/moods', authenticateAdmin, async (req, res) => {
 // DELETE /api/admin/moods/:id
 app.delete('/api/admin/moods/:id', authenticateAdmin, async (req, res) => {
   try {
-    await pool.query('DELETE FROM moods WHERE id = $1', [req.params.id]);
+    await pool.query('DELETE FROM mood_entries WHERE id = $1', [req.params.id]);
     sendResponse(res, true, 'Deleted', { id: parseInt(req.params.id) });
   } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
 });

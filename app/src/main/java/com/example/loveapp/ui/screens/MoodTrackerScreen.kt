@@ -83,6 +83,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.data.api.models.MoodResponse
 import com.example.loveapp.ui.components.IOSTopAppBar
+import com.example.loveapp.ui.components.UserAvatar
 import com.example.loveapp.viewmodel.MoodViewModel
 import com.example.loveapp.utils.rememberResponsiveConfig
 import java.text.SimpleDateFormat
@@ -167,6 +168,8 @@ fun MoodTrackerScreen(
     val partnerToday     by viewModel.partnerTodayMoods.collectAsState()
     val partnerName      by viewModel.partnerName.collectAsState()
     val myName           by viewModel.myName.collectAsState()
+    val myAvatar         by viewModel.myAvatar.collectAsState()
+    val partnerAvatar    by viewModel.partnerAvatar.collectAsState()
     val isLoading        by viewModel.isLoading.collectAsState()
     val errorMessage     by viewModel.errorMessage.collectAsState()
     val successMessage   by viewModel.successMessage.collectAsState()
@@ -226,11 +229,13 @@ fun MoodTrackerScreen(
                     ) {
                         MoodFlask(
                             moods = myToday, label = myName ?: "Я",
+                            avatarUrl = myAvatar,
                             isMyFlask = true, onClick = { showPicker = true },
                             modifier = Modifier.weight(1f)
                         )
                         MoodFlask(
                             moods = partnerToday, label = partnerName ?: "Партнёр",
+                            avatarUrl = partnerAvatar,
                             isMyFlask = false, onClick = { showPartnerHistory = true },
                             modifier = Modifier.weight(1f)
                         )
@@ -377,7 +382,8 @@ private fun MoodFlask(
     label: String,
     isMyFlask: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    avatarUrl: String? = null
 ) {
     val background  = MaterialTheme.colorScheme.background
     val isDark      = remember(background) { background.luminance() < 0.5f }
@@ -415,15 +421,29 @@ private fun MoodFlask(
             modifier = Modifier.fillMaxWidth().padding(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text       = label,
-                style      = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color      = labelColor,
-                maxLines   = 1,
-                overflow   = TextOverflow.Ellipsis,
-                modifier   = Modifier.padding(bottom = 10.dp)
-            )
+            // Avatar + name header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp)
+            ) {
+                UserAvatar(
+                    imageUrl    = avatarUrl,
+                    displayName = label,
+                    size        = 22.dp
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text       = label,
+                    style      = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color      = labelColor,
+                    maxLines   = 1,
+                    overflow   = TextOverflow.Ellipsis
+                )
+            }
 
             Canvas(modifier = Modifier.fillMaxWidth().height(160.dp)) {
                 val w = size.width; val h = size.height

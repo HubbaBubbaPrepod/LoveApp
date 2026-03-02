@@ -508,7 +508,7 @@ app.get('/api/notes', authenticateToken, async (req, res) => {
         [req.userId, partnerId]
       );
       result = await pool.query(
-        `SELECT n.*, u.display_name FROM notes n
+        `SELECT n.*, u.display_name, u.profile_image FROM notes n
          JOIN users u ON n.user_id = u.id
          WHERE n.user_id = $1 OR (n.user_id = $2 AND n.is_private = false)
          ORDER BY n.created_at DESC LIMIT $3 OFFSET $4`,
@@ -520,7 +520,7 @@ app.get('/api/notes', authenticateToken, async (req, res) => {
         [req.userId]
       );
       result = await pool.query(
-        `SELECT n.*, u.display_name FROM notes n
+        `SELECT n.*, u.display_name, u.profile_image FROM notes n
          JOIN users u ON n.user_id = u.id
          WHERE n.user_id = $1 ORDER BY n.created_at DESC LIMIT $2 OFFSET $3`,
         [req.userId, pageSize, offset]
@@ -661,7 +661,7 @@ app.get('/api/wishes', authenticateToken, async (req, res) => {
         [req.userId, partnerId]
       );
       result = await pool.query(
-        `SELECT w.*, u.display_name FROM wishes w
+        `SELECT w.*, u.display_name, u.profile_image FROM wishes w
          JOIN users u ON w.user_id = u.id
          WHERE w.user_id = $1 OR (w.user_id = $2 AND w.is_private = false)
          ORDER BY w.created_at DESC LIMIT $3 OFFSET $4`,
@@ -673,7 +673,7 @@ app.get('/api/wishes', authenticateToken, async (req, res) => {
         [req.userId]
       );
       result = await pool.query(
-        `SELECT w.*, u.display_name FROM wishes w
+        `SELECT w.*, u.display_name, u.profile_image FROM wishes w
          JOIN users u ON w.user_id = u.id
          WHERE w.user_id = $1 ORDER BY w.created_at DESC LIMIT $2 OFFSET $3`,
         [req.userId, pageSize, offset]
@@ -850,7 +850,7 @@ app.get('/api/moods/partner', authenticateToken, async (req, res) => {
       return sendResponse(res, true, 'No partner', { items: [], total: 0, page: 1, page_size: 500 });
     }
     const { date, start_date, end_date } = req.query;
-    let query = `SELECT me.*, u.display_name FROM mood_entries me
+    let query = `SELECT me.*, u.display_name, u.profile_image FROM mood_entries me
       JOIN users u ON me.user_id = u.id WHERE me.user_id = $1`;
     const params = [partnerId];
     let p = 2;
@@ -895,7 +895,7 @@ app.get('/api/moods', authenticateToken, async (req, res) => {
     }
     const countResult = await pool.query(countQuery, countParams);
 
-    let query = 'SELECT me.*, u.display_name FROM mood_entries me JOIN users u ON me.user_id = u.id WHERE me.user_id = $1';
+    let query = 'SELECT me.*, u.display_name, u.profile_image FROM mood_entries me JOIN users u ON me.user_id = u.id WHERE me.user_id = $1';
     const params = [req.userId];
     p = 2;
     if (date) {
@@ -985,7 +985,7 @@ app.get('/api/activities/partner', authenticateToken, async (req, res) => {
     let query = `SELECT al.id, al.user_id, al.title, al.description,
                         al.event_date AS date, al.category,
                         al.activity_type, al.duration_minutes, al.start_time, al.note,
-                        al.created_at, u.display_name
+                        al.created_at, u.display_name, u.profile_image
                  FROM activity_logs al
                  JOIN users u ON al.user_id = u.id
                  WHERE al.user_id = $1`;
@@ -1035,7 +1035,7 @@ app.get('/api/activities', authenticateToken, async (req, res) => {
     let query = `SELECT al.id, al.user_id, al.title, al.description,
                         al.event_date AS date, al.category,
                         al.activity_type, al.duration_minutes, al.start_time, al.note,
-                        al.created_at, u.display_name
+                        al.created_at, u.display_name, u.profile_image
                  FROM activity_logs al
                  JOIN users u ON al.user_id = u.id
                  WHERE al.user_id = $1`;
@@ -1588,9 +1588,11 @@ app.delete('/api/calendars/events/:eventId', authenticateToken, async (req, res)
 app.get('/api/relationship', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT ri.*, u.display_name AS partner_display_name
+      `SELECT ri.*, u.display_name AS partner_display_name, u.profile_image AS partner_avatar,
+              me.profile_image AS my_avatar
        FROM relationship_info ri
        LEFT JOIN users u ON u.id = ri.partner_user_id
+       JOIN users me ON me.id = ri.user_id
        WHERE ri.user_id = $1 LIMIT 1`,
       [req.userId]
     );
@@ -1629,11 +1631,13 @@ app.put('/api/relationship', authenticateToken, async (req, res) => {
       );
     }
 
-    // Re-fetch with partner display_name joined
+    // Re-fetch with partner display_name and avatars joined
     const full = await pool.query(
-      `SELECT ri.*, u.display_name AS partner_display_name
+      `SELECT ri.*, u.display_name AS partner_display_name, u.profile_image AS partner_avatar,
+              me.profile_image AS my_avatar
        FROM relationship_info ri
        LEFT JOIN users u ON u.id = ri.partner_user_id
+       JOIN users me ON me.id = ri.user_id
        WHERE ri.user_id = $1 LIMIT 1`,
       [req.userId]
     );

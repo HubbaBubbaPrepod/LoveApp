@@ -3,6 +3,7 @@ package com.example.loveapp.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -10,6 +11,8 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -27,6 +30,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
@@ -35,9 +39,11 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.example.loveapp.MainActivity
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_DATE
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_MY_AVATAR
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_MY_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_MY_NOTE
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_MY_TYPE
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_AVATAR
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_NOTE
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_TYPE
@@ -65,6 +71,8 @@ class MoodDayWidget : GlanceAppWidget() {
         val ptNote = prefs[KEY_MOOD_PT_NOTE] ?: ""
         val ptName = (prefs[KEY_MOOD_PT_NAME]?.takeIf { it.isNotBlank() } ?: "Партнёр").take(8)
         val date   = prefs[KEY_MOOD_DATE]    ?: ""
+        val myAvatarBmp = loadWidgetIconBitmap(prefs[KEY_MOOD_MY_AVATAR] ?: "")
+        val ptAvatarBmp = loadWidgetIconBitmap(prefs[KEY_MOOD_PT_AVATAR] ?: "")
 
         val openMood = actionStartActivity(
             Intent(context, MainActivity::class.java).apply {
@@ -101,18 +109,18 @@ class MoodDayWidget : GlanceAppWidget() {
                 Spacer(GlanceModifier.height(8.dp))
 
                 // ── My mood ──────────────────────────────────────────────────
-                MoodRow(name = myName, moodType = myType, note = myNote, isMe = true)
+                MoodRow(name = myName, moodType = myType, note = myNote, isMe = true, avatarBitmap = myAvatarBmp)
 
                 Spacer(GlanceModifier.height(6.dp))
 
                 // ── Partner mood ─────────────────────────────────────────────
-                MoodRow(name = ptName, moodType = ptType, note = ptNote, isMe = false)
+                MoodRow(name = ptName, moodType = ptType, note = ptNote, isMe = false, avatarBitmap = ptAvatarBmp)
             }
         }
     }
 
     @Composable
-    private fun MoodRow(name: String, moodType: String, note: String, isMe: Boolean) {
+    private fun MoodRow(name: String, moodType: String, note: String, isMe: Boolean, avatarBitmap: Bitmap? = null) {
         val rowBg   = if (isMe) Color(0x1AFF6B9D) else Color(0x1A8E8E93)
         val nameClr = if (isMe) Color(0xFFFF6B9D) else Color(0xFF636366)
 
@@ -124,6 +132,14 @@ class MoodDayWidget : GlanceAppWidget() {
                 .padding(horizontal = 8.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (avatarBitmap != null) {
+                Image(
+                    provider = ImageProvider(avatarBitmap),
+                    contentDescription = name,
+                    modifier = GlanceModifier.size(18.dp).cornerRadius(9.dp)
+                )
+                Spacer(GlanceModifier.width(4.dp))
+            }
             Text(
                 text     = name,
                 style    = TextStyle(
@@ -131,7 +147,7 @@ class MoodDayWidget : GlanceAppWidget() {
                     fontSize   = 10.sp,
                     fontWeight = FontWeight.Bold
                 ),
-                modifier = GlanceModifier.width(58.dp)
+                modifier = GlanceModifier.width(if (avatarBitmap != null) 40.dp else 58.dp)
             )
             if (moodType.isEmpty()) {
                 Text(

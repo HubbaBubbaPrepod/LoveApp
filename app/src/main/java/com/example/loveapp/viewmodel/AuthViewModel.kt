@@ -2,6 +2,7 @@ package com.example.loveapp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.net.Uri
 import com.example.loveapp.data.api.models.AuthResponse
 import com.example.loveapp.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -171,5 +172,23 @@ class AuthViewModel @Inject constructor(
 
     fun setErrorMessage(message: String) {
         _errorMessage.value = message
+    }
+
+    private val _isAvatarUploading = MutableStateFlow(false)
+    val isAvatarUploading: StateFlow<Boolean> = _isAvatarUploading.asStateFlow()
+
+    fun uploadAvatar(uri: Uri) {
+        viewModelScope.launch {
+            _isAvatarUploading.value = true
+            val result = authRepository.uploadAvatar(uri)
+            result.onSuccess { url ->
+                // Update current user in-memory so the UI reflects the new avatar immediately
+                _currentUser.value = _currentUser.value?.copy(profileImage = url)
+                _successMessage.value = "Аватар обновлён"
+            }.onFailure {
+                _errorMessage.value = it.message ?: "Ошибка загрузки"
+            }
+            _isAvatarUploading.value = false
+        }
     }
 }

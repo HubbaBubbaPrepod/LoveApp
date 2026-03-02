@@ -32,6 +32,9 @@ class WidgetUpdater @Inject constructor(
         val KEY_MOOD_PT_NOTE = stringPreferencesKey("mood_pt_note")
         val KEY_MOOD_PT_NAME = stringPreferencesKey("mood_pt_name")
         val KEY_MOOD_DATE    = stringPreferencesKey("mood_date")
+        // Mood widget avatar paths
+        val KEY_MOOD_MY_AVATAR = stringPreferencesKey("mood_my_avatar")
+        val KEY_MOOD_PT_AVATAR = stringPreferencesKey("mood_pt_avatar")
 
         // Activity widget keys – my data
         val KEY_ACT_MY_COUNT = intPreferencesKey("act_my_count")
@@ -44,6 +47,9 @@ class WidgetUpdater @Inject constructor(
         val KEY_ACT_PT_ICONS = stringPreferencesKey("act_pt_icons")
         val KEY_ACT_PT_NAME  = stringPreferencesKey("act_pt_name")
         val KEY_ACT_DATE     = stringPreferencesKey("act_date")
+        // Activity widget avatar paths
+        val KEY_ACT_MY_AVATAR = stringPreferencesKey("act_my_avatar")
+        val KEY_ACT_PT_AVATAR = stringPreferencesKey("act_pt_avatar")
     }
 
     /**
@@ -52,7 +58,8 @@ class WidgetUpdater @Inject constructor(
      */
     suspend fun pushMoodUpdate(
         myType: String, myNote: String, myName: String?,
-        ptType: String, ptNote: String, ptName: String?
+        ptType: String, ptNote: String, ptName: String?,
+        myAvatarPath: String? = null, ptAvatarPath: String? = null
     ) = runCatching {
         val today = DateUtils.getTodayDateString()
         val mgr = GlanceAppWidgetManager(context)
@@ -70,6 +77,8 @@ class WidgetUpdater @Inject constructor(
                     this[KEY_MOOD_PT_NOTE] = ptNote
                     this[KEY_MOOD_PT_NAME] = ptName ?: ""
                     this[KEY_MOOD_DATE]    = today
+                    this[KEY_MOOD_MY_AVATAR] = myAvatarPath ?: ""
+                    this[KEY_MOOD_PT_AVATAR] = ptAvatarPath ?: ""
                 }
             }
             widget.update(context, id)
@@ -86,7 +95,8 @@ class WidgetUpdater @Inject constructor(
      */
     suspend fun pushActivityUpdate(
         myCount: Int, myTypes: String, myIcons: String, myName: String?,
-        ptCount: Int, ptTypes: String, ptIcons: String, ptName: String?
+        ptCount: Int, ptTypes: String, ptIcons: String, ptName: String?,
+        myAvatarPath: String? = null, ptAvatarPath: String? = null
     ) = runCatching {
         val today = DateUtils.getTodayDateString()
         val mgr = GlanceAppWidgetManager(context)
@@ -105,6 +115,8 @@ class WidgetUpdater @Inject constructor(
                     this[KEY_ACT_PT_ICONS] = ptIcons
                     this[KEY_ACT_PT_NAME]  = ptName ?: ""
                     this[KEY_ACT_DATE]     = today
+                    this[KEY_ACT_MY_AVATAR] = myAvatarPath ?: ""
+                    this[KEY_ACT_PT_AVATAR] = ptAvatarPath ?: ""
                 }
             }
             widget.update(context, id)

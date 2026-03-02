@@ -9,8 +9,10 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.example.loveapp.data.api.models.ActivityResponse
 import com.example.loveapp.data.repository.ActivityRepository
 import com.example.loveapp.data.repository.MoodRepository
+import com.example.loveapp.ui.screens.CUSTOM_ICON_MAP
 import com.example.loveapp.utils.DateUtils
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -55,30 +57,65 @@ class WidgetSyncWorker(
         val myActs  = actRepo.getActivities(date = today).getOrElse { emptyList() }
         val ptActs  = actRepo.getPartnerActivities(date = today).getOrElse { emptyList() }
 
+        // Resolve custom activity types so c_1/c_3 → proper name + icon
+        val customTypes = actRepo.getCustomActivityTypes().getOrElse { emptyList() }
+
         // Push mood data
         val myFirst = myMoods.firstOrNull()
         val ptFirst = ptMoods.firstOrNull()
+        // Prerender mood avatars
+        val myMoodAvatar = WidgetIconPreparer.prepareAvatar(applicationContext, myFirst?.userAvatar, "mood_my")
+        val ptMoodAvatar = WidgetIconPreparer.prepareAvatar(applicationContext, ptFirst?.userAvatar, "mood_pt")
         updater.pushMoodUpdate(
             myType = myFirst?.moodType     ?: "",
             myNote = myFirst?.note         ?: "",
             myName = myFirst?.displayName,
             ptType = ptFirst?.moodType     ?: "",
             ptNote = ptFirst?.note         ?: "",
-            ptName = ptFirst?.displayName
+            ptName = ptFirst?.displayName,
+            myAvatarPath = myMoodAvatar,
+            ptAvatarPath = ptMoodAvatar
         )
 
-        // Push activity data
-        val myTypes = myActs.map { it.activityType }.distinct().take(4).joinToString(",")
-        val ptTypes = ptActs.map { it.activityType }.distinct().take(4).joinToString(",")
+        // Build (displayName, rawIconValue) pairs — same logic as ActivityViewModel
+        fun buildTypeIconPairs(list: List<ActivityResponse>) =
+            list.map { a ->
+                val displayName = if (a.activityType.startsWith("c_")) a.title else a.activityType
+                val rawIconValue = if (a.activityType.startsWith("c_")) {
+                    val id = a.activityType.removePrefix("c_").toIntOrNull()
+                    customTypes.find { it.id == id }?.emoji ?: ""
+                } else {
+                    a.activityType  // built-in key like "work", "sport"
+                }
+                Pair(displayName, rawIconValue)
+            }.distinctBy { it.first }.take(4)
+
+        val myPairs = buildTypeIconPairs(myActs)
+        val ptPairs = buildTypeIconPairs(ptActs)
+        val myTypes = myPairs.joinToString(",") { it.first }
+        val ptTypes = ptPairs.joinToString(",") { it.first }
+
+        // Pre-render icons to cached PNG files (same as ActivityViewModel)
+        val myIcons = WidgetIconPreparer.prepareIcons(
+            applicationContext, myPairs.map { it.second }, CUSTOM_ICON_MAP, "my")
+        val ptIcons = WidgetIconPreparer.prepareIcons(
+            applicationContext, ptPairs.map { it.second }, CUSTOM_ICON_MAP, "pt")
+
+        // Prerender activity avatars
+        val myActAvatar = WidgetIconPreparer.prepareAvatar(applicationContext, myActs.firstOrNull()?.userAvatar, "act_my")
+        val ptActAvatar = WidgetIconPreparer.prepareAvatar(applicationContext, ptActs.firstOrNull()?.userAvatar, "act_pt")
+
         updater.pushActivityUpdate(
             myCount = myActs.size,
             myTypes = myTypes,
-            myIcons = "",
+            myIcons = myIcons,
             myName  = myActs.firstOrNull()?.displayName,
             ptCount = ptActs.size,
             ptTypes = ptTypes,
-            ptIcons = "",
-            ptName  = ptActs.firstOrNull()?.displayName
+            ptIcons = ptIcons,
+            ptName  = ptActs.firstOrNull()?.displayName,
+            myAvatarPath = myActAvatar,
+            ptAvatarPath = ptActAvatar
         )
 
         Result.success()

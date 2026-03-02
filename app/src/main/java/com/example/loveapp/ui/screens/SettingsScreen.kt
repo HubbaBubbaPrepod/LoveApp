@@ -2,6 +2,8 @@
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ExitToApp
@@ -71,6 +74,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.BuildConfig
 import com.example.loveapp.ui.components.IOSTopAppBar
+import com.example.loveapp.ui.components.UserAvatar
 import com.example.loveapp.ui.theme.AccentPurple
 import com.example.loveapp.ui.theme.PrimaryPink
 import com.example.loveapp.viewmodel.AuthViewModel
@@ -93,11 +97,19 @@ fun SettingsScreen(
     val currentUser          by authViewModel.currentUser.collectAsState()
     val isLoading            by authViewModel.isLoading.collectAsState()
     val isLoggedIn           by authViewModel.isLoggedIn.collectAsState()
+    val isAvatarUploading    by authViewModel.isAvatarUploading.collectAsState()
 
     val context           = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val r = rememberResponsiveConfig()
     var showLogoutDialog by remember { mutableStateOf(false) }
+
+    // Gallery picker for avatar upload
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { authViewModel.uploadAvatar(it) }
+    }
 
     // Load profile on open
     LaunchedEffect(Unit) { authViewModel.getProfile() }
@@ -120,10 +132,13 @@ fun SettingsScreen(
             //  Profile card 
             item {
                 ProfileHeader(
-                    displayName = currentUser?.displayName ?: currentUser?.username ?: "",
-                    username    = currentUser?.username?.let { "@$it" } ?: "",
-                    email       = currentUser?.email ?: "",
-                    isLoading   = isLoading && currentUser == null
+                    displayName      = currentUser?.displayName ?: currentUser?.username ?: "",
+                    username         = currentUser?.username?.let { "@$it" } ?: "",
+                    email            = currentUser?.email ?: "",
+                    profileImage     = currentUser?.profileImage,
+                    isLoading        = isLoading && currentUser == null,
+                    isAvatarUploading = isAvatarUploading,
+                    onAvatarClick    = { galleryLauncher.launch("image/*") }
                 )
             }
 
@@ -364,17 +379,12 @@ private fun ProfileHeader(
     displayName: String,
     username: String,
     email: String,
-    isLoading: Boolean
+    profileImage: String? = null,
+    isLoading: Boolean = false,
+    isAvatarUploading: Boolean = false,
+    onAvatarClick: () -> Unit = {}
 ) {
     val gradient = remember { Brush.linearGradient(listOf(PrimaryPink, AccentPurple)) }
-    val initials = remember(displayName) {
-        displayName
-            .split(" ")
-            .take(2)
-            .mapNotNull { it.firstOrNull()?.uppercase() }
-            .joinToString("")
-            .ifEmpty { "?" }
-    }
 
     Box(
         modifier = Modifier
@@ -387,23 +397,36 @@ private fun ProfileHeader(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (isLoading) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(48.dp))
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(72.dp))
             } else {
-                // Avatar circle
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .background(Color.White.copy(alpha = 0.25f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = initials,
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 28.sp
-                        ),
-                        color = Color.White
+                // Tappable avatar — tap opens gallery
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    UserAvatar(
+                        imageUrl     = profileImage,
+                        displayName  = displayName.ifEmpty { "?" },
+                        size         = 80.dp,
+                        borderColor  = Color.White.copy(alpha = 0.6f),
+                        isUploading  = isAvatarUploading,
+                        onClick      = onAvatarClick
                     )
+                    // Camera badge
+                    if (!isAvatarUploading) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.9f))
+                                .clickable(onClick = onAvatarClick),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "Сменить фото",
+                                tint = PrimaryPink,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -427,6 +450,12 @@ private fun ProfileHeader(
                         color = Color.White.copy(alpha = 0.6f)
                     )
                 }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Нажмите на фото для смены аватара",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.5f)
+                )
             }
         }
     }

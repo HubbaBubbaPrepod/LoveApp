@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -62,6 +63,7 @@ import com.example.loveapp.R
 import com.example.loveapp.data.api.models.NoteResponse
 import com.example.loveapp.navigation.Screen
 import com.example.loveapp.ui.components.IOSTopAppBar
+import com.example.loveapp.ui.components.UserAvatar
 import com.example.loveapp.utils.rememberResponsiveConfig
 import com.example.loveapp.viewmodel.NoteViewModel
 
@@ -303,13 +305,24 @@ fun NoteIOSTile(
 
             // Bottom: author name
             if (!note.displayName.isNullOrBlank()) {
-                Text(
-                    text = note.displayName,
-                    fontSize = 10.sp,
-                    color = contentColor.copy(alpha = 0.65f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    UserAvatar(
+                        imageUrl    = note.userAvatar,
+                        displayName = note.displayName ?: "",
+                        size        = 14.dp
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = note.displayName ?: "",
+                        fontSize = 10.sp,
+                        color = contentColor.copy(alpha = 0.65f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }

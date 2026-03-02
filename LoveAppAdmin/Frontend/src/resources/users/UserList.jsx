@@ -1,5 +1,5 @@
 import {
-  List, Datagrid, TextField, DateField, NumberField,
+  List, Datagrid, TextField, DateField,
   SearchInput, FunctionField, ShowButton, DeleteButton,
   useRecordContext, EditButton,
 } from 'react-admin'
@@ -71,15 +71,16 @@ export const UserList = () => (
       }}
     >
       <FunctionField label="" render={() => <AvatarField />} />
-      <TextField    source="display_name" label="Имя"      sortable={false} />
-      <TextField    source="username"     label="Username" sortable={false} />
-      <TextField    source="email"        label="Email"    sortable={false} />
-      <TextField    source="gender"       label="Пол"      sortable={false} />
-      <FunctionField label="Роль"     render={() => <RoleBadge />} />
-      <FunctionField label="Пара"     render={() => <PartnerBadge />} />
-      <NumberField  source="activity_count" label="Актив." sortable={false} />
-      <NumberField  source="mood_count"     label="Настр."  sortable={false} />
-      <DateField    source="created_at"  label="Дата" options={{ day: '2-digit', month: 'short', year: 'numeric' }} />
+      <FunctionField label="Имя / Username" sortable={false} render={r => (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 13 }}>{r.display_name || '—'}</div>
+          <div style={{ color: '#64748b', fontSize: 11 }}>@{r.username}</div>
+        </div>
+      )} />
+      <TextField    source="email"  label="Email"  sortable={false} />
+      <FunctionField label="Роль"   render={() => <RoleBadge />} />
+      <FunctionField label="Пара"   render={() => <PartnerBadge />} />
+      <DateField    source="created_at" label="Дата" options={{ day: '2-digit', month: 'short', year: 'numeric' }} />
       <ShowButton   label="" />
       <EditButton   label="" />
       <DeleteButton label="" mutationMode="pessimistic" />

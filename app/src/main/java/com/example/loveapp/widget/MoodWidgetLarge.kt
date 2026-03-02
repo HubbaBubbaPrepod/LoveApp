@@ -3,6 +3,7 @@ package com.example.loveapp.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -10,6 +11,8 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -27,6 +30,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
@@ -35,9 +39,11 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.example.loveapp.MainActivity
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_DATE
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_MY_AVATAR
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_MY_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_MY_NOTE
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_MY_TYPE
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_AVATAR
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_NOTE
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_TYPE
@@ -64,6 +70,8 @@ class MoodWidgetLarge : GlanceAppWidget() {
         val ptNote = prefs[KEY_MOOD_PT_NOTE] ?: ""
         val ptName = (prefs[KEY_MOOD_PT_NAME]?.takeIf { it.isNotBlank() } ?: "Партнёр")
         val date   = prefs[KEY_MOOD_DATE]    ?: ""
+        val myAvatarBmp = loadWidgetIconBitmap(prefs[KEY_MOOD_MY_AVATAR] ?: "")
+        val ptAvatarBmp = loadWidgetIconBitmap(prefs[KEY_MOOD_PT_AVATAR] ?: "")
 
         val open = actionStartActivity(
             Intent(context, MainActivity::class.java).apply {
@@ -116,7 +124,8 @@ class MoodWidgetLarge : GlanceAppWidget() {
                     note     = myNote,
                     bgColor  = Color(0x1FFF6B9D),
                     nameColor = Color(0xFFFF6B9D),
-                    noteMax  = 80
+                    noteMax  = 80,
+                    avatarBitmap = myAvatarBmp
                 )
 
                 Spacer(GlanceModifier.height(10.dp))
@@ -128,7 +137,8 @@ class MoodWidgetLarge : GlanceAppWidget() {
                     note     = ptNote,
                     bgColor  = Color(0x158E8E93),
                     nameColor = Color(0xFF636366),
-                    noteMax  = 80
+                    noteMax  = 80,
+                    avatarBitmap = ptAvatarBmp
                 )
             }
         }
@@ -141,7 +151,8 @@ class MoodWidgetLarge : GlanceAppWidget() {
         note: String,
         bgColor: Color,
         nameColor: Color,
-        noteMax: Int
+        noteMax: Int,
+        avatarBitmap: Bitmap? = null
     ) {
         Box(
             modifier = GlanceModifier
@@ -153,11 +164,20 @@ class MoodWidgetLarge : GlanceAppWidget() {
             Column(horizontalAlignment = Alignment.Start) {
                 // Name + emoji in a row
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text  = moodEmoji(moodType),
-                        style = TextStyle(fontSize = 30.sp)
-                    )
-                    Spacer(GlanceModifier.width(10.dp))
+                    if (avatarBitmap != null) {
+                        Image(
+                            provider = ImageProvider(avatarBitmap),
+                            contentDescription = name,
+                            modifier = GlanceModifier.size(32.dp).cornerRadius(16.dp)
+                        )
+                        Spacer(GlanceModifier.width(8.dp))
+                    } else {
+                        Text(
+                            text  = moodEmoji(moodType),
+                            style = TextStyle(fontSize = 30.sp)
+                        )
+                        Spacer(GlanceModifier.width(10.dp))
+                    }
                     Column {
                         Text(
                             text  = name,

@@ -1,5 +1,6 @@
 package com.example.loveapp.data.api
 
+import com.example.loveapp.data.api.models.AvatarUploadResponse
 import com.example.loveapp.data.api.models.ActivityRequest
 import com.example.loveapp.data.api.models.ActivityResponse
 import com.example.loveapp.data.api.models.CustomActivityTypeRequest
@@ -103,6 +104,13 @@ interface LoveAppApiService {
         @Header("Authorization") token: String,
         @Part file: MultipartBody.Part
     ): ApiResponse<UploadResponse>
+
+    @Multipart
+    @POST("upload/profile")
+    suspend fun uploadAvatar(
+        @Header("Authorization") token: String,
+        @Part file: MultipartBody.Part
+    ): ApiResponse<AvatarUploadResponse>
 
     // ==================== Wishes Endpoints ====================
     @POST("wishes")

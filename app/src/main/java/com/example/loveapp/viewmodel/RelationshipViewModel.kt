@@ -39,6 +39,12 @@ class RelationshipViewModel @Inject constructor(
     private val _partnerDisplayName = MutableStateFlow<String?>(null)
     val partnerDisplayName: StateFlow<String?> = _partnerDisplayName.asStateFlow()
 
+    private val _partnerAvatar = MutableStateFlow<String?>(null)
+    val partnerAvatar: StateFlow<String?> = _partnerAvatar.asStateFlow()
+
+    private val _myAvatar = MutableStateFlow<String?>(null)
+    val myAvatar: StateFlow<String?> = _myAvatar.asStateFlow()
+
     private val _daysSinceStart = MutableStateFlow(0L)
     val daysSinceStart: StateFlow<Long> = _daysSinceStart.asStateFlow()
 
@@ -74,6 +80,8 @@ class RelationshipViewModel @Inject constructor(
             result.onSuccess { rel ->
                 _relationship.value = rel
                 _partnerDisplayName.value = rel.partnerDisplayName
+                _partnerAvatar.value = rel.partnerAvatar
+                _myAvatar.value = rel.myAvatar
                 val days = calculateDaysSinceStart(rel)
                 _daysSinceStart.value = days
                 val startDate = parseDate(rel.relationshipStartDate)
@@ -114,6 +122,8 @@ class RelationshipViewModel @Inject constructor(
             result.onSuccess { rel ->
                 _relationship.value = rel
                 _partnerDisplayName.value = rel.partnerDisplayName
+                _partnerAvatar.value = rel.partnerAvatar
+                _myAvatar.value = rel.myAvatar
                 val days = calculateDaysSinceStart(rel)
                 _daysSinceStart.value = days
                 val start = parseDate(rel.relationshipStartDate)

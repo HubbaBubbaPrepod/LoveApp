@@ -3,6 +3,7 @@ package com.example.loveapp.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -39,11 +40,13 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.example.loveapp.MainActivity
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_DATE
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_AVATAR
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_COUNT
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_ICONS
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_TYPES
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_COUNT
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_AVATAR
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_ICONS
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_TYPES
@@ -73,6 +76,8 @@ class ActivityDayWidget : GlanceAppWidget() {
         val ptIconsRaw = prefs[KEY_ACT_PT_ICONS] ?: ""
         val ptName     = (prefs[KEY_ACT_PT_NAME]?.takeIf { it.isNotBlank() } ?: "Партнёр").take(8)
         val date       = prefs[KEY_ACT_DATE]     ?: ""
+        val myAvatarBmp = loadWidgetIconBitmap(prefs[KEY_ACT_MY_AVATAR] ?: "")
+        val ptAvatarBmp = loadWidgetIconBitmap(prefs[KEY_ACT_PT_AVATAR] ?: "")
 
         val myTypes = if (myTypesRaw.isBlank()) emptyList()
                       else myTypesRaw.split(",").filter { it.isNotBlank() }.take(4)
@@ -118,18 +123,18 @@ class ActivityDayWidget : GlanceAppWidget() {
                 Spacer(GlanceModifier.height(8.dp))
 
                 // ── My activities ────────────────────────────────────────────
-                ActivityRow(name = myName, count = myCount, types = myTypes, icons = myIcons, isMe = true)
+                ActivityRow(name = myName, count = myCount, types = myTypes, icons = myIcons, isMe = true, avatarBitmap = myAvatarBmp)
 
                 Spacer(GlanceModifier.height(6.dp))
 
-                // ── Partner activities ────────────────────────────────────────
-                ActivityRow(name = ptName, count = ptCount, types = ptTypes, icons = ptIcons, isMe = false)
+                // ── Partner activities ────────────────────────────────────────────
+                ActivityRow(name = ptName, count = ptCount, types = ptTypes, icons = ptIcons, isMe = false, avatarBitmap = ptAvatarBmp)
             }
         }
     }
 
     @Composable
-    private fun ActivityRow(name: String, count: Int, types: List<String>, icons: List<String>, isMe: Boolean) {
+    private fun ActivityRow(name: String, count: Int, types: List<String>, icons: List<String>, isMe: Boolean, avatarBitmap: Bitmap? = null) {
         val rowBg   = if (isMe) Color(0x1A1E90FF) else Color(0x1A8E8E93)
         val nameClr = if (isMe) Color(0xFF1E90FF) else Color(0xFF636366)
         val cntClr  = if (isMe) Color(0xFF1E90FF) else Color(0xFF48484A)
@@ -142,6 +147,14 @@ class ActivityDayWidget : GlanceAppWidget() {
                 .padding(horizontal = 8.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (avatarBitmap != null) {
+                Image(
+                    provider = ImageProvider(avatarBitmap),
+                    contentDescription = name,
+                    modifier = GlanceModifier.size(18.dp).cornerRadius(9.dp)
+                )
+                Spacer(GlanceModifier.width(4.dp))
+            }
             Text(
                 text     = name,
                 style    = TextStyle(
@@ -149,7 +162,7 @@ class ActivityDayWidget : GlanceAppWidget() {
                     fontSize   = 10.sp,
                     fontWeight = FontWeight.Bold
                 ),
-                modifier = GlanceModifier.width(58.dp)
+                modifier = GlanceModifier.width(if (avatarBitmap != null) 40.dp else 58.dp)
             )
             if (count == 0) {
                 Text(

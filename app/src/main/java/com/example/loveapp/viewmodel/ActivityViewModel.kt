@@ -45,6 +45,12 @@ class ActivityViewModel @Inject constructor(
     private val _partnerName = MutableStateFlow<String?>(null)
     val partnerName: StateFlow<String?> = _partnerName.asStateFlow()
 
+    private val _myAvatar = MutableStateFlow<String?>(null)
+    val myAvatar: StateFlow<String?> = _myAvatar.asStateFlow()
+
+    private val _partnerAvatar = MutableStateFlow<String?>(null)
+    val partnerAvatar: StateFlow<String?> = _partnerAvatar.asStateFlow()
+
     // Calendar (month maps: "yyyy-MM-dd" -> list)
     private val _myMonthActivities = MutableStateFlow<Map<String, List<ActivityResponse>>>(emptyMap())
     val myMonthActivities: StateFlow<Map<String, List<ActivityResponse>>> = _myMonthActivities.asStateFlow()
@@ -87,10 +93,12 @@ class ActivityViewModel @Inject constructor(
             myResult.onSuccess { list ->
                 _myTodayActivities.value = list
                 if (_myName.value == null) _myName.value = list.firstOrNull()?.displayName
+                if (_myAvatar.value == null) _myAvatar.value = list.firstOrNull()?.userAvatar
             }
             ptResult.onSuccess { list ->
                 _partnerTodayActivities.value = list
                 if (_partnerName.value == null) _partnerName.value = list.firstOrNull()?.displayName
+                if (_partnerAvatar.value == null) _partnerAvatar.value = list.firstOrNull()?.userAvatar
             }.onFailure { /* no partner is ok */ }
             // Push both users' activities to the home-screen widget after both loads finish
             val my      = myResult.getOrElse { emptyList() }

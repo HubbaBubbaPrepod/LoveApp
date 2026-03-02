@@ -48,9 +48,17 @@ export const MoodList = () => (
   >
     <Datagrid bulkActionButtons={false}>
       <FunctionField label="Настроение"  render={() => <MoodChip />} />
-      <TextField     source="display_name" label="Пользователь" sortable={false} />
-      <TextField     source="username"     label="Username"     sortable={false} />
-      <TextField     source="note"         label="Заметка"      sortable={false} />
+      <FunctionField label="Пользователь" sortable={false} render={r => (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 13 }}>{r.display_name || '—'}</div>
+          <div style={{ color: '#64748b', fontSize: 11 }}>@{r.username}</div>
+        </div>
+      )} />
+      <FunctionField source="note" label="Заметка" sortable={false} render={r => (
+        <span style={{ display: 'block', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {r.note || '—'}
+        </span>
+      )} />
       <FunctionField   source="created_at"   label="Дата" render={r => {
         if (!r?.created_at) return '—'
         return new Date(r.created_at).toLocaleString('ru', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })

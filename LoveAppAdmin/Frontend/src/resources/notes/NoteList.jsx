@@ -33,10 +33,18 @@ export const NoteList = () => (
   >
     <Datagrid bulkActionButtons={false}>
       <FunctionField label="Цвет"          render={() => <ColorDot />} />
-      <TextField     source="title"        label="Заголовок"    sortable={false} />
-      <TextField     source="display_name" label="Пользователь" sortable={false} />
-      <TextField     source="username"     label="Username"     sortable={false} />
-      <FunctionField label="Закреплена" render={r => r?.is_pinned ? (
+      <FunctionField source="title" label="Заголовок" sortable={false} render={r => (
+        <span style={{ display: 'block', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+          {r.title || '—'}
+        </span>
+      )} />
+      <FunctionField label="Пользователь" sortable={false} render={r => (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 13 }}>{r.display_name || '—'}</div>
+          <div style={{ color: '#64748b', fontSize: 11 }}>@{r.username}</div>
+        </div>
+      )} />
+      <FunctionField label="📌" render={r => r?.is_pinned ? (
         <PushPinIcon sx={{ color: '#e91e63', fontSize: 16 }} />
       ) : null} />
       <DateField     source="created_at"   label="Дата"         options={{ dateStyle: 'medium' }} />

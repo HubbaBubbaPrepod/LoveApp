@@ -89,6 +89,25 @@ object WidgetIconPreparer {
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
     }.getOrNull()
 
+    /**
+     * Downloads a profile image URL, crops it to a circle, caches to disk,
+     * and returns the absolute file path. Returns null if url is empty or on error.
+     */
+    suspend fun prepareAvatar(context: Context, url: String?, prefix: String): String? {
+        if (url.isNullOrBlank()) return null
+        return withContext(Dispatchers.IO) {
+            val dir = File(context.cacheDir, "widget_icons").also { it.mkdirs() }
+            val file = File(dir, "${prefix}_avatar.png")
+            runCatching {
+                val fullUrl = if (url.startsWith("/")) "$WIDGET_SERVER_BASE$url" else url
+                val bmp = downloadBitmap(fullUrl) ?: return@withContext null
+                val circular = makeCircle(bmp)
+                file.outputStream().use { out -> circular.compress(Bitmap.CompressFormat.PNG, 90, out) }
+                file.absolutePath
+            }.getOrNull()
+        }
+    }
+
     private fun makeCircle(src: Bitmap): Bitmap {
         val s = ICON_PX
         val out = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888)

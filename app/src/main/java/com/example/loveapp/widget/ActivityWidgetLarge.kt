@@ -3,6 +3,7 @@ package com.example.loveapp.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -39,10 +40,12 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.example.loveapp.MainActivity
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_DATE
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_AVATAR
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_COUNT
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_ICONS
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_TYPES
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_AVATAR
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_COUNT
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_ICONS
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_NAME
@@ -72,6 +75,8 @@ class ActivityWidgetLarge : GlanceAppWidget() {
         val ptIconsRaw = prefs[KEY_ACT_PT_ICONS] ?: ""
         val ptName     = (prefs[KEY_ACT_PT_NAME]?.takeIf { it.isNotBlank() } ?: "Партнёр")
         val date       = prefs[KEY_ACT_DATE]     ?: ""
+        val myAvatarBmp = loadWidgetIconBitmap(prefs[KEY_ACT_MY_AVATAR] ?: "")
+        val ptAvatarBmp = loadWidgetIconBitmap(prefs[KEY_ACT_PT_AVATAR] ?: "")
 
         val myTypes = parseTypes(myTypesRaw)
         val myIcons = parseTypes(myIconsRaw)
@@ -124,26 +129,28 @@ class ActivityWidgetLarge : GlanceAppWidget() {
 
                 // ── My card ────────────────────────────────────────────────────
                 LargeActivityCard(
-                    name      = myName,
-                    count     = myCount,
-                    types     = myTypes,
-                    icons     = myIcons,
-                    bgColor   = Color(0x1C1E90FF),
-                    nameColor = Color(0xFF1E90FF),
-                    cntColor  = Color(0xFF1E90FF)
+                    name         = myName,
+                    count        = myCount,
+                    types        = myTypes,
+                    icons        = myIcons,
+                    bgColor      = Color(0x1C1E90FF),
+                    nameColor    = Color(0xFF1E90FF),
+                    cntColor     = Color(0xFF1E90FF),
+                    avatarBitmap = myAvatarBmp
                 )
 
                 Spacer(GlanceModifier.height(10.dp))
 
                 // ── Partner card ──────────────────────────────────────────────
                 LargeActivityCard(
-                    name      = ptName,
-                    count     = ptCount,
-                    types     = ptTypes,
-                    icons     = ptIcons,
-                    bgColor   = Color(0x128E8E93),
-                    nameColor = Color(0xFF636366),
-                    cntColor  = Color(0xFF48484A)
+                    name         = ptName,
+                    count        = ptCount,
+                    types        = ptTypes,
+                    icons        = ptIcons,
+                    bgColor      = Color(0x128E8E93),
+                    nameColor    = Color(0xFF636366),
+                    cntColor     = Color(0xFF48484A),
+                    avatarBitmap = ptAvatarBmp
                 )
             }
         }
@@ -157,7 +164,8 @@ class ActivityWidgetLarge : GlanceAppWidget() {
         icons: List<String>,
         bgColor: Color,
         nameColor: Color,
-        cntColor: Color
+        cntColor: Color,
+        avatarBitmap: Bitmap? = null
     ) {
         Box(
             modifier = GlanceModifier
@@ -167,17 +175,26 @@ class ActivityWidgetLarge : GlanceAppWidget() {
                 .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
             Column(horizontalAlignment = Alignment.Start) {
-                // Name + big count in a row
+                // Name + count/avatar in a row
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text  = if (count == 0) "0" else count.toString(),
-                        style = TextStyle(
-                            color      = ColorProvider(cntColor),
-                            fontSize   = 34.sp,
-                            fontWeight = FontWeight.Bold
+                    if (avatarBitmap != null) {
+                        Image(
+                            provider = ImageProvider(avatarBitmap),
+                            contentDescription = name,
+                            modifier = GlanceModifier.size(32.dp).cornerRadius(16.dp)
                         )
-                    )
-                    Spacer(GlanceModifier.width(10.dp))
+                        Spacer(GlanceModifier.width(10.dp))
+                    } else {
+                        Text(
+                            text  = if (count == 0) "0" else count.toString(),
+                            style = TextStyle(
+                                color      = ColorProvider(cntColor),
+                                fontSize   = 34.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                        Spacer(GlanceModifier.width(10.dp))
+                    }
                     Column {
                         Text(
                             text  = name,

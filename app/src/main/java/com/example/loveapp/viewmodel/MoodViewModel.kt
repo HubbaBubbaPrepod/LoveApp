@@ -35,6 +35,12 @@ class MoodViewModel @Inject constructor(
     private val _myName = MutableStateFlow<String?>(null)
     val myName: StateFlow<String?> = _myName.asStateFlow()
 
+    private val _myAvatar = MutableStateFlow<String?>(null)
+    val myAvatar: StateFlow<String?> = _myAvatar.asStateFlow()
+
+    private val _partnerAvatar = MutableStateFlow<String?>(null)
+    val partnerAvatar: StateFlow<String?> = _partnerAvatar.asStateFlow()
+
     // Maps: date "yyyy-MM-dd" -> list of moods for calendar view
     private val _myMonthMoods = MutableStateFlow<Map<String, List<MoodResponse>>>(emptyMap())
     val myMonthMoods: StateFlow<Map<String, List<MoodResponse>>> = _myMonthMoods.asStateFlow()
@@ -78,10 +84,12 @@ class MoodViewModel @Inject constructor(
             myResult.onSuccess {
                 _myTodayMoods.value = it
                 if (_myName.value == null) _myName.value = it.firstOrNull()?.displayName
+                if (_myAvatar.value == null) _myAvatar.value = it.firstOrNull()?.userAvatar
             }
             ptResult.onSuccess { moods ->
                 _partnerTodayMoods.value = moods
                 if (_partnerName.value == null) _partnerName.value = moods.firstOrNull()?.displayName
+                if (_partnerAvatar.value == null) _partnerAvatar.value = moods.firstOrNull()?.userAvatar
             }.onFailure { /* no partner is ok */ }
             // Push both users' moods to the home-screen widget after both loads finish
             val my      = myResult.getOrElse { emptyList() }

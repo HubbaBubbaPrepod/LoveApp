@@ -3,6 +3,7 @@ package com.example.loveapp.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -37,10 +38,12 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.example.loveapp.MainActivity
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_AVATAR
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_COUNT
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_ICONS
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_MY_TYPES
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_AVATAR
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_COUNT
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_ICONS
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_ACT_PT_NAME
@@ -68,6 +71,8 @@ class ActivityWidgetSmall : GlanceAppWidget() {
         val ptTypesRaw = prefs[KEY_ACT_PT_TYPES] ?: ""
         val ptIconsRaw = prefs[KEY_ACT_PT_ICONS] ?: ""
         val ptName     = (prefs[KEY_ACT_PT_NAME]?.takeIf { it.isNotBlank() } ?: "Партн.").take(6)
+        val myAvatarBmp = loadWidgetIconBitmap(prefs[KEY_ACT_MY_AVATAR] ?: "")
+        val ptAvatarBmp = loadWidgetIconBitmap(prefs[KEY_ACT_PT_AVATAR] ?: "")
 
         val myIcons = parseIconList(myIconsRaw, myTypesRaw, max = 3)
         val ptIcons = parseIconList(ptIconsRaw, ptTypesRaw, max = 3)
@@ -93,23 +98,25 @@ class ActivityWidgetSmall : GlanceAppWidget() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ActivityBadge(
-                    name      = myName,
-                    count     = myCount,
-                    icons     = myIcons,
-                    bgColor   = Color(0x331E90FF),
-                    nameColor = Color(0xFF1E90FF),
-                    cntColor  = Color(0xFF1E90FF),
-                    modifier  = GlanceModifier.defaultWeight()
+                    name         = myName,
+                    count        = myCount,
+                    icons        = myIcons,
+                    bgColor      = Color(0x331E90FF),
+                    nameColor    = Color(0xFF1E90FF),
+                    cntColor     = Color(0xFF1E90FF),
+                    modifier     = GlanceModifier.defaultWeight(),
+                    avatarBitmap = myAvatarBmp
                 )
                 Spacer(GlanceModifier.width(6.dp))
                 ActivityBadge(
-                    name      = ptName,
-                    count     = ptCount,
-                    icons     = ptIcons,
-                    bgColor   = Color(0x228E8E93),
-                    nameColor = Color(0xFF636366),
-                    cntColor  = Color(0xFF48484A),
-                    modifier  = GlanceModifier.defaultWeight()
+                    name         = ptName,
+                    count        = ptCount,
+                    icons        = ptIcons,
+                    bgColor      = Color(0x228E8E93),
+                    nameColor    = Color(0xFF636366),
+                    cntColor     = Color(0xFF48484A),
+                    modifier     = GlanceModifier.defaultWeight(),
+                    avatarBitmap = ptAvatarBmp
                 )
             }
         }
@@ -123,7 +130,8 @@ class ActivityWidgetSmall : GlanceAppWidget() {
         bgColor: Color,
         nameColor: Color,
         cntColor: Color,
-        modifier: GlanceModifier
+        modifier: GlanceModifier,
+        avatarBitmap: Bitmap? = null
     ) {
         Box(
             modifier = modifier
@@ -133,14 +141,22 @@ class ActivityWidgetSmall : GlanceAppWidget() {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text  = if (count == 0) "—" else count.toString(),
-                    style = TextStyle(
-                        color      = ColorProvider(cntColor),
-                        fontSize   = 22.sp,
-                        fontWeight = FontWeight.Bold
+                if (avatarBitmap != null) {
+                    Image(
+                        provider = ImageProvider(avatarBitmap),
+                        contentDescription = name,
+                        modifier = GlanceModifier.size(20.dp).cornerRadius(10.dp)
                     )
-                )
+                } else {
+                    Text(
+                        text  = if (count == 0) "—" else count.toString(),
+                        style = TextStyle(
+                            color      = ColorProvider(cntColor),
+                            fontSize   = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
                 if (icons.isNotEmpty() && count > 0) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         icons.forEachIndexed { idx, iconStr ->

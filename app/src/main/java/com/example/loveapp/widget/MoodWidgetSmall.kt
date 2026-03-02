@@ -3,6 +3,7 @@ package com.example.loveapp.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -10,6 +11,8 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -26,6 +29,7 @@ import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.layout.wrapContentWidth
 import androidx.glance.state.PreferencesGlanceStateDefinition
@@ -34,8 +38,10 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.example.loveapp.MainActivity
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_MY_AVATAR
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_MY_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_MY_TYPE
+import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_AVATAR
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_NAME
 import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_TYPE
 
@@ -58,6 +64,8 @@ class MoodWidgetSmall : GlanceAppWidget() {
         val myName = (prefs[KEY_MOOD_MY_NAME]?.takeIf { it.isNotBlank() } ?: "Я").take(6)
         val ptType = prefs[KEY_MOOD_PT_TYPE] ?: ""
         val ptName = (prefs[KEY_MOOD_PT_NAME]?.takeIf { it.isNotBlank() } ?: "Партн.").take(6)
+        val myAvatarBmp = loadWidgetIconBitmap(prefs[KEY_MOOD_MY_AVATAR] ?: "")
+        val ptAvatarBmp = loadWidgetIconBitmap(prefs[KEY_MOOD_PT_AVATAR] ?: "")
 
         val open = actionStartActivity(
             Intent(context, MainActivity::class.java).apply {
@@ -85,15 +93,17 @@ class MoodWidgetSmall : GlanceAppWidget() {
                     moodType = myType,
                     bgColor  = Color(0x33FF6B9D),
                     nameColor = Color(0xFFFF6B9D),
+                    avatarBitmap = myAvatarBmp,
                     modifier  = GlanceModifier.defaultWeight()
                 )
                 Spacer(GlanceModifier.width(6.dp))
-                // ── Partner badge ─────────────────────────────────────────────
+                // ── Partner badge ─────────────────────────────────────────────────
                 MoodBadge(
                     name     = ptName,
                     moodType = ptType,
                     bgColor  = Color(0x228E8E93),
                     nameColor = Color(0xFF636366),
+                    avatarBitmap = ptAvatarBmp,
                     modifier  = GlanceModifier.defaultWeight()
                 )
             }
@@ -106,7 +116,8 @@ class MoodWidgetSmall : GlanceAppWidget() {
         moodType: String,
         bgColor: Color,
         nameColor: Color,
-        modifier: GlanceModifier
+        modifier: GlanceModifier,
+        avatarBitmap: Bitmap? = null
     ) {
         val emoji = moodEmoji(moodType)
         Box(
@@ -117,10 +128,18 @@ class MoodWidgetSmall : GlanceAppWidget() {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text  = emoji,
-                    style = TextStyle(fontSize = 22.sp)
-                )
+                if (avatarBitmap != null) {
+                    Image(
+                        provider = ImageProvider(avatarBitmap),
+                        contentDescription = name,
+                        modifier = GlanceModifier.size(20.dp).cornerRadius(10.dp)
+                    )
+                } else {
+                    Text(
+                        text  = emoji,
+                        style = TextStyle(fontSize = 22.sp)
+                    )
+                }
                 Text(
                     text  = name,
                     style = TextStyle(

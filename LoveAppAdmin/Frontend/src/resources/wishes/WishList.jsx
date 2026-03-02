@@ -42,13 +42,21 @@ export const WishList = () => (
     sort={{ field: 'created_at', order: 'DESC' }}
   >
     <Datagrid bulkActionButtons={false}>
-      <TextField     source="title"        label="Название"     sortable={false} />
-      <TextField     source="display_name" label="Пользователь" sortable={false} />
-      <TextField     source="username"     label="Username"     sortable={false} />
-      <TextField     source="category"     label="Категория"    sortable={false} />
-      <FunctionField label="Приоритет"     render={() => <PriorityChip />} />
-      <FunctionField label="✔"             render={() => <CompletedField />} />
-      <DateField     source="created_at"   label="Дата"         options={{ dateStyle: 'medium' }} />
+      <FunctionField source="title" label="Название" sortable={false} render={r => (
+        <span style={{ display: 'block', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+          {r.title || '—'}
+        </span>
+      )} />
+      <FunctionField label="Пользователь" sortable={false} render={r => (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 13 }}>{r.display_name || '—'}</div>
+          <div style={{ color: '#64748b', fontSize: 11 }}>@{r.username}</div>
+        </div>
+      )} />
+      <TextField     source="category"  label="Категория" sortable={false} />
+      <FunctionField label="Приоритет"  render={() => <PriorityChip />} />
+      <FunctionField label="✔"          render={() => <CompletedField />} />
+      <DateField     source="created_at" label="Дата" options={{ dateStyle: 'medium' }} />
       <DeleteButton  label="" mutationMode="pessimistic" />
     </Datagrid>
   </List>

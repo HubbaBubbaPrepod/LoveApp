@@ -63,6 +63,8 @@ data class NoteResponse(
     val userId: Int,
     @SerializedName("display_name")
     val displayName: String? = null,
+    @SerializedName("profile_image")
+    val userAvatar: String? = null,
     @SerializedName("created_at")
     val createdAt: String,
     @SerializedName("updated_at")
@@ -98,6 +100,8 @@ data class WishResponse(
     val userId: Int,
     @SerializedName("display_name")
     val displayName: String? = null,
+    @SerializedName("profile_image")
+    val userAvatar: String? = null,
     @SerializedName("created_at")
     val createdAt: String,
     @SerializedName("is_completed")
@@ -135,7 +139,9 @@ data class MoodResponse(
     val note: String = "",
     val color: String? = null,
     @SerializedName("display_name")
-    val displayName: String? = null
+    val displayName: String? = null,
+    @SerializedName("profile_image")
+    val userAvatar: String? = null
 )
 
 // Activity Models
@@ -172,7 +178,9 @@ data class ActivityResponse(
     val startTime: String = "",
     val note: String = "",
     @SerializedName("display_name")
-    val displayName: String? = null
+    val displayName: String? = null,
+    @SerializedName("profile_image")
+    val userAvatar: String? = null
 )
 
 // Custom Activity Type Models
@@ -308,6 +316,10 @@ data class RelationshipResponse(
     val partnerBirthday: String? = null,
     @SerializedName("partner_display_name")
     val partnerDisplayName: String? = null,
+    @SerializedName("partner_avatar")
+    val partnerAvatar: String? = null,
+    @SerializedName("my_avatar")
+    val myAvatar: String? = null,
     @SerializedName("user_id")
     val userId1: Int = 0,
     @SerializedName("partner_user_id")
@@ -323,6 +335,12 @@ data class RelationshipResponse(
 // Upload Response
 data class UploadResponse(
     val url: String
+)
+
+// Avatar upload response
+data class AvatarUploadResponse(
+    @SerializedName("profile_image")
+    val profileImage: String
 )
 
 // Generic Response Wrapper (matches server sendResponse)

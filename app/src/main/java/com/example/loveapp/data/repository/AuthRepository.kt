@@ -11,13 +11,19 @@ import com.example.loveapp.data.dao.UserDao
 import com.example.loveapp.data.entity.User
 import com.example.loveapp.notifications.FcmTokenManager
 import com.example.loveapp.utils.TokenManager
+import android.content.Context
+import android.net.Uri
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 
 class AuthRepository @Inject constructor(
     private val apiService: LoveAppApiService,
     private val userDao: UserDao,
     private val tokenManager: TokenManager,
-    private val fcmTokenManager: FcmTokenManager
+    private val fcmTokenManager: FcmTokenManager,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
 ) {
 
     suspend fun signup(
@@ -185,6 +191,22 @@ class AuthRepository @Inject constructor(
             Result.success(response.data)
         } else {
             Result.failure(Exception(response.message ?: "Failed to get profile"))
+        }
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    suspend fun uploadAvatar(uri: Uri): Result<String> = try {
+        val token = tokenManager.getToken() ?: return Result.failure(Exception("Not authenticated"))
+        val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
+            ?: return Result.failure(Exception("Cannot read image"))
+        val requestBody = bytes.toRequestBody("image/*".toMediaTypeOrNull())
+        val part = MultipartBody.Part.createFormData("file", "avatar.jpg", requestBody)
+        val response = apiService.uploadAvatar("Bearer $token", part)
+        if (response.success && response.data != null) {
+            Result.success(response.data.profileImage)
+        } else {
+            Result.failure(Exception(response.message ?: "Upload failed"))
         }
     } catch (e: Exception) {
         Result.failure(e)

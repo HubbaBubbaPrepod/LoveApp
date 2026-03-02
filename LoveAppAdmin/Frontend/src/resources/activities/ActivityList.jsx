@@ -46,12 +46,19 @@ export const ActivityList = () => (
   >
     <Datagrid bulkActionButtons={false}>
       <FunctionField label="Тип"          render={() => <TypeChip />} />
-      <TextField     source="display_name" label="Пользователь" sortable={false} />
-      <TextField     source="username"     label="Username"     sortable={false} />
-      <NumberField   source="duration_minutes" label="Мин."    sortable={false} />
-      <TextField     source="start_time"   label="Начало"       sortable={false} />
-      <TextField     source="note"         label="Заметка"      sortable={false} />
-      <DateField     source="created_at"   label="Дата"         options={{ dateStyle: 'medium' }} />
+      <FunctionField label="Пользователь" sortable={false} render={r => (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 13 }}>{r.display_name || '—'}</div>
+          <div style={{ color: '#64748b', fontSize: 11 }}>@{r.username}</div>
+        </div>
+      )} />
+      <NumberField   source="duration_minutes" label="Мин." sortable={false} />
+      <FunctionField source="note" label="Заметка" sortable={false} render={r => (
+        <span style={{ display: 'block', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {r.note || '—'}
+        </span>
+      )} />
+      <DateField     source="created_at"   label="Дата" options={{ dateStyle: 'medium' }} />
       <DeleteButton  label="" mutationMode="pessimistic" />
     </Datagrid>
   </List>

@@ -38,6 +38,7 @@ import coil.compose.AsyncImage
 import com.example.loveapp.data.api.models.ActivityResponse
 import com.example.loveapp.data.api.models.CustomActivityTypeResponse
 import com.example.loveapp.ui.components.IOSTopAppBar
+import com.example.loveapp.ui.components.UserAvatar
 import com.example.loveapp.utils.DateUtils
 import com.example.loveapp.viewmodel.ActivityViewModel
 import com.example.loveapp.utils.rememberResponsiveConfig
@@ -228,6 +229,8 @@ fun ActivityFeedScreen(
     val partnerActivities by viewModel.partnerTodayActivities.collectAsState()
     val myName            by viewModel.myName.collectAsState()
     val partnerName       by viewModel.partnerName.collectAsState()
+    val myAvatar          by viewModel.myAvatar.collectAsState()
+    val partnerAvatar     by viewModel.partnerAvatar.collectAsState()
     val isLoading         by viewModel.isLoading.collectAsState()
     val errorMessage      by viewModel.errorMessage.collectAsState()
     val successMessage    by viewModel.successMessage.collectAsState()
@@ -289,6 +292,7 @@ fun ActivityFeedScreen(
                 ActivityUserCard(
                     modifier = Modifier.weight(1f),
                     name = myName ?: "Я",
+                    avatarUrl = myAvatar,
                     activities = myActivities,
                     isMe = true,
                     isLoading = isLoading,
@@ -298,6 +302,7 @@ fun ActivityFeedScreen(
                 ActivityUserCard(
                     modifier = Modifier.weight(1f),
                     name = partnerName ?: "Партнёр",
+                    avatarUrl = partnerAvatar,
                     activities = partnerActivities,
                     isMe = false,
                     isLoading = false,
@@ -400,6 +405,7 @@ fun ActivityFeedScreen(
 private fun ActivityUserCard(
     modifier: Modifier = Modifier,
     name: String,
+    avatarUrl: String? = null,
     activities: List<ActivityResponse>,
     isMe: Boolean,
     isLoading: Boolean,
@@ -426,10 +432,18 @@ private fun ActivityUserCard(
             Row(verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()) {
-                Text(name.take(10), style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isMe) MaterialTheme.colorScheme.onPrimaryContainer
-                            else MaterialTheme.colorScheme.onSecondaryContainer)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    UserAvatar(
+                        imageUrl    = avatarUrl,
+                        displayName = name,
+                        size        = 20.dp
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(name.take(10), style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isMe) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSecondaryContainer)
+                }
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 } else {

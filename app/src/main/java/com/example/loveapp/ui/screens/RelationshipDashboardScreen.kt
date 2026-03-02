@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.ui.components.IOSTopAppBar
+import com.example.loveapp.ui.components.UserAvatar
 import com.example.loveapp.ui.theme.AccentPurple
 import com.example.loveapp.ui.theme.PrimaryPink
 import com.example.loveapp.viewmodel.MilestoneEvent
@@ -98,6 +99,8 @@ fun RelationshipDashboardScreen(
 
     val relationship      by viewModel.relationship.collectAsState()
     val partnerDisplayName by viewModel.partnerDisplayName.collectAsState()
+    val partnerAvatar      by viewModel.partnerAvatar.collectAsState()
+    val myAvatar           by viewModel.myAvatar.collectAsState()
     val daysSinceStart    by viewModel.daysSinceStart.collectAsState()
     val milestones        by viewModel.milestones.collectAsState()
     val selectedTab       by viewModel.selectedTab.collectAsState()
@@ -187,6 +190,8 @@ fun RelationshipDashboardScreen(
                                 daysSinceStart = daysSinceStart,
                                 startDate = startDate,
                                 partnerDisplayName = partnerDisplayName,
+                                partnerAvatar = partnerAvatar,
+                                myAvatar = myAvatar,
                                 onEditClick = { showEditDialog = true }
                             )
                         }
@@ -290,6 +295,8 @@ private fun RelationshipHeaderCard(
     daysSinceStart: Long,
     startDate: LocalDate?,
     partnerDisplayName: String?,
+    partnerAvatar: String? = null,
+    myAvatar: String? = null,
     onEditClick: () -> Unit
 ) {
     val gradient = remember { Brush.linearGradient(listOf(PrimaryPink, AccentPurple)) }
@@ -326,8 +333,34 @@ private fun RelationshipHeaderCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (!partnerDisplayName.isNullOrBlank()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    UserAvatar(
+                        imageUrl    = myAvatar,
+                        displayName = "Я",
+                        size        = 44.dp,
+                        borderColor = Color.White.copy(alpha = 0.5f)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    UserAvatar(
+                        imageUrl    = partnerAvatar,
+                        displayName = partnerDisplayName,
+                        size        = 44.dp,
+                        borderColor = Color.White.copy(alpha = 0.5f)
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    text = "❤️ $partnerDisplayName",
+                    text = partnerDisplayName,
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.95f),
                     fontWeight = FontWeight.SemiBold

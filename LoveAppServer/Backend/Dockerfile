@@ -6,11 +6,17 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 
+# Install PM2 globally
+RUN npm install pm2 -g
+
 # Copy source
 COPY . .
 
 # Create logs directory
 RUN mkdir -p logs
+
+ENV PM2_PUBLIC_KEY gk21vm4h8hkkkks
+ENV PM2_SECRET_KEY q1hs5k69e167q2i
 
 EXPOSE 3005
 
@@ -18,4 +24,4 @@ EXPOSE 3005
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
   CMD wget -qO- http://localhost:3005/api/health || exit 1
 
-CMD ["node", "index.js"]
+CMD ["pm2-runtime", "index.js"]

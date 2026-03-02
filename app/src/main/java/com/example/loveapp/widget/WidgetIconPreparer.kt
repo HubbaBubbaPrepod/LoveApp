@@ -31,7 +31,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.asin
 
-private const val WIDGET_SERVER_BASE = "http://195.2.71.218:3005"
+private const val WIDGET_SERVER_BASE = "https://love-app.ru"
 private const val ICON_PX = 80
 
 /**

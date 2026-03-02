@@ -136,7 +136,7 @@ private fun parseHexColor(hex: String): Color = try {
 }
 
 /** Server base URL – used to resolve relative /uploads/ paths. */
-private const val SERVER_BASE = "http://195.2.71.218:3005"
+private const val SERVER_BASE = "https://love-app.ru"
 
 /** Returns true if the string looks like a remote image URL or a server-relative upload path. */
 private fun String.isImageUrl() =

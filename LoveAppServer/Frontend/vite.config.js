@@ -11,11 +11,11 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/api': {
-        target: 'http://195.2.71.218:3005',
+        target: 'http://168.222.193.34:3005',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://195.2.71.218:3005',
+        target: 'http://168.222.193.34:3005',
         changeOrigin: true,
       },
     },

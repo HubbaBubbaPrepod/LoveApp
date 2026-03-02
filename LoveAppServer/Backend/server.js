@@ -102,7 +102,7 @@ const upload = multer({
 
 // PostgreSQL Connection Pool
 const pool = new pg.Pool({
-  host: process.env.PGHOST || '195.2.71.218',
+  host: process.env.PGHOST || '168.222.193.34',
   user: process.env.PGUSER || 'spyuser',
   password: process.env.PGPASSWORD || '0451',
   database: process.env.PGDATABASE || 'loveapp_db',
@@ -2194,7 +2194,7 @@ app.post('/api/art/canvases/:id/thumbnail', authenticateToken, upload.single('th
   try {
     if (!req.file) return sendResponse(res, false, 'No file', null, 400);
     const coupleKey = await getCoupleKey(req.userId);
-    const url = `${process.env.SERVER_URL || 'http://195.2.71.218:3005'}/uploads/${req.file.filename}`;
+    const url = `${process.env.SERVER_URL || 'http://168.222.193.34:3005'}/uploads/${req.file.filename}`;
     const result = await pool.query(
       `UPDATE art_canvases SET thumbnail_url = $1, updated_at = NOW()
        WHERE id = $2 AND couple_key = $3

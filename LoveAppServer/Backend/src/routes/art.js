@@ -90,7 +90,7 @@ router.post('/canvases/:id/thumbnail', authenticateToken, async (req, res) => {
     try {
       if (!req.file) return sendResponse(res, false, 'No file', null, 400);
       const ck = await getCoupleKey(req.userId);
-      const serverUrl = process.env.SERVER_URL || 'http://195.2.71.218:3005';
+      const serverUrl = process.env.SERVER_URL || 'http://168.222.193.34:3005';
       const url = `${serverUrl}/uploads/${req.file.filename}`;
       const result = await pool.query(
         `UPDATE art_canvases SET thumbnail_url=$1, updated_at=NOW()

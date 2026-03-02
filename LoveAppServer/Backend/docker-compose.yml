@@ -1,4 +1,4 @@
-version: '3.9'
+﻿version: '3.9'
 
 services:
   api:
@@ -10,7 +10,6 @@ services:
     env_file:
       - .env
     environment:
-      # Override Redis URL to use Docker service name instead of localhost
       REDIS_URL: redis://redis:6379
     volumes:
       - uploads_data:/app/uploads
@@ -69,117 +68,6 @@ services:
       - prometheus
 
 volumes:
-  redis_data:
-  uploads_data:
-  logs_data:
-  prometheus_data:
-  grafana_data:
-
-networks:
-  loveapp_net:
-    driver: bridge
-
-    PGUSER=spyuser
-    PGPASSWORD=0451
-    PGDATABASE=loveapp_db
-    PGPORT=5432
-    REDIS_URL=redis://localhost:6379
-    API_PORT=3005
-    JWT_SECRET=f3ec2a4a90e8b74076b1f47037459900582bc89d0aa63d491b7dc7c71e765a53d13ea695625dd21cee704b8cd26ceffeceb18c821c1b03bfe6ead2b122a0ab44
-    REFRESH_TOKEN_SECRET=8bd91lu]qOcF3QCAqJ6qsR8=uCmh{IgsI:MA[,S:#O(Awld@W?5+m!KDFV1|4f5.Dxqs8'g5=\a@pU/:=f-r\8{pE7/rVSG7A0dhoD*Ff??r|H4\gKseOPApKhRlM{xSU*LZ"s}*beSr[|y-mO9Yds'2Syl|8@Yb)*BBvW}1CaJa'(4Hob3vB=Gqyk9LHI|-GG"R0Bdg?};[r}E'+[FB:(d):{zviK.X@I'a;{EiFS*q#ZcI8bDR25J(YrPIGz(f{P3ZKYJc?H)4)3Z#Q.{/0.pIXcOT@{cyG/k5#OI/3wh'I;sBfXF;]LI(-zSRfyJ0t]-G)Ij0GpvBd714/f3zVJ?Jg[thM*;4P[X7,;13CQ.WJ\Ojy6BMpg1t-3hQaejP?1c;.4PiSPAeCM.]s/028jDVdF][),JUEPOT;W4q'#a{aOatsU#VlwE.7+qppk=4?,-yb{:X33gLT@|1[)MD.{b?a#o|i8Tt-EvW{Ye!LK*eBFi:gYj:8iE*-t4/{vWV
-    JWT_ACCESS_EXPIRES=15m
-    JWT_REFRESH_EXPIRES=30d
-    SMTP_HOST=smtp.gmail.com
-    SMTP_PORT=587
-    SMTP_USER=your_email@gmail.com
-    SMTP_PASSWORD=your_app_password
-    STORAGE_PATH=./uploads
-    MAX_FILE_SIZE=20971520
-    SERVER_URL=http://195.2.71.218:3005
-    LOG_LEVEL=info
-    LOGS_DIR=./logs
-    CORS_ORIGIN=*
-    GRAFANA_PASSWORD=admin
-    volumes:
-      - uploads_data:/app/uploads
-      - logs_data:/app/logs
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - loveapp_net
-
-  postgres:
-    image: postgres:16-alpine
-    container_name: loveapp-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${PGUSER:-loveapp=}
-      POSTGRES_PASSWORD: ${PGPASSWORD:-changeme}
-      POSTGRES_DB: ${PGDATABASE:-loveapp_db}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-loveapp}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - loveapp_net
-
-  redis:
-    image: redis:7-alpine
-    container_name: loveapp-redis
-    restart: unless-stopped
-    command: redis-server --save 60 1 --loglevel warning
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - loveapp_net
-
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: loveapp-prometheus
-    restart: unless-stopped
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.retention.time=15d'
-    networks:
-      - loveapp_net
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: loveapp-grafana
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
-    volumes:
-      - grafana_data:/var/lib/grafana
-    networks:
-      - loveapp_net
-    depends_on:
-      - prometheus
-
-volumes:
-  postgres_data:
   redis_data:
   uploads_data:
   logs_data:

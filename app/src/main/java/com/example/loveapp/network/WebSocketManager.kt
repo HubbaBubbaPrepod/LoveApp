@@ -61,7 +61,7 @@ class WebSocketManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "WebSocketManager"
-        private const val SERVER_URL = "http://195.2.71.218:3005"
+        private const val SERVER_URL = "https://love-app.ru"
         private const val PREF_LAST_SYNC = "ws_last_sync_ts"
     }
 

@@ -5,7 +5,7 @@ const pg = require('pg');
 pg.types.setTypeParser(1082, (val) => val);
 
 const pool = new pg.Pool({
-  host:     process.env.PGHOST     || '195.2.71.218',
+  host:     process.env.PGHOST     || '168.222.193.34',
   user:     process.env.PGUSER     || 'spyuser',
   password: process.env.PGPASSWORD || '0451',
   database: process.env.PGDATABASE || 'loveapp_db',

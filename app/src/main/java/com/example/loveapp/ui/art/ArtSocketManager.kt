@@ -37,7 +37,7 @@ class ArtSocketManager @Inject constructor() {
                 .build()
             // Pass token via auth so the server middleware can read it
             // socket.io-client Java passes auth via query or options - use query
-            socket = IO.socket(URI.create("http://195.2.71.218:3005?token=$token"), opts)
+            socket = IO.socket(URI.create("https://love-app.ru?token=$token"), opts)
             socket?.connect()
         } catch (e: Exception) {
             e.printStackTrace()

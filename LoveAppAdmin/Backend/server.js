@@ -1746,9 +1746,11 @@ app.post('/api/admin/login', async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) return sendResponse(res, false, 'Username and password required', null, 400);
   try {
+    // Accept either username or email in the username field
     const r = await pool.query(
-      `SELECT id, username, display_name, password_hash, role
-       FROM users WHERE username = $1 LIMIT 1`, [username]);
+      `SELECT id, username, display_name, password_hash,
+              COALESCE(role, 'user') AS role
+       FROM users WHERE username = $1 OR email = $1 LIMIT 1`, [username]);
     const user = r.rows[0];
     if (!user) return sendResponse(res, false, 'Invalid credentials', null, 401);
     if (user.role !== 'admin' && user.role !== 'superadmin')

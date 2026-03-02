@@ -91,9 +91,9 @@ export default function LoginPage () {
           </Typography>
         </Box>
 
-        {/* Username */}
+        {/* Username or email */}
         <TextField
-          label="Имя пользователя"
+          label="Логин или Email"
           value={username}
           onChange={e => setUsername(e.target.value)}
           required

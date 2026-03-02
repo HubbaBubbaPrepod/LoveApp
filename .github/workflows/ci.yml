@@ -19,9 +19,9 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_pass
-          POSTGRES_DB: test_db
+          POSTGRES_USER: spyuser
+          POSTGRES_PASSWORD: "0451"
+          POSTGRES_DB: loveapp_db
         ports: ["5432:5432"]
         options: >-
           --health-cmd pg_isready
@@ -43,7 +43,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: LoveAppServer/Backend/package-lock.json
 
       - name: Install dependencies
         run: npm install
@@ -57,20 +56,26 @@ jobs:
           NODE_ENV: test
           PGHOST: localhost
           PGPORT: 5432
-          PGUSER: test_user
-          PGPASSWORD: test_pass
-          PGDATABASE: test_db
+          PGUSER: spyuser
+          PGPASSWORD: "0451"
+          PGDATABASE: loveapp_db
           REDIS_URL: redis://localhost:6379
           API_PORT: 3005
-          JWT_SECRET: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
-          REFRESH_TOKEN_SECRET: b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3
+          JWT_SECRET: f3ec2a4a90e8b74076b1f47037459900582bc89d0aa63d491b7dc7c71e765a53d13ea695625dd21cee704b8cd26ceffeceb18c821c1b03bfe6ead2b122a0ab44
+          REFRESH_TOKEN_SECRET: c7e2d9f4a1b8e3c6d0f5a2b9e4c1d8f3a6b0e7c4d1f8a5b2e9c6d3f0a7b4e1c8d5f2a9b6e3c0d7f4a1b8e5c2d9f6a3b0e7c4d1f8a5b2e9c6
           JWT_ACCESS_EXPIRES: 15m
           JWT_REFRESH_EXPIRES: 30d
           STORAGE_PATH: ./uploads
           MAX_FILE_SIZE: 20971520
           CORS_ORIGIN: "*"
           LOG_LEVEL: error
+          LOGS_DIR: ./logs
           SERVER_URL: http://localhost:3005
+          SMTP_HOST: smtp.gmail.com
+          SMTP_PORT: 587
+          SMTP_USER: your_email@gmail.com
+          SMTP_PASSWORD: your_app_password
+          GRAFANA_PASSWORD: admin
 
   # ── Android build ────────────────────────────────────────────────────────────
   android:
@@ -96,10 +101,10 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest --continue
+        run: ./gradlew testDebugUnitTest --continue --stacktrace --info
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --stacktrace --info
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

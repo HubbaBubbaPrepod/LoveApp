@@ -1,7 +1,4 @@
-import { Admin, Resource, CustomRoutes } from 'react-admin'
-import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles'
-import { CssBaseline } from '@mui/material'
-import { SnackbarProvider } from 'notistack'
+import { Admin, Resource } from 'react-admin'
 
 import dataProvider  from './api/dataProvider'
 import authProvider  from './api/authProvider'
@@ -25,56 +22,48 @@ import CardGiftcardIcon  from '@mui/icons-material/CardGiftcard'
 
 export default function App () {
   return (
-    <StyledEngineProvider injectFirst>
-      <ThemeProvider theme={adminTheme}>
-        <CssBaseline />
-        <SnackbarProvider maxSnack={4} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-          <Admin
-            dataProvider={dataProvider}
-            authProvider={authProvider}
-            layout={AdminLayout}
-            dashboard={Dashboard}
-            theme={adminTheme}
-            title="LoveApp Admin"
-            requireAuth
-            disableTelemetry
-            loginPage={false}   /* uses default ra LoginForm; theme handles styling */
-          >
-            <Resource
-              name="users"
-              options={{ label: 'Пользователи' }}
-              icon={PeopleIcon}
-              list={UserList}
-              show={UserShow}
-            />
-            <Resource
-              name="activities"
-              options={{ label: 'Активности' }}
-              icon={DirectionsRunIcon}
-              list={ActivityList}
-            />
-            <Resource
-              name="moods"
-              options={{ label: 'Настроения' }}
-              icon={MoodIcon}
-              list={MoodList}
-            />
-            <Resource
-              name="notes"
-              options={{ label: 'Заметки' }}
-              icon={NotesIcon}
-              list={NoteList}
-            />
-            <Resource
-              name="wishes"
-              options={{ label: 'Желания' }}
-              icon={CardGiftcardIcon}
-              list={WishList}
-            />
-          </Admin>
-        </SnackbarProvider>
-      </ThemeProvider>
-    </StyledEngineProvider>
+    <Admin
+      dataProvider={dataProvider}
+      authProvider={authProvider}
+      layout={AdminLayout}
+      dashboard={Dashboard}
+      theme={adminTheme}
+      title="LoveApp Admin"
+      requireAuth
+      disableTelemetry
+    >
+      <Resource
+        name="users"
+        options={{ label: 'Пользователи' }}
+        icon={PeopleIcon}
+        list={UserList}
+        show={UserShow}
+      />
+      <Resource
+        name="activities"
+        options={{ label: 'Активности' }}
+        icon={DirectionsRunIcon}
+        list={ActivityList}
+      />
+      <Resource
+        name="moods"
+        options={{ label: 'Настроения' }}
+        icon={MoodIcon}
+        list={MoodList}
+      />
+      <Resource
+        name="notes"
+        options={{ label: 'Заметки' }}
+        icon={NotesIcon}
+        list={NoteList}
+      />
+      <Resource
+        name="wishes"
+        options={{ label: 'Желания' }}
+        icon={CardGiftcardIcon}
+        list={WishList}
+      />
+    </Admin>
   )
 }
 

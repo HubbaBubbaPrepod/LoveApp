@@ -17,6 +17,11 @@ data class Wish(
     val imageUrl: String? = null,
     val category: String = "", // e.g., "gift", "experience", "date idea"
     val dueDate: Long? = null,
+    val isPrivate: Boolean = false,
+    val emoji: String? = null,
+    // ── Display metadata (populated from server response) ───
+    val displayName: String? = null,
+    val userAvatar: String? = null,
     // ── Sync metadata ──────────────────────────────────────
     val serverId: Int? = null,
     val syncPending: Boolean = true,

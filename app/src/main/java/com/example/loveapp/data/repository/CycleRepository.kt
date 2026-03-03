@@ -105,4 +105,31 @@ class CycleRepository @Inject constructor(
         outboxDao.enqueue(OutboxEntry(entityType = "cycle", action = "delete", payload = gson.toJson(mapOf("id" to e.serverId)), localId = localId, serverId = e.serverId))
         return Result.success(Unit)
     }
+
+    suspend fun refreshFromServer() {
+        val token = authRepository.getToken() ?: return
+        try {
+            suspend fun upsertCycle(c: CycleResponse) {
+                val ex = cycleDao.getByServerId(c.id)
+                cycleDao.upsert(MenstrualCycleEntry(
+                    id = ex?.id ?: 0,
+                    userId = c.userId,
+                    cycleStartDate = DateUtils.dateStringToTimestamp(c.cycleStartDate),
+                    cycleDuration = c.cycleDuration,
+                    periodDuration = c.periodDuration,
+                    symptoms = gson.toJson(c.symptoms),
+                    mood = gson.toJson(c.mood),
+                    notes = c.notes,
+                    serverId = c.id,
+                    syncPending = false
+                ))
+            }
+            apiService.getCycles("Bearer $token", 200)
+                .takeIf { it.success && it.data != null }
+                ?.data?.items?.forEach { upsertCycle(it) }
+            apiService.getPartnerCycles("Bearer $token", 200)
+                .takeIf { it.success && it.data != null }
+                ?.data?.items?.forEach { upsertCycle(it) }
+        } catch (_: Exception) {}
+    }
 }

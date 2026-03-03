@@ -48,31 +48,33 @@ class NoteRepository @Inject constructor(
         } catch (e: Exception) { enqueue("create", saved, localId) }
     }
 
-    suspend fun updateNote(localId: Int, title: String, content: String,
+    suspend fun updateNote(serverId: Int, title: String, content: String,
                            isPrivate: Boolean, tags: String): Result<Note> {
-        val ex = noteDao.getNoteById(localId) ?: return Result.failure(Exception("Not found"))
+        val ex = noteDao.getByServerId(serverId) ?: noteDao.getNoteById(serverId)
+                 ?: return Result.failure(Exception("Note not found"))
         val updated = ex.copy(title = title, content = content, isPrivate = isPrivate,
             tags = tags, updatedAt = System.currentTimeMillis(), syncPending = true)
         noteDao.upsert(updated)
         return try {
-            val token = authRepository.getToken() ?: return enqueue("update", updated, localId)
-            val sId = updated.serverId ?: return enqueue("update", updated, localId)
+            val token = authRepository.getToken() ?: return enqueue("update", updated, ex.id)
+            val sId = updated.serverId ?: return enqueue("update", updated, ex.id)
             val resp = apiService.updateNote("Bearer $token", sId, NoteRequest(title, content, isPrivate, tags))
             if (resp.success) { noteDao.upsert(updated.copy(syncPending = false)); Result.success(updated.copy(syncPending = false)) }
-            else enqueue("update", updated, localId)
-        } catch (e: Exception) { enqueue("update", updated, localId) }
+            else enqueue("update", updated, ex.id)
+        } catch (e: Exception) { enqueue("update", updated, ex.id) }
     }
 
-    suspend fun deleteNote(localId: Int): Result<Unit> {
-        val ex = noteDao.getNoteById(localId) ?: return Result.success(Unit)
+    suspend fun deleteNote(serverId: Int): Result<Unit> {
+        val ex = noteDao.getByServerId(serverId) ?: noteDao.getNoteById(serverId)
+                 ?: return Result.success(Unit)
         val sd = ex.copy(deletedAt = System.currentTimeMillis(), syncPending = true)
         noteDao.upsert(sd)
         return try {
-            val token = authRepository.getToken() ?: return enqueueDelete(sd, localId)
-            val sId = sd.serverId ?: return enqueueDelete(sd, localId)
+            val token = authRepository.getToken() ?: return enqueueDelete(sd, ex.id)
+            val sId = sd.serverId ?: return enqueueDelete(sd, ex.id)
             apiService.deleteNote("Bearer $token", sId)
             noteDao.upsert(sd.copy(syncPending = false)); Result.success(Unit)
-        } catch (e: Exception) { enqueueDelete(sd, localId) }
+        } catch (e: Exception) { enqueueDelete(sd, ex.id) }
     }
 
     // ─── REST read (for initial load / refresh) ──────────────────────────
@@ -102,6 +104,8 @@ class NoteRepository @Inject constructor(
                     userId = n.userId ?: 0, isPrivate = n.isPrivate ?: false, tags = n.tags ?: "",
                     createdAt = DateUtils.parseIsoTs(n.createdAt),
                     updatedAt = DateUtils.parseIsoTs(n.updatedAt),
+                    displayName = n.displayName,
+                    userAvatar  = n.userAvatar,
                     serverId = n.id, syncPending = false))
             }
         }

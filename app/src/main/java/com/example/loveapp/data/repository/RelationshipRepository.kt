@@ -7,6 +7,7 @@ import com.example.loveapp.data.dao.OutboxDao
 import com.example.loveapp.data.dao.RelationshipInfoDao
 import com.example.loveapp.data.entity.OutboxEntry
 import com.example.loveapp.data.entity.RelationshipInfo
+import com.example.loveapp.utils.DateUtils
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -61,5 +62,28 @@ class RelationshipRepository @Inject constructor(
                 payload = gson.toJson(request), localId = 0, serverId = null))
             Result.failure(e)
         }
+    }
+
+    suspend fun refreshFromServer() {
+        val token = authRepository.getToken() ?: return
+        try {
+            val resp = apiService.getRelationship("Bearer $token")
+            if (resp.success && resp.data != null) {
+                val d = resp.data
+                val ex = relationshipDao.getAllRelationshipInfo().firstOrNull()
+                relationshipDao.upsert(RelationshipInfo(
+                    id = ex?.id ?: 0,
+                    relationshipStartDate = DateUtils.parseIsoTs(d.relationshipStartDate),
+                    firstKissDate = d.firstKissDate?.let { DateUtils.parseIsoTs(it) },
+                    anniversaryDate = d.anniversaryDate?.let { DateUtils.parseIsoTs(it) },
+                    userId1 = d.userId1,
+                    userId2 = d.userId2,
+                    nickname1 = d.nickname1,
+                    nickname2 = d.nickname2,
+                    serverId = d.id,
+                    syncPending = false
+                ))
+            }
+        } catch (_: Exception) {}
     }
 }

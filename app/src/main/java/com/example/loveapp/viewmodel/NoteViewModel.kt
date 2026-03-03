@@ -2,13 +2,14 @@ package com.example.loveapp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.loveapp.data.api.models.NoteRequest
 import com.example.loveapp.data.api.models.NoteResponse
 import com.example.loveapp.data.repository.NoteRepository
+import com.example.loveapp.utils.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -36,25 +37,42 @@ class NoteViewModel @Inject constructor(
     val currentUserId: StateFlow<Int?> = _currentUserId.asStateFlow()
 
     init {
-        loadNotes()
+        // Observe Room — instantly shows cached data, auto-updates when server sync writes new rows
+        viewModelScope.launch {
+            noteRepository.observeAllNotes()
+                .map { list ->
+                    list.filter { it.deletedAt == null }
+                        .sortedByDescending { it.updatedAt }
+                        .map { note ->
+                            NoteResponse(
+                                id          = note.serverId ?: note.id,
+                                title       = note.title,
+                                content     = note.content,
+                                userId      = note.userId,
+                                createdAt   = DateUtils.timestampToDateString(note.createdAt),
+                                updatedAt   = DateUtils.timestampToDateString(note.updatedAt),
+                                isPrivate   = note.isPrivate,
+                                tags        = note.tags,
+                                displayName = note.displayName,
+                                userAvatar  = note.userAvatar
+                            )
+                        }
+                }
+                .collect { _notes.value = it }
+        }
         viewModelScope.launch {
             _currentUserId.value = noteRepository.getCurrentUserId()
         }
+        // Pull fresh data from server in the background; Room flow updates the UI automatically
+        viewModelScope.launch { noteRepository.refreshFromServer() }
     }
 
+    /** Triggers a background pull from server; Room flow updates the list automatically. */
     fun loadNotes() {
         viewModelScope.launch {
             _isLoading.value = true
-            _errorMessage.value = null
-            
-            val result = noteRepository.getNotes(1)
-            result.onSuccess { noteList ->
-                _notes.value = noteList
-                _isLoading.value = false
-            }.onFailure { error ->
-                _errorMessage.value = error.message ?: "Failed to load notes"
-                _isLoading.value = false
-            }
+            noteRepository.refreshFromServer()
+            _isLoading.value = false
         }
     }
 
@@ -90,7 +108,7 @@ class NoteViewModel @Inject constructor(
             result.onSuccess {
                 _successMessage.value = "Note created successfully"
                 _isLoading.value = false
-                loadNotes()
+                // Room flow auto-updates the list
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Failed to create note"
                 _isLoading.value = false
@@ -103,18 +121,12 @@ class NoteViewModel @Inject constructor(
             _isLoading.value = true
             _errorMessage.value = null
             
-            val noteRequest = NoteRequest(
-                title = title,
-                content = content,
-                isPrivate = isPrivate
-            )
-            
-            val result = noteRepository.updateNote(id, noteRequest.title, noteRequest.content, noteRequest.isPrivate, noteRequest.tags)
+            val result = noteRepository.updateNote(id, title, content, isPrivate, "")
             
             result.onSuccess {
                 _successMessage.value = "Note updated successfully"
                 _isLoading.value = false
-                loadNotes()
+                // Room flow auto-updates the list
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Failed to update note"
                 _isLoading.value = false
@@ -130,9 +142,9 @@ class NoteViewModel @Inject constructor(
             val result = noteRepository.deleteNote(id)
             
             result.onSuccess {
-                _notes.value = _notes.value.filter { it.id != id }
                 _successMessage.value = "Note deleted successfully"
                 _isLoading.value = false
+                // Room flow auto-updates the list
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Failed to delete note"
                 _isLoading.value = false

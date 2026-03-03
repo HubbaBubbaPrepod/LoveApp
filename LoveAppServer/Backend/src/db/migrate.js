@@ -207,6 +207,15 @@ const migrations = [
      created_at    TIMESTAMPTZ  DEFAULT NOW()
    )`,
 
+  // ── Canvas strokes (persisted drawing data) ───────────────────────────────
+  `CREATE TABLE IF NOT EXISTS canvas_strokes (
+     id           BIGSERIAL    PRIMARY KEY,
+     canvas_id    INTEGER      NOT NULL REFERENCES art_canvases(id) ON DELETE CASCADE,
+     strokes_json TEXT         NOT NULL DEFAULT '[]',
+     updated_at   TIMESTAMPTZ  DEFAULT NOW(),
+     UNIQUE (canvas_id)
+   )`,
+
   // ══════════════════════════════════════════════════════════════════════════
   // INCREMENTAL MIGRATIONS — safe to re-run (ADD COLUMN IF NOT EXISTS)
   // ══════════════════════════════════════════════════════════════════════════
@@ -278,6 +287,7 @@ const migrations = [
   `CREATE INDEX IF NOT EXISTS idx_relationship_user      ON relationship_info(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_relationship_partner   ON relationship_info(partner_user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_art_canvases_couple    ON art_canvases(couple_key)`,
+  `CREATE INDEX IF NOT EXISTS idx_canvas_strokes_canvas  ON canvas_strokes(canvas_id)`,
 ];
 
 async function runMigrations() {

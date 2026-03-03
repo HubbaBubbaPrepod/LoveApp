@@ -16,6 +16,9 @@ data class Note(
     val tags: String = "", // comma-separated tags
     val dueDate: Long? = null,
     val imageUrl: String? = null,
+    // ── Display metadata (populated from server response) ───
+    val displayName: String? = null,
+    val userAvatar: String? = null,
     // ── Sync metadata ──────────────────────────────────────
     val serverId: Int? = null,          // server-assigned ID after first sync
     val syncPending: Boolean = true,    // true = not yet confirmed by server

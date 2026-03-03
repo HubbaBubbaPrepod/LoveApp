@@ -33,7 +33,8 @@ import javax.inject.Singleton
 class SyncManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val webSocketManager: WebSocketManager,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    private val dataPreloadManager: DataPreloadManager
 ) {
     companion object {
         private const val TAG = "SyncManager"
@@ -92,6 +93,9 @@ class SyncManager @Inject constructor(
         // Periodic background sync (15-minute cadence, survives process kill)
         SyncWorker.schedulePeriodicSync(context)
 
+        // Preload all repository caches so every screen opens with data already in Room
+        scope.launch { dataPreloadManager.preloadAll() }
+
         Log.i(TAG, "SyncManager initialised")
     }
 
@@ -99,6 +103,7 @@ class SyncManager @Inject constructor(
     fun onLogin() {
         webSocketManager.reconnectWithNewToken()
         SyncWorker.scheduleImmediateSync(context)
+        scope.launch { dataPreloadManager.preloadAll() }
     }
 
     /** Call after logout to tear down the connection. */

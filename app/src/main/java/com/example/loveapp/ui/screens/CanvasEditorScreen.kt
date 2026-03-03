@@ -1,7 +1,7 @@
 package com.example.loveapp.ui.screens
 
 import android.graphics.Bitmap
-import android.graphics.Picture
+import android.graphics.Paint as AndroidPaint
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -18,20 +18,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.loveapp.viewmodel.ArtViewModel
 import com.example.loveapp.viewmodel.DrawPath
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.ui.input.pointer.consumeAllChanges
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 
 val ART_PALETTE = listOf(
     Color.Black,
@@ -65,8 +66,7 @@ fun CanvasEditorScreen(
     val activeCanvas     by viewModel.activeCanvas.collectAsState()
 
     var showToolbar by remember { mutableStateOf(true) }
-
-    val picture = remember { Picture() }
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
     // Open the canvas when we land on this screen
     val canvases by viewModel.canvases.collectAsState()
@@ -79,8 +79,31 @@ fun CanvasEditorScreen(
 
     fun captureAndExit() {
         scope.launch {
-            val bm = pictureToAndroidBitmap(picture)
-            if (bm != null) viewModel.saveSnapshot(bm)
+            val w = canvasSize.width
+            val h = canvasSize.height
+            if (w > 0 && h > 0) {
+                val bm = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                val androidCanvas = android.graphics.Canvas(bm)
+                androidCanvas.drawColor(android.graphics.Color.WHITE)
+                val paint = AndroidPaint().apply {
+                    isAntiAlias = true
+                    style = AndroidPaint.Style.STROKE
+                    strokeCap = AndroidPaint.Cap.ROUND
+                    strokeJoin = AndroidPaint.Join.ROUND
+                }
+                viewModel.strokes.value.forEach { dp ->
+                    paint.color = dp.color.toArgb()
+                    paint.strokeWidth = dp.strokeWidth
+                    androidCanvas.drawPath(dp.path.asAndroidPath(), paint)
+                }
+                // Save strokes and thumbnail in parallel
+                kotlinx.coroutines.coroutineScope {
+                    val strokesJob = launch { viewModel.saveCurrentStrokes() }
+                    val thumbnailJob = launch { viewModel.saveSnapshot(bm) }
+                    strokesJob.join()
+                    thumbnailJob.join()
+                }
+            }
             viewModel.closeCanvas()
             onNavigateBack()
         }
@@ -97,27 +120,30 @@ fun CanvasEditorScreen(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
+                .onSizeChanged { canvasSize = it }
                 .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = { offset ->
-                            viewModel.strokeStart(offset.x, offset.y)
-                        },
-                        onDrag = { change, _ ->
-                            change.consumeAllChanges()
-                            viewModel.strokeMove(change.position.x, change.position.y)
-                        },
-                        onDragEnd = { viewModel.strokeEnd() },
-                        onDragCancel = { viewModel.strokeEnd() }
-                    )
-                }
-                .drawWithContent {
-                    val pictureCanvas = picture.beginRecording(
-                        size.width.toInt(), size.height.toInt()
-                    )
-                    // draw background
-                    pictureCanvas.drawColor(android.graphics.Color.WHITE)
-                    drawContent()
-                    picture.endRecording()
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var didDrag = false
+                        val touchSlop = viewConfiguration.touchSlop
+                        do {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!didDrag) {
+                                val delta = change.position - down.position
+                                if (delta.getDistance() > touchSlop) {
+                                    didDrag = true
+                                    viewModel.strokeStart(down.position.x, down.position.y)
+                                }
+                            }
+                            if (didDrag) {
+                                change.consume()
+                                viewModel.strokeMove(change.position.x, change.position.y)
+                            }
+                        } while (event.changes.any { it.pressed })
+                        if (didDrag) viewModel.strokeEnd()
+                        else showToolbar = !showToolbar
+                    }
                 }
         ) {
             // committed strokes
@@ -157,16 +183,6 @@ fun CanvasEditorScreen(
                 )
             }
         }
-
-        // Toolbar toggle tap
-        Box(
-            Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                    indication = null
-                ) { showToolbar = !showToolbar }
-        )
 
         // ── Canvas title ───────────────────────────────────────────────────
         if (showToolbar) {
@@ -299,13 +315,4 @@ private fun SmallToolButton(
     }
 }
 
-private fun pictureToAndroidBitmap(picture: Picture): Bitmap? {
-    return try {
-        val bm = Bitmap.createBitmap(picture.width, picture.height, Bitmap.Config.ARGB_8888)
-        val canvas = android.graphics.Canvas(bm)
-        picture.draw(canvas)
-        bm
-    } catch (e: Exception) {
-        null
-    }
-}
+

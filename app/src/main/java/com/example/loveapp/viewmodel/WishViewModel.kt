@@ -6,10 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.loveapp.data.api.models.WishRequest
 import com.example.loveapp.data.api.models.WishResponse
 import com.example.loveapp.data.repository.WishRepository
+import com.example.loveapp.utils.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -40,24 +42,45 @@ class WishViewModel @Inject constructor(
     val currentUserId: StateFlow<Int?> = _currentUserId.asStateFlow()
 
     init {
-        loadWishes()
+        // Observe Room — instantly shows cached data, auto-updates when server sync writes new rows
+        viewModelScope.launch {
+            wishRepository.observeAllWishes()
+                .map { list ->
+                    list.filter { it.deletedAt == null }
+                        .sortedByDescending { it.createdAt }
+                        .map { wish ->
+                            WishResponse(
+                                id          = wish.serverId ?: wish.id,
+                                title       = wish.title,
+                                description = wish.description,
+                                userId      = wish.userId,
+                                createdAt   = DateUtils.timestampToDateString(wish.createdAt),
+                                isCompleted = wish.isCompleted,
+                                priority    = wish.priority,
+                                category    = wish.category,
+                                isPrivate   = wish.isPrivate,
+                                imageUrls   = wish.imageUrl,
+                                emoji       = wish.emoji,
+                                displayName = wish.displayName,
+                                userAvatar  = wish.userAvatar
+                            )
+                        }
+                }
+                .collect { _wishes.value = it }
+        }
         viewModelScope.launch {
             _currentUserId.value = wishRepository.getCurrentUserId()
         }
+        // Pull fresh data from server in the background; Room flow updates the UI automatically
+        viewModelScope.launch { wishRepository.refreshFromServer() }
     }
 
+    /** Triggers a background pull from server; Room flow updates the list automatically. */
     fun loadWishes() {
         viewModelScope.launch {
             _isLoading.value = true
-            _errorMessage.value = null
-            val result = wishRepository.getWishes()
-            result.onSuccess { wishes ->
-                _wishes.value = wishes
-                _isLoading.value = false
-            }.onFailure { error ->
-                _errorMessage.value = error.message ?: "Failed to load wishes"
-                _isLoading.value = false
-            }
+            wishRepository.refreshFromServer()
+            _isLoading.value = false
         }
     }
 
@@ -99,7 +122,7 @@ class WishViewModel @Inject constructor(
             result.onSuccess {
                 _successMessage.value = "Wish created"
                 _isLoading.value = false
-                loadWishes()
+                // Room flow auto-updates the list
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Failed to create wish"
                 _isLoading.value = false
@@ -131,7 +154,7 @@ class WishViewModel @Inject constructor(
             result.onSuccess {
                 _successMessage.value = "Wish updated"
                 _isLoading.value = false
-                loadWishes()
+                // Room flow auto-updates the list
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Failed to update wish"
                 _isLoading.value = false
@@ -147,7 +170,7 @@ class WishViewModel @Inject constructor(
             result.onSuccess {
                 _successMessage.value = "Wish completed!"
                 _isLoading.value = false
-                loadWishes()
+                // Room flow auto-updates the list
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Failed to complete wish"
                 _isLoading.value = false
@@ -161,9 +184,9 @@ class WishViewModel @Inject constructor(
             _errorMessage.value = null
             val result = wishRepository.deleteWish(id)
             result.onSuccess {
-                _wishes.value = _wishes.value.filter { it.id != id }
                 _successMessage.value = "Wish deleted"
                 _isLoading.value = false
+                // Room flow auto-updates the list
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Failed to delete wish"
                 _isLoading.value = false

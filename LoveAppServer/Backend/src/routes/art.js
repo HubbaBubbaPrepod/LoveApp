@@ -103,4 +103,39 @@ router.post('/canvases/:id/thumbnail', authenticateToken, async (req, res) => {
   });
 });
 
+// GET /api/art/canvases/:id/strokes
+router.get('/canvases/:id/strokes', authenticateToken, async (req, res) => {
+  try {
+    const ck = await getCoupleKey(req.userId);
+    const canvas = await pool.query(
+      'SELECT id FROM art_canvases WHERE id=$1 AND couple_key=$2', [req.params.id, ck]
+    );
+    if (!canvas.rows.length) return sendResponse(res, false, 'Not found', null, 404);
+    const result = await pool.query(
+      'SELECT strokes_json FROM canvas_strokes WHERE canvas_id=$1', [req.params.id]
+    );
+    sendResponse(res, true, 'OK', { strokes: result.rows[0]?.strokes_json ?? '[]' });
+  } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
+});
+
+// PUT /api/art/canvases/:id/strokes
+router.put('/canvases/:id/strokes', authenticateToken, async (req, res) => {
+  try {
+    const { strokes } = req.body;
+    if (typeof strokes !== 'string') return sendResponse(res, false, 'strokes must be a JSON string', null, 400);
+    const ck = await getCoupleKey(req.userId);
+    const canvas = await pool.query(
+      'SELECT id FROM art_canvases WHERE id=$1 AND couple_key=$2', [req.params.id, ck]
+    );
+    if (!canvas.rows.length) return sendResponse(res, false, 'Not found', null, 404);
+    await pool.query(
+      `INSERT INTO canvas_strokes (canvas_id, strokes_json, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (canvas_id) DO UPDATE SET strokes_json=$2, updated_at=NOW()`,
+      [req.params.id, strokes]
+    );
+    sendResponse(res, true, 'Strokes saved');
+  } catch (err) { sendResponse(res, false, 'Server error', null, 500); }
+});
+
 module.exports = router;

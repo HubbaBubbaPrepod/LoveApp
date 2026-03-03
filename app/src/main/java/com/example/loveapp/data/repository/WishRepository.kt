@@ -71,44 +71,48 @@ class WishRepository @Inject constructor(
         else Result.failure(Exception(response.message ?: "Failed to get wishes"))
     } catch (e: Exception) { Result.failure(e) }
 
-    suspend fun updateWish(localId: Int, wish: WishRequest): Result<Wish> {
-        val ex = wishDao.getWishById(localId) ?: return Result.failure(Exception("Not found"))
+    suspend fun updateWish(serverId: Int, wish: WishRequest): Result<Wish> {
+        val ex = wishDao.getByServerId(serverId) ?: wishDao.getWishById(serverId)
+                 ?: return Result.failure(Exception("Wish not found"))
         val updated = ex.copy(title = wish.title ?: ex.title, description = wish.description ?: ex.description,
             priority = wish.priority ?: ex.priority, category = wish.category ?: ex.category,
+            isPrivate = wish.isPrivate, emoji = wish.emoji,
             syncPending = true)
         wishDao.upsert(updated)
         return try {
-            val token = authRepository.getToken() ?: return enqueue("update", updated, localId)
-            val sId = updated.serverId ?: return enqueue("update", updated, localId)
+            val token = authRepository.getToken() ?: return enqueue("update", updated, ex.id)
+            val sId = updated.serverId ?: return enqueue("update", updated, ex.id)
             val resp = apiService.updateWish("Bearer $token", sId, wish)
             if (resp.success) { wishDao.upsert(updated.copy(syncPending = false)); Result.success(updated.copy(syncPending = false)) }
-            else enqueue("update", updated, localId)
-        } catch (e: Exception) { enqueue("update", updated, localId) }
+            else enqueue("update", updated, ex.id)
+        } catch (e: Exception) { enqueue("update", updated, ex.id) }
     }
 
-    suspend fun completeWish(localId: Int): Result<Wish> {
-        val ex = wishDao.getWishById(localId) ?: return Result.failure(Exception("Not found"))
+    suspend fun completeWish(serverId: Int): Result<Wish> {
+        val ex = wishDao.getByServerId(serverId) ?: wishDao.getWishById(serverId)
+                 ?: return Result.failure(Exception("Wish not found"))
         val updated = ex.copy(isCompleted = true, syncPending = true)
         wishDao.upsert(updated)
         return try {
-            val token = authRepository.getToken() ?: return enqueue("complete", updated, localId)
-            val sId = updated.serverId ?: return enqueue("complete", updated, localId)
+            val token = authRepository.getToken() ?: return enqueue("complete", updated, ex.id)
+            val sId = updated.serverId ?: return enqueue("complete", updated, ex.id)
             val resp = apiService.completeWish("Bearer $token", sId)
             if (resp.success) { wishDao.upsert(updated.copy(syncPending = false)); Result.success(updated.copy(syncPending = false)) }
-            else enqueue("complete", updated, localId)
-        } catch (e: Exception) { enqueue("complete", updated, localId) }
+            else enqueue("complete", updated, ex.id)
+        } catch (e: Exception) { enqueue("complete", updated, ex.id) }
     }
 
-    suspend fun deleteWish(localId: Int): Result<Unit> {
-        val ex = wishDao.getWishById(localId) ?: return Result.success(Unit)
+    suspend fun deleteWish(serverId: Int): Result<Unit> {
+        val ex = wishDao.getByServerId(serverId) ?: wishDao.getWishById(serverId)
+                 ?: return Result.success(Unit)
         val sd = ex.copy(deletedAt = System.currentTimeMillis(), syncPending = true)
         wishDao.upsert(sd)
         return try {
-            val token = authRepository.getToken() ?: return enqueueDelete(sd, localId)
-            val sId = sd.serverId ?: return enqueueDelete(sd, localId)
+            val token = authRepository.getToken() ?: return enqueueDelete(sd, ex.id)
+            val sId = sd.serverId ?: return enqueueDelete(sd, ex.id)
             apiService.deleteWish("Bearer $token", sId)
             wishDao.upsert(sd.copy(syncPending = false)); Result.success(Unit)
-        } catch (e: Exception) { enqueueDelete(sd, localId) }
+        } catch (e: Exception) { enqueueDelete(sd, ex.id) }
     }
 
     suspend fun getWishById(id: Int): Result<WishResponse> = try {
@@ -129,6 +133,11 @@ class WishRepository @Inject constructor(
                     category = w.category ?: "", isCompleted = w.isCompleted ?: false,
                     userId = w.userId ?: 0,
                     createdAt = DateUtils.parseIsoTs(w.createdAt),
+                    isPrivate = w.isPrivate,
+                    emoji = w.emoji,
+                    displayName = w.displayName,
+                    userAvatar = w.userAvatar,
+                    imageUrl = w.imageUrls,
                     serverId = w.id, syncPending = false))
             }
         }

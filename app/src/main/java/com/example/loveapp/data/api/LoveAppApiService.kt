@@ -4,6 +4,8 @@ import com.example.loveapp.data.api.models.ArtCanvasRequest
 import com.example.loveapp.data.api.models.ArtCanvasResponse
 import com.example.loveapp.data.api.models.ArtCanvasThumbnailResponse
 import com.example.loveapp.data.api.models.ArtCanvasUpdateRequest
+import com.example.loveapp.data.api.models.CanvasStrokesResponse
+import com.example.loveapp.data.api.models.CanvasStrokesSaveRequest
 import com.example.loveapp.data.api.models.AvatarUploadResponse
 import com.example.loveapp.data.api.models.ActivityRequest
 import com.example.loveapp.data.api.models.ActivityResponse
@@ -421,4 +423,17 @@ interface LoveAppApiService {
         @Path("id") id: Int,
         @Part thumbnail: MultipartBody.Part
     ): ApiResponse<ArtCanvasThumbnailResponse>
+
+    @GET("art/canvases/{id}/strokes")
+    suspend fun getCanvasStrokes(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): ApiResponse<CanvasStrokesResponse>
+
+    @PUT("art/canvases/{id}/strokes")
+    suspend fun saveCanvasStrokes(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int,
+        @Body request: CanvasStrokesSaveRequest
+    ): ApiResponse<Any?>
 }

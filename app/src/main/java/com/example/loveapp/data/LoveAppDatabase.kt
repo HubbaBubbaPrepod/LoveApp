@@ -40,7 +40,7 @@ import com.example.loveapp.data.entity.Wish
         RelationshipInfo::class,
         OutboxEntry::class          // offline sync queue
     ],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 abstract class LoveAppDatabase : RoomDatabase() {
@@ -109,6 +109,56 @@ abstract class LoveAppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration 3 → 4:
+         *  Recreates the outbox table without SQLite DEFAULT clauses and without the
+         *  extra index. The previous migration created DEFAULT 0 / DEFAULT NULL and an
+         *  index that Room's schema validator does not expect (Room manages Kotlin-level
+         *  defaults itself), causing an IllegalStateException on every DB open.
+         *  Data is preserved via INSERT INTO ... SELECT.
+         */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP INDEX IF EXISTS index_outbox_entity")
+                db.execSQL("ALTER TABLE outbox RENAME TO outbox_old")
+                db.execSQL("""
+                    CREATE TABLE outbox (
+                        id         INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        entityType TEXT    NOT NULL,
+                        action     TEXT    NOT NULL,
+                        payload    TEXT    NOT NULL,
+                        localId    INTEGER NOT NULL,
+                        serverId   INTEGER,
+                        createdAt  INTEGER NOT NULL,
+                        retryCount INTEGER NOT NULL,
+                        retryAfter INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    INSERT INTO outbox (id, entityType, action, payload, localId, serverId, createdAt, retryCount, retryAfter)
+                    SELECT              id, entityType, action, payload, localId, serverId, createdAt, retryCount, retryAfter
+                    FROM outbox_old
+                """.trimIndent())
+                db.execSQL("DROP TABLE outbox_old")
+            }
+        }
+
+        /**
+         * Migration 4 → 5:
+         *  Adds displayName / userAvatar to notes (partner display in tile).
+         *  Adds isPrivate, emoji, displayName, userAvatar to wishes.
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notes ADD COLUMN displayName TEXT")
+                db.execSQL("ALTER TABLE notes ADD COLUMN userAvatar TEXT")
+                db.execSQL("ALTER TABLE wishes ADD COLUMN isPrivate INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE wishes ADD COLUMN emoji TEXT")
+                db.execSQL("ALTER TABLE wishes ADD COLUMN displayName TEXT")
+                db.execSQL("ALTER TABLE wishes ADD COLUMN userAvatar TEXT")
+            }
+        }
+
         fun getDatabase(context: Context): LoveAppDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -116,7 +166,7 @@ abstract class LoveAppDatabase : RoomDatabase() {
                     LoveAppDatabase::class.java,
                     "loveapp_database"
                 )
-                    .addMigrations(MIGRATION_2_3)
+                    .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .fallbackToDestructiveMigration() // safety net for dev builds
                     .build()
                     .also { Instance = it }

@@ -419,3 +419,23 @@ data class ArtCanvasThumbnailResponse(
     @SerializedName("updated_at")
     val updatedAt: String = ""
 )
+
+// Stroke persistence models
+data class CanvasStrokesResponse(
+    val strokes: String   // JSON-encoded array of SavedStroke
+)
+
+data class CanvasStrokesSaveRequest(
+    val strokes: String   // JSON-encoded array of SavedStroke
+)
+
+/** Mirror of DrawPoint for JSON serialization (no Compose dependency). */
+data class SavedDrawPoint(val x: Float, val y: Float)
+
+/** Serializable representation of one DrawPath stroke. */
+data class SavedStroke(
+    val color: String,          // hex e.g. "#FF0000"
+    val strokeWidth: Float,
+    val isFromPartner: Boolean,
+    val points: List<SavedDrawPoint>
+)

@@ -12,6 +12,8 @@ const authProvider = {
       const res = await axios.post('/api/admin/login', { username, password })
       const { token, username: user } = res.data.data
       store.dispatch(loginSuccess({ token, username: user }))
+      localStorage.setItem(TOKEN_KEY, token)
+      localStorage.setItem('loveapp_admin_user', user)
       return Promise.resolve()
     } catch (err) {
       const msg = err.response?.data?.message || 'Invalid credentials'
@@ -22,6 +24,8 @@ const authProvider = {
 
   logout: () => {
     store.dispatch(logout())
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem('loveapp_admin_user')
     return Promise.resolve()
   },
 

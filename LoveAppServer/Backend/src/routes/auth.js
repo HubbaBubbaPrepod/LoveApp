@@ -187,8 +187,8 @@ router.post('/google', async (req, res) => {
     const { id_token } = req.body;
     if (!id_token) return sendResponse(res, false, 'id_token is required', null, 400);
 
-    const GOOGLE_WEB_CLIENT_ID     = '833288193423-pdau5bt5ffa4tjvioss2tut96s8frkd1.apps.googleusercontent.com';
-    const GOOGLE_ANDROID_CLIENT_ID = '833288193423-obc5cifc5109pifdcou1cp4s6p01emab.apps.googleusercontent.com';
+    const GOOGLE_WEB_CLIENT_ID     = process.env.GOOGLE_WEB_CLIENT_ID     || '833288193423-pdau5bt5ffa4tjvioss2tut96s8frkd1.apps.googleusercontent.com';
+    const GOOGLE_ANDROID_CLIENT_ID = process.env.GOOGLE_ANDROID_CLIENT_ID || '833288193423-obc5cifc5109pifdcou1cp4s6p01emab.apps.googleusercontent.com';
 
     const tokenInfoRes = await fetch(
       `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(id_token)}`

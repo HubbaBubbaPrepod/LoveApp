@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.URI
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,12 +31,10 @@ class ArtSocketManager @Inject constructor() {
     fun connect(token: String) {
         if (socket?.connected() == true) return
         try {
-            val opts = IO.Options.builder()
-                .setExtraHeaders(mapOf("Authorization" to listOf("Bearer $token")))
-                .build()
-            // Pass token via auth so the server middleware can read it
-            // socket.io-client Java passes auth via query or options - use query
-            socket = IO.socket(URI.create("https://love-app.ru?token=$token"), opts)
+            val opts = IO.Options().apply {
+                extraHeaders = mapOf("Authorization" to listOf("Bearer $token"))
+            }
+            socket = IO.socket("https://love-app.ru?token=$token", opts)
             socket?.connect()
         } catch (e: Exception) {
             e.printStackTrace()

@@ -21,8 +21,8 @@ class SimpleApplication : Application(), Configuration.Provider {
     @Inject lateinit var syncManager: SyncManager
 
     /** Provide Hilt-aware WorkerFactory so @HiltWorker classes are injected correctly. */
-    override fun getWorkManagerConfiguration(): Configuration =
-        Configuration.Builder()
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
             .build()
 

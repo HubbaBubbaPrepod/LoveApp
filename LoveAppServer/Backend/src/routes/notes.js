@@ -3,21 +3,9 @@ const express = require('express');
 const pool = require('../config/db');
 const { authenticateToken } = require('../utils/auth');
 const { sendResponse } = require('../utils/response');
-const { publish } = require('../config/redis');
+const { getPartnerId, buildCoupleKey, broadcastChange } = require('../utils/couple');
 
 const router = express.Router();
-
-/** Broadcast a data-change event for the couple (used by REST endpoints too) */
-async function broadcastChange(io, coupleKey, senderId, entityType, action, data) {
-  if (!io) return;
-  const payload = {
-    entityType, action, data,
-    serverTimestamp: data?.server_updated_at?.toISOString?.() || new Date().toISOString(),
-    senderId,
-  };
-  io.to(`couple:${coupleKey}`).except(String(senderId)).emit('data-change', payload);
-  await publish('loveapp:data-changes', { coupleKey, senderId: String(senderId), payload });
-}
 
 function parseTags(tags) {
   if (!tags || tags === '') return [];
@@ -28,13 +16,6 @@ function parseTags(tags) {
 function formatNote(row) {
   if (!row) return row;
   return { ...row, tags: Array.isArray(row.tags) ? row.tags.join(',') : (row.tags || '') };
-}
-
-async function getPartnerId(userId) {
-  const r = await pool.query(
-    'SELECT partner_user_id FROM relationship_info WHERE user_id = $1 LIMIT 1', [userId]
-  );
-  return r.rows[0]?.partner_user_id || null;
 }
 
 // POST /api/notes
@@ -49,10 +30,7 @@ router.post('/', authenticateToken, async (req, res) => {
     );
     const row = formatNote(result.rows[0]);
     const partnerId = await getPartnerId(req.userId);
-    const coupleKey = partnerId
-      ? `${Math.min(req.userId, partnerId)}_${Math.max(req.userId, partnerId)}`
-      : `solo_${req.userId}`;
-    await broadcastChange(req.app.get('io'), coupleKey, req.userId, 'note', 'create', row);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, partnerId), req.userId, 'note', 'create', row);
     sendResponse(res, true, 'Note created', row, 201);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
@@ -129,10 +107,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     if (!result.rows.length) return sendResponse(res, false, 'Note not found', null, 404);
     const row = formatNote(result.rows[0]);
     const partnerId = await getPartnerId(req.userId);
-    const coupleKey = partnerId
-      ? `${Math.min(req.userId, partnerId)}_${Math.max(req.userId, partnerId)}`
-      : `solo_${req.userId}`;
-    await broadcastChange(req.app.get('io'), coupleKey, req.userId, 'note', 'update', row);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, partnerId), req.userId, 'note', 'update', row);
     sendResponse(res, true, 'Note updated', row);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
@@ -147,13 +122,9 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     );
     if (!result.rows.length) return sendResponse(res, false, 'Note not found', null, 404);
     const partnerId = await getPartnerId(req.userId);
-    const coupleKey = partnerId
-      ? `${Math.min(req.userId, partnerId)}_${Math.max(req.userId, partnerId)}`
-      : `solo_${req.userId}`;
-    await broadcastChange(req.app.get('io'), coupleKey, req.userId, 'note', 'delete', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, partnerId), req.userId, 'note', 'delete', result.rows[0]);
     sendResponse(res, true, 'Note deleted');
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
 
 module.exports = router;
-module.exports.broadcastChange = broadcastChange;

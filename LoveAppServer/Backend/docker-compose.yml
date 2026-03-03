@@ -5,8 +5,9 @@ services:
     build: .
     container_name: loveapp-api
     restart: unless-stopped
-    ports:
-      - "3005:3005"
+    # Port NOT exposed publicly — traffic goes through nginx only
+    # ports:
+    #   - "3005:3005"
     env_file:
       - .env
     environment:
@@ -25,8 +26,6 @@ services:
     container_name: loveapp-redis
     restart: unless-stopped
     command: redis-server --save 60 1 --loglevel warning
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -34,6 +33,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    sysctls:
+      net.core.somaxconn: 1024
     networks:
       - loveapp_net
 
@@ -56,10 +57,9 @@ services:
     image: grafana/grafana:latest
     container_name: loveapp-grafana
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_SERVER_ROOT_URL: https://love-app.ru:3000
     volumes:
       - grafana_data:/var/lib/grafana
     networks:
@@ -74,6 +74,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "3000:3000"
+      - "9000:9000"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
@@ -81,6 +83,28 @@ services:
       - uploads_data:/var/www/loveapp/uploads:ro
     depends_on:
       - api
+      - frontend
+    networks:
+      - loveapp_net
+
+  frontend:
+    build:
+      context: ../Frontend
+      dockerfile: Dockerfile
+    container_name: loveapp-frontend
+    restart: unless-stopped
+    networks:
+      - loveapp_net
+    depends_on:
+      - api
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: loveapp-portainer
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
     networks:
       - loveapp_net
 
@@ -90,6 +114,7 @@ volumes:
   logs_data:
   prometheus_data:
   grafana_data:
+  portainer_data:
 
 networks:
   loveapp_net:

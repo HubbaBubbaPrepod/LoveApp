@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -190,7 +191,7 @@ fun CanvasEditorScreen(
                     .padding(start = 8.dp, top = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SmallToolButton(Icons.Default.ArrowBack, "Назад") { captureAndExit() }
+                SmallToolButton(Icons.AutoMirrored.Filled.ArrowBack, "Назад") { captureAndExit() }
                 Spacer(Modifier.width(4.dp))
                 SmallToolButton(Icons.Default.Undo, "Отменить") { viewModel.undo() }
                 SmallToolButton(Icons.Default.Redo, "Повторить") { viewModel.redo() }

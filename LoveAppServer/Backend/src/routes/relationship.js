@@ -3,14 +3,10 @@ const express = require('express');
 const pool = require('../config/db');
 const { authenticateToken } = require('../utils/auth');
 const { sendResponse } = require('../utils/response');
-const { broadcastChange } = require('./notes');
+const { buildCoupleKey, broadcastChange } = require('../utils/couple');
 const crypto = require('crypto');
 
 const router = express.Router();
-
-function coupleKey(userId, pid) {
-  return pid ? `${Math.min(userId, pid)}_${Math.max(userId, pid)}` : `solo_${userId}`;
-}
 
 // GET /api/relationship
 router.get('/', authenticateToken, async (req, res) => {
@@ -63,7 +59,7 @@ router.put('/', authenticateToken, async (req, res) => {
 
     const row = full.rows[0] || result.rows[0];
     const pid = row.partner_user_id || null;
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'relationship', 'update', row);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'relationship', 'update', row);
     sendResponse(res, true, 'Relationship updated', row);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
@@ -113,7 +109,7 @@ router.post('/link', authenticateToken, async (req, res) => {
     await pool.query('UPDATE users SET pairing_code=NULL, pairing_code_expires_at=NULL WHERE id=$1', [partner.id]);
 
     // Notify partner of the link
-    const ck = coupleKey(req.userId, partner.id);
+    const ck = buildCoupleKey(req.userId, partner.id);
     await broadcastChange(req.app.get('io'), ck, req.userId, 'relationship', 'update', {
       user_id: req.userId, partner_user_id: partner.id,
     });

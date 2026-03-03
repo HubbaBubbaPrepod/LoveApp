@@ -4,17 +4,10 @@ const pool = require('../config/db');
 const { authenticateToken } = require('../utils/auth');
 const { sendResponse } = require('../utils/response');
 const { sendPushToPartner } = require('../utils/fcm');
-const { broadcastChange } = require('./notes');
+const { getPartnerId, buildCoupleKey, broadcastChange } = require('../utils/couple');
 
 const router = express.Router();
 
-async function getPartnerId(userId) {
-  const r = await pool.query('SELECT partner_user_id FROM relationship_info WHERE user_id=$1 LIMIT 1', [userId]);
-  return r.rows[0]?.partner_user_id || null;
-}
-function coupleKey(userId, pid) {
-  return pid ? `${Math.min(userId, pid)}_${Math.max(userId, pid)}` : `solo_${userId}`;
-}
 function cycleJson(val) {
   if (val == null || val === '') return JSON.stringify({});
   if (typeof val === 'string') return val;
@@ -32,7 +25,7 @@ router.post('/', authenticateToken, async (req, res) => {
        cycleJson(symptoms), cycleJson(mood), notes || '']
     );
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'cycle', 'create', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'cycle', 'create', result.rows[0]);
     sendPushToPartner(req.userId, { type: 'partner_cycle', isNewCycle: true, destination: 'menstrual_calendar' }).catch(() => {});
     sendResponse(res, true, 'Cycle created', result.rows[0], 201);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
@@ -100,7 +93,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     );
     if (!result.rows.length) return sendResponse(res, false, 'Cycle not found', null, 404);
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'cycle', 'update', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'cycle', 'update', result.rows[0]);
     sendResponse(res, true, 'Cycle updated', result.rows[0]);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
@@ -126,7 +119,7 @@ router.patch('/:id', authenticateToken, async (req, res) => {
     const result = await pool.query('SELECT * FROM menstrual_cycles WHERE id=$1 AND user_id=$2', [req.params.id, req.userId]);
     if (!result.rows.length) return sendResponse(res, false, 'Cycle not found', null, 404);
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'cycle', 'update', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'cycle', 'update', result.rows[0]);
     if (symptoms_day !== undefined || mood_day !== undefined) {
       sendPushToPartner(req.userId, { type: 'partner_cycle', isNewCycle: false, destination: 'menstrual_calendar' }).catch(() => {});
     }
@@ -144,7 +137,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     );
     if (!result.rows.length) return sendResponse(res, false, 'Cycle not found', null, 404);
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'cycle', 'delete', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'cycle', 'delete', result.rows[0]);
     sendResponse(res, true, 'Cycle deleted');
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });

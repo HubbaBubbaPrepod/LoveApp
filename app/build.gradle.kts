@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.services)
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.0"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.1.0"
     id("kotlin-kapt")
 }
 
@@ -133,7 +133,6 @@ dependencies {
 
     // Sentry crash reporting
     implementation("io.sentry:sentry-android:7.9.0")
-    implementation("io.sentry:sentry-android-timber:7.9.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

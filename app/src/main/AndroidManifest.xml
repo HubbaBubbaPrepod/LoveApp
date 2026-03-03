@@ -31,12 +31,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.LoveApp">
 
-        <!-- Sentry: replace value with your actual DSN from sentry.io -->
+        <!-- Sentry: DSN for crash reporting. Auto-init disabled — manual init in SimpleApplication -->
         <meta-data
             android:name="io.sentry.dsn"
-            android:value="https://your_key@oXXXXXX.ingest.sentry.io/XXXXXXX" />
-        <meta-data android:name="io.sentry.traces-sample-rate" android:value="0.2" />
-        <meta-data android:name="io.sentry.environment" android:value="production" />
+            android:value="https://503edf5c1972fa711ecf26665acaa789@o4510979258843136.ingest.de.sentry.io/4510979272147024" />
+        <meta-data android:name="io.sentry.auto-init" android:value="false" />
 
         <activity
             android:name=".MainActivity"

@@ -3,7 +3,7 @@ const express = require('express');
 const pool = require('../config/db');
 const { authenticateToken } = require('../utils/auth');
 const { sendResponse } = require('../utils/response');
-const { broadcastChange } = require('./notes');
+const { getPartnerId, buildCoupleKey, broadcastChange } = require('../utils/couple');
 
 const router = express.Router();
 
@@ -11,13 +11,6 @@ function normalizeColor(hex) {
   if (!hex || typeof hex !== 'string') return '#000000';
   const s = hex.trim();
   return (s.startsWith('#') ? s : '#' + s).substring(0, 7);
-}
-async function getPartnerId(userId) {
-  const r = await pool.query('SELECT partner_user_id FROM relationship_info WHERE user_id=$1 LIMIT 1', [userId]);
-  return r.rows[0]?.partner_user_id || null;
-}
-function coupleKey(userId, pid) {
-  return pid ? `${Math.min(userId, pid)}_${Math.max(userId, pid)}` : `solo_${userId}`;
 }
 async function checkCalendarAccess(calendarId, userId) {
   const r = await pool.query(
@@ -41,7 +34,7 @@ router.post('/', authenticateToken, async (req, res) => {
       [req.userId, name || '', description || '', type || 'default', normalizeColor(color_hex)]
     );
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'calendar', 'create', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'calendar', 'create', result.rows[0]);
     sendResponse(res, true, 'Calendar created', result.rows[0], 201);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
@@ -101,7 +94,7 @@ router.delete('/events/:eventId', authenticateToken, async (req, res) => {
     );
     if (!result.rows.length) return sendResponse(res, false, 'Event not found or access denied', null, 404);
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'event', 'delete', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'event', 'delete', result.rows[0]);
     sendResponse(res, true, 'Event deleted', { id: result.rows[0].id });
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
@@ -126,7 +119,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     );
     if (!result.rows.length) return sendResponse(res, false, 'Calendar not found', null, 404);
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'calendar', 'delete', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'calendar', 'delete', result.rows[0]);
     sendResponse(res, true, 'Calendar deleted', { id: result.rows[0].id });
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
@@ -155,7 +148,7 @@ router.post('/:id/events', authenticateToken, async (req, res) => {
       [req.params.id, event_date, title || '', description || '']
     );
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'event', 'create', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'event', 'create', result.rows[0]);
     sendResponse(res, true, 'Event created', result.rows[0], 201);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });

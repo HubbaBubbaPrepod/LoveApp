@@ -4,17 +4,9 @@ const pool = require('../config/db');
 const { authenticateToken } = require('../utils/auth');
 const { sendResponse } = require('../utils/response');
 const { sendPushToPartner } = require('../utils/fcm');
-const { broadcastChange } = require('./notes');
+const { getPartnerId, buildCoupleKey, broadcastChange } = require('../utils/couple');
 
 const router = express.Router();
-
-async function getPartnerId(userId) {
-  const r = await pool.query('SELECT partner_user_id FROM relationship_info WHERE user_id=$1 LIMIT 1', [userId]);
-  return r.rows[0]?.partner_user_id || null;
-}
-function coupleKey(userId, pid) {
-  return pid ? `${Math.min(userId, pid)}_${Math.max(userId, pid)}` : `solo_${userId}`;
-}
 
 // POST /api/moods
 router.post('/', authenticateToken, async (req, res) => {
@@ -29,7 +21,7 @@ router.post('/', authenticateToken, async (req, res) => {
     );
     const row = result.rows[0];
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'mood', 'create', row);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'mood', 'create', row);
     sendPushToPartner(req.userId, { type: 'partner_mood', moodType: mood_type, destination: 'mood_tracker' }).catch(() => {});
     sendResponse(res, true, 'Mood created', row, 201);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
@@ -46,7 +38,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     );
     if (!result.rows.length) return sendResponse(res, false, 'Mood not found', null, 404);
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'mood', 'update', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'mood', 'update', result.rows[0]);
     sendResponse(res, true, 'Mood updated', result.rows[0]);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
@@ -99,6 +91,20 @@ router.get('/', authenticateToken, async (req, res) => {
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
 
+// GET /api/moods/:id
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT me.*, u.display_name, u.profile_image FROM mood_entries me
+       JOIN users u ON me.user_id = u.id
+       WHERE me.id = $1 AND me.user_id = $2 AND me.deleted_at IS NULL`,
+      [req.params.id, req.userId]
+    );
+    if (!result.rows.length) return sendResponse(res, false, 'Mood not found', null, 404);
+    sendResponse(res, true, 'Mood retrieved', result.rows[0]);
+  } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
+});
+
 // DELETE /api/moods/:id – soft delete
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
@@ -109,7 +115,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     );
     if (!result.rows.length) return sendResponse(res, false, 'Mood not found', null, 404);
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'mood', 'delete', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'mood', 'delete', result.rows[0]);
     sendResponse(res, true, 'Mood deleted');
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });

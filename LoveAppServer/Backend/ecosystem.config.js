@@ -11,7 +11,7 @@ module.exports = {
   apps: [
     {
       name:             'loveapp-api',
-      script:           'server.js',
+      script:           'index.js',
 
       // ── Clustering ──────────────────────────────────────────────────
       instances:        'max',       // one process per CPU core

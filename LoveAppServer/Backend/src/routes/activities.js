@@ -4,17 +4,9 @@ const pool = require('../config/db');
 const { authenticateToken } = require('../utils/auth');
 const { sendResponse } = require('../utils/response');
 const { sendPushToPartner } = require('../utils/fcm');
-const { broadcastChange } = require('./notes');
+const { getPartnerId, buildCoupleKey, broadcastChange } = require('../utils/couple');
 
 const router = express.Router();
-
-async function getPartnerId(userId) {
-  const r = await pool.query('SELECT partner_user_id FROM relationship_info WHERE user_id=$1 LIMIT 1', [userId]);
-  return r.rows[0]?.partner_user_id || null;
-}
-function coupleKey(userId, pid) {
-  return pid ? `${Math.min(userId, pid)}_${Math.max(userId, pid)}` : `solo_${userId}`;
-}
 
 const SELECT_ACTIVITY = `SELECT al.id, al.user_id, al.title, al.description,
   al.event_date AS date, al.category, al.activity_type, al.duration_minutes,
@@ -36,7 +28,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const userRes = await pool.query('SELECT display_name FROM users WHERE id=$1', [req.userId]);
     const row = { ...result.rows[0], display_name: userRes.rows[0]?.display_name || '' };
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'activity', 'create', row);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'activity', 'create', row);
     sendPushToPartner(req.userId, { type: 'partner_activity', count: 1, destination: 'activity_feed' }).catch(() => {});
     sendResponse(res, true, 'Activity created', row, 201);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
@@ -87,6 +79,31 @@ router.get('/', authenticateToken, async (req, res) => {
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
 
+// PUT /api/activities/:id
+router.put('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { title, description, date, category, activity_type, duration_minutes, start_time, note } = req.body;
+    const actType = activity_type || category || title || 'other';
+    const result = await pool.query(
+      `UPDATE activity_logs
+       SET title=$1, description=$2, event_date=$3, category=$4, activity_type=$5,
+           duration_minutes=$6, start_time=$7, note=$8, server_updated_at=NOW()
+       WHERE id=$9 AND user_id=$10 AND deleted_at IS NULL
+       RETURNING id, user_id, title, description, event_date AS date, category, activity_type,
+                 duration_minutes, start_time, note, server_updated_at, created_at`,
+      [title || actType, note || description || '', date, actType, actType,
+       parseInt(duration_minutes, 10) || 0, start_time || '', note || description || '',
+       req.params.id, req.userId]
+    );
+    if (!result.rows.length) return sendResponse(res, false, 'Activity not found', null, 404);
+    const userRes = await pool.query('SELECT display_name FROM users WHERE id=$1', [req.userId]);
+    const row = { ...result.rows[0], display_name: userRes.rows[0]?.display_name || '' };
+    const pid = await getPartnerId(req.userId);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'activity', 'update', row);
+    sendResponse(res, true, 'Activity updated', row);
+  } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
+});
+
 // DELETE /api/activities/:id – soft delete
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
@@ -97,7 +114,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     );
     if (!result.rows.length) return sendResponse(res, false, 'Activity not found', null, 404);
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'activity', 'delete', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'activity', 'delete', result.rows[0]);
     sendResponse(res, true, 'Activity deleted');
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });

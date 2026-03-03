@@ -5,9 +5,9 @@ const pg = require('pg');
 pg.types.setTypeParser(1082, (val) => val);
 
 const pool = new pg.Pool({
-  host:     process.env.PGHOST     || '168.222.193.34',
-  user:     process.env.PGUSER     || 'spyuser',
-  password: process.env.PGPASSWORD || '0451',
+  host:     process.env.PGHOST     || 'localhost',
+  user:     process.env.PGUSER     || 'postgres',
+  password: process.env.PGPASSWORD || '',
   database: process.env.PGDATABASE || 'loveapp_db',
   port:     parseInt(process.env.PGPORT || '5432', 10),
   max:      20,

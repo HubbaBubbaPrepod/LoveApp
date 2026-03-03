@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.net.URI
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -92,15 +91,15 @@ class WebSocketManager @Inject constructor(
         }
         _connectionState.value = SocketState.CONNECTING
         try {
-            val opts = IO.Options.builder()
-                .setAuth(mapOf("token" to token))
-                .setReconnection(true)
-                .setReconnectionAttempts(Int.MAX_VALUE)
-                .setReconnectionDelay(1_000)
-                .setReconnectionDelayMax(30_000)
-                .build()
+            val opts = IO.Options().apply {
+                auth = mapOf("token" to token)
+                reconnection = true
+                reconnectionAttempts = Int.MAX_VALUE
+                reconnectionDelay = 1_000L
+                reconnectionDelayMax = 30_000L
+            }
 
-            socket = IO.socket(URI.create(SERVER_URL), opts).also { s ->
+            socket = IO.socket(SERVER_URL, opts).also { s ->
                 s.on(Socket.EVENT_CONNECT)           { onConnect() }
                 s.on(Socket.EVENT_DISCONNECT)         { onDisconnect() }
                 s.on(Socket.EVENT_CONNECT_ERROR)      { args -> onError(args) }

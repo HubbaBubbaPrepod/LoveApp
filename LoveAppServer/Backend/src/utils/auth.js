@@ -19,8 +19,7 @@ async function generateRefreshToken(userId) {
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
   await pool.query(
     `INSERT INTO refresh_tokens (user_id, token, expires_at)
-     VALUES ($1, $2, $3)
-     ON CONFLICT DO NOTHING`,
+     VALUES ($1, $2, $3)`,
     [userId, token, expiresAt]
   );
   return token;

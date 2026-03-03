@@ -4,7 +4,7 @@
 
 require('../instrumentation'); // Sentry must be first
 
-const logger = require('../utils/logger');
+const logger = require('../config/logger');
 
 // Importing the queue file registers the processor immediately
 require('../queues/notificationQueue');

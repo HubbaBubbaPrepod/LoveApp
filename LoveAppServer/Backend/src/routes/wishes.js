@@ -3,22 +3,9 @@ const express = require('express');
 const pool = require('../config/db');
 const { authenticateToken } = require('../utils/auth');
 const { sendResponse } = require('../utils/response');
-const { broadcastChange } = require('./notes'); // reuse helper
+const { getPartnerId, buildCoupleKey, broadcastChange } = require('../utils/couple');
 
 const router = express.Router();
-
-async function getPartnerId(userId) {
-  const r = await pool.query(
-    'SELECT partner_user_id FROM relationship_info WHERE user_id=$1 LIMIT 1', [userId]
-  );
-  return r.rows[0]?.partner_user_id || null;
-}
-
-function coupleKey(userId, partnerId) {
-  return partnerId
-    ? `${Math.min(userId, partnerId)}_${Math.max(userId, partnerId)}`
-    : `solo_${userId}`;
-}
 
 // POST /api/wishes
 router.post('/', authenticateToken, async (req, res) => {
@@ -33,7 +20,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const userRes = await pool.query('SELECT display_name FROM users WHERE id=$1', [req.userId]);
     const row = { ...result.rows[0], display_name: userRes.rows[0]?.display_name || '' };
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'wish', 'create', row);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'wish', 'create', row);
     sendResponse(res, true, 'Wish created', row, 201);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
@@ -106,7 +93,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const userRes = await pool.query('SELECT display_name FROM users WHERE id=$1', [req.userId]);
     const row = { ...result.rows[0], display_name: userRes.rows[0]?.display_name || '' };
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'wish', 'update', row);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'wish', 'update', row);
     sendResponse(res, true, 'Wish updated', row);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
@@ -123,7 +110,7 @@ router.post('/:id/complete', authenticateToken, async (req, res) => {
     const userRes = await pool.query('SELECT display_name FROM users WHERE id=$1', [req.userId]);
     const row = { ...result.rows[0], display_name: userRes.rows[0]?.display_name || '' };
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'wish', 'update', row);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'wish', 'update', row);
     sendResponse(res, true, 'Wish completed', row);
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });
@@ -138,7 +125,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     );
     if (!result.rows.length) return sendResponse(res, false, 'Wish not found', null, 404);
     const pid = await getPartnerId(req.userId);
-    await broadcastChange(req.app.get('io'), coupleKey(req.userId, pid), req.userId, 'wish', 'delete', result.rows[0]);
+    await broadcastChange(req.app.get('io'), buildCoupleKey(req.userId, pid), req.userId, 'wish', 'delete', result.rows[0]);
     sendResponse(res, true, 'Wish deleted');
   } catch (err) { sendResponse(res, false, 'Internal server error', null, 500); }
 });

@@ -7,7 +7,7 @@ const { sendResponse } = require('../utils/response');
 
 const router = express.Router();
 
-const ADMIN_SECRET = process.env.ADMIN_JWT_SECRET || (process.env.JWT_SECRET + '_admin_panel') || 'admin_secret';
+const ADMIN_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET + '_admin_panel';
 
 function generateAdminToken(userId, username) {
   return jwt.sign({ admin: true, userId, username }, ADMIN_SECRET, { expiresIn: '12h' });

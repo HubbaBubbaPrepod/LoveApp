@@ -1,5 +1,6 @@
 // index.js – LoveApp API Server (modular, real-time, Redis-backed)
-// This replaces the monolithic server.js with a clean, scalable architecture.
+// Sentry must be initialised before any other require
+require('./src/instrumentation');
 
 require('dotenv').config();
 const express = require('express');
@@ -55,6 +56,9 @@ async function bootstrap() {
   // 3. Express app
   const app    = express();
   const server = http.createServer(app);
+
+  // Trust nginx reverse proxy — required for express-rate-limit and correct IP detection
+  app.set('trust proxy', 1);
 
   // ── File storage ────────────────────────────────────────────────────────────
   const storagePath = process.env.STORAGE_PATH || path.join(__dirname, 'uploads');

@@ -131,8 +131,8 @@ dependencies {
     implementation("androidx.paging:paging-runtime-ktx:3.3.6")
     implementation("androidx.paging:paging-compose:3.3.6")
 
-    // Sentry crash reporting
-    implementation("io.sentry:sentry-android:7.9.0")
+    // Sentry crash reporting (8.x has 16 KB page-aligned native libs)
+    implementation("io.sentry:sentry-android:8.0.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

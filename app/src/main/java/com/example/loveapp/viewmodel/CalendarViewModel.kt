@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.loveapp.data.api.models.CalendarEventResponse
 import com.example.loveapp.data.api.models.CustomCalendarResponse
+import com.example.loveapp.data.entity.CustomCalendar
 import com.example.loveapp.data.repository.CalendarRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -50,8 +51,36 @@ class CalendarViewModel @Inject constructor(
     val selectedCalendarId: StateFlow<Int?> = _selectedCalendarId.asStateFlow()
 
     init {
-        loadCalendars()
+        // Observe Room — shows preloaded calendars instantly, reacts to WebSocket writes
+        viewModelScope.launch {
+            calendarRepository.observeAllCalendars().collect { entities ->
+                val responses = entities.map { it.toResponse() }
+                _calendars.value = responses
+                // Prefetch events for synced calendars not yet in cache
+                responses.filter { it.id > 0 }.forEach { cal ->
+                    if (_events.value[cal.id] == null) {
+                        launch {
+                            calendarRepository.getCalendarEvents(cal.id).onSuccess { list ->
+                                _events.value = _events.value + (cal.id to list)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
+
+    /** Maps a Room entity to the API response model used by the UI. */
+    private fun CustomCalendar.toResponse() = CustomCalendarResponse(
+        id          = serverId ?: id,
+        name        = name,
+        description = description,
+        type        = type,
+        colorHex    = colorHex,
+        icon        = icon.ifBlank { null },
+        createdAt   = "",
+        userId      = userId,
+    )
 
     //  Load all calendars (mine + partner's) and prefetch their events 
     fun loadCalendars() {
@@ -62,7 +91,6 @@ class CalendarViewModel @Inject constructor(
             val myDeferred      = async { calendarRepository.getCalendars() }
             val partnerDeferred = async { calendarRepository.getPartnerCalendars() }
 
-            // Capture results once — avoid redundant await() calls on same Deferred
             val myResult      = myDeferred.await()
             val partnerResult = partnerDeferred.await()
 

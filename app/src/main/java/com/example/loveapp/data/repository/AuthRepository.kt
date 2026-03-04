@@ -1,5 +1,6 @@
 package com.example.loveapp.data.repository
 
+import com.example.loveapp.data.LoveAppDatabase
 import com.example.loveapp.data.api.LoveAppApiService
 import com.example.loveapp.data.api.models.AuthResponse
 import com.example.loveapp.data.api.models.GoogleSignInRequest
@@ -13,6 +14,8 @@ import com.example.loveapp.notifications.FcmTokenManager
 import com.example.loveapp.utils.TokenManager
 import android.content.Context
 import android.net.Uri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -23,6 +26,7 @@ class AuthRepository @Inject constructor(
     private val userDao: UserDao,
     private val tokenManager: TokenManager,
     private val fcmTokenManager: FcmTokenManager,
+    private val database: LoveAppDatabase,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
 ) {
 
@@ -174,10 +178,9 @@ class AuthRepository @Inject constructor(
 
     suspend fun logout(): Result<Unit> = try {
         tokenManager.clearAll()
-        val currentUser = userDao.getAllUsers().firstOrNull()
-        currentUser?.let {
-            userDao.updateUser(it.copy(isLoggedIn = false))
-        }
+        // Wipe ALL cached data from Room so a subsequent login with a different
+        // account never sees stale rows from the previous session.
+        withContext(Dispatchers.IO) { database.clearAllTables() }
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)

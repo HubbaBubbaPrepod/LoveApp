@@ -74,15 +74,34 @@ class CalendarRepository @Inject constructor(
         } catch (e: Exception) { enqueueCalendar("update", updated, localId) }
     }
 
-    suspend fun deleteCalendar(localId: Int): Result<Unit> {
-        val ex = calendarDao.getCalendarById(localId) ?: return Result.success(Unit)
-        val sd = ex.copy(deletedAt = System.currentTimeMillis(), syncPending = true); calendarDao.upsert(sd)
+    suspend fun deleteCalendar(serverId: Int): Result<Unit> {
+        // _calendars holds CustomCalendarResponse with server IDs, so the caller passes server ID.
+        // Look up the local Room record by server ID, not by local auto-increment ID.
+        val ex = calendarDao.getByServerId(serverId)
+        val localId = ex?.id ?: 0
+
+        // Soft-delete locally so the UI stays consistent
+        if (ex != null) {
+            calendarDao.upsert(ex.copy(deletedAt = System.currentTimeMillis(), syncPending = true))
+        }
+
         return try {
-            val token = authRepository.getToken() ?: return enqueueCalendarDelete(sd, localId)
-            val sId = sd.serverId ?: return enqueueCalendarDelete(sd, localId)
-            apiService.deleteCalendar("Bearer $token", sId)
-            calendarDao.upsert(sd.copy(syncPending = false)); Result.success(Unit)
-        } catch (e: Exception) { enqueueCalendarDelete(sd, localId) }
+            val token = authRepository.getToken() ?: run {
+                val sd = ex ?: return Result.failure(Exception("No token"))
+                return enqueueCalendarDelete(sd.copy(deletedAt = System.currentTimeMillis(), syncPending = true), localId)
+            }
+            val r = apiService.deleteCalendar("Bearer $token", serverId)
+            if (r.success) {
+                // Mark sync done in Room (if we have a local record)
+                if (ex != null) calendarDao.upsert(ex.copy(deletedAt = System.currentTimeMillis(), syncPending = false))
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception(r.message ?: "Delete failed"))
+            }
+        } catch (e: Exception) {
+            val sd = ex?.copy(deletedAt = System.currentTimeMillis(), syncPending = true) ?: return Result.failure(e)
+            enqueueCalendarDelete(sd, localId)
+        }
     }
 
     suspend fun getCalendarEvents(calendarId: Int): Result<List<CalendarEventResponse>> = try {

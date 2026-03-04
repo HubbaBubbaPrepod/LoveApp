@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Preview for MoodDayWidget / medium (3×2) -->
+<!-- Preview for MoodDayWidget medium (3x2) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -7,30 +7,28 @@
     android:background="@drawable/widget_bg_mood"
     android:padding="14dp">
 
-    <!-- Header -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="💭  Настроение сегодня"
+        android:text="&#x1F4AD;  &#1053;&#1072;&#1089;&#1090;&#1088;&#1086;&#1077;&#1085;&#1080;&#1077; &#1089;&#1077;&#1075;&#1086;&#1076;&#1085;&#1103;"
         android:textSize="10sp"
         android:textColor="#FF8E8E93"
-        android:textStyle="bold"/>
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
 
-    <Space android:layout_width="match_parent" android:layout_height="8dp"/>
-
-    <!-- My mood row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:background="@drawable/widget_row_pink"
         android:padding="8dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="6dp">
 
         <TextView
             android:layout_width="58dp"
             android:layout_height="wrap_content"
-            android:text="Я"
+            android:text="&#x042F;"
             android:textSize="10sp"
             android:textColor="#FFFF6B9D"
             android:textStyle="bold"/>
@@ -38,23 +36,19 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="😊"
-            android:textSize="18sp"/>
-
-        <Space android:layout_width="6dp" android:layout_height="wrap_content"/>
+            android:text="&#128522;"
+            android:textSize="18sp"
+            android:layout_marginEnd="6dp"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Хорошо"
+            android:text="&#1061;&#1086;&#1088;&#1086;&#1096;&#1086;"
             android:textSize="12sp"
             android:textColor="#FF30D158"
             android:textStyle="bold"/>
     </LinearLayout>
 
-    <Space android:layout_width="match_parent" android:layout_height="6dp"/>
-
-    <!-- Partner mood row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -66,7 +60,7 @@
         <TextView
             android:layout_width="58dp"
             android:layout_height="wrap_content"
-            android:text="Партнёр"
+            android:text="&#1055;&#1072;&#1088;&#1090;&#1085;&#1105;&#1088;"
             android:textSize="10sp"
             android:textColor="#FF636366"
             android:textStyle="bold"/>
@@ -74,15 +68,14 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="😄"
-            android:textSize="18sp"/>
-
-        <Space android:layout_width="6dp" android:layout_height="wrap_content"/>
+            android:text="&#128516;"
+            android:textSize="18sp"
+            android:layout_marginEnd="6dp"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Отлично"
+            android:text="&#1054;&#1090;&#1083;&#1080;&#1095;&#1085;&#1086;"
             android:textSize="12sp"
             android:textColor="#FFFF375F"
             android:textStyle="bold"/>

@@ -49,4 +49,12 @@ interface MoodEntryDao {
 
     @Query("SELECT * FROM mood_entries WHERE userId = :userId AND deletedAt IS NULL ORDER BY timestamp DESC")
     fun observeMoodsByUser(userId: Int): Flow<List<MoodEntry>>
+
+    /** Reactive: all moods (own + partner) for a given date, used by MoodViewModel to avoid per-screen network calls. */
+    @Query("SELECT * FROM mood_entries WHERE date = :date AND deletedAt IS NULL ORDER BY timestamp DESC")
+    fun observeByDate(date: String): Flow<List<MoodEntry>>
+
+    /** Reactive: moods in a date range (own + partner), used for calendar month view cache. */
+    @Query("SELECT * FROM mood_entries WHERE date >= :startDate AND date <= :endDate AND deletedAt IS NULL ORDER BY date DESC, timestamp DESC")
+    fun observeByDateRange(startDate: String, endDate: String): Flow<List<MoodEntry>>
 }

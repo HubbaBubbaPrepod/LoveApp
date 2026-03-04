@@ -9,7 +9,7 @@ const { getPartnerId, buildCoupleKey, broadcastChange } = require('../utils/coup
 const router = express.Router();
 
 const SELECT_ACTIVITY = `SELECT al.id, al.user_id, al.title, al.description,
-  al.event_date AS date, al.category, al.activity_type, al.duration_minutes,
+  TO_CHAR(al.event_date, 'YYYY-MM-DD') AS date, al.category, al.activity_type, al.duration_minutes,
   al.start_time, al.note, al.server_updated_at, al.deleted_at, al.created_at,
   u.display_name, u.profile_image`;
 
@@ -21,7 +21,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const result = await pool.query(
       `INSERT INTO activity_logs (user_id, title, description, event_date, category, activity_type, duration_minutes, start_time, note, server_updated_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
-       RETURNING id, user_id, title, description, event_date AS date, category, activity_type, duration_minutes, start_time, note, server_updated_at, created_at`,
+       RETURNING id, user_id, title, description, TO_CHAR(event_date, 'YYYY-MM-DD') AS date, category, activity_type, duration_minutes, start_time, note, server_updated_at, created_at`,
       [req.userId, title || actType, note || description || '', date, actType, actType,
        parseInt(duration_minutes, 10) || 0, start_time || '', note || description || '']
     );
@@ -89,7 +89,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
        SET title=$1, description=$2, event_date=$3, category=$4, activity_type=$5,
            duration_minutes=$6, start_time=$7, note=$8, server_updated_at=NOW()
        WHERE id=$9 AND user_id=$10 AND deleted_at IS NULL
-       RETURNING id, user_id, title, description, event_date AS date, category, activity_type,
+       RETURNING id, user_id, title, description, TO_CHAR(event_date, 'YYYY-MM-DD') AS date, category, activity_type,
                  duration_minutes, start_time, note, server_updated_at, created_at`,
       [title || actType, note || description || '', date, actType, actType,
        parseInt(duration_minutes, 10) || 0, start_time || '', note || description || '',

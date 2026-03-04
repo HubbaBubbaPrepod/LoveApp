@@ -117,6 +117,7 @@ class WebSocketManager @Inject constructor(
         socket?.disconnect()
         socket = null
         _connectionState.value = SocketState.DISCONNECTED
+        lastSyncTimestamp = 0L  // Reset so the next login syncs everything from the beginning
     }
 
     /** Re-authenticate with a fresh token after token refresh. */
@@ -308,7 +309,8 @@ class WebSocketManager @Inject constructor(
             title       = j.get("title")?.asString ?: existing?.title ?: "",
             description = j.get("description")?.asString ?: existing?.description ?: "",
             timestamp   = j.get("timestamp")?.asLong ?: existing?.timestamp.orNow(),
-            date        = j.get("date")?.asString ?: existing?.date ?: "",
+            // syncHandler sends "event_date"; REST responses alias it to "date" — support both
+            date        = (j.get("event_date")?.asString ?: j.get("date")?.asString)?.take(10) ?: existing?.date ?: "",
             imageUrls   = j.get("image_urls")?.asString ?: existing?.imageUrls ?: "",
             category    = j.get("category")?.asString ?: existing?.category ?: "",
             photoPath   = if (j.has("photo_path") && !j.get("photo_path").isJsonNull) j.get("photo_path").asString else existing?.photoPath,

@@ -9,6 +9,8 @@ import com.example.loveapp.data.entity.MoodEntry
 import com.example.loveapp.data.entity.OutboxEntry
 import com.example.loveapp.utils.DateUtils
 import com.google.gson.Gson
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -24,6 +26,11 @@ class MoodRepository @Inject constructor(
     fun observeAllMoods(): Flow<List<MoodEntry>> = moodEntryDao.observeAllMoods()
     fun observeMoodsByUser(userId: Int): Flow<List<MoodEntry>> =
         moodEntryDao.observeMoodsByUser(userId)
+    /** All moods (own + partner) for a specific date — use instead of a network call. */
+    fun observeByDate(date: String): Flow<List<MoodEntry>> = moodEntryDao.observeByDate(date)
+    /** All moods (own + partner) in a date range — use for month calendar view. */
+    fun observeByDateRange(startDate: String, endDate: String): Flow<List<MoodEntry>> =
+        moodEntryDao.observeByDateRange(startDate, endDate)
 
     // ─── Write: Room-first ────────────────────────────────────────────────
     suspend fun createMood(moodType: String, date: String, note: String = ""): Result<MoodEntry> {
@@ -82,16 +89,34 @@ class MoodRepository @Inject constructor(
         else Result.failure(Exception(response.message ?: "Failed to get partner moods"))
     } catch (e: Exception) { Result.failure(e) }
 
-    suspend fun refreshFromServer() {
-        val token = authRepository.getToken() ?: return
-        val resp = apiService.getMoods("Bearer $token", null, null, null, 1, 500)
-        if (resp.success && resp.data != null) {
-            resp.data.items.forEach { m ->
-                val ex = m.id?.let { moodEntryDao.getByServerId(it) }
-                moodEntryDao.upsert(MoodEntry(id = ex?.id ?: 0, moodType = m.moodType ?: "",
-                    date = m.date ?: "", note = m.note ?: "", userId = m.userId ?: 0,
-                    timestamp = DateUtils.parseIsoTs(m.timestamp),
-                    serverId = m.id, syncPending = false))
+    suspend fun refreshFromServer() = coroutineScope {
+        val token = authRepository.getToken() ?: return@coroutineScope
+        // Fetch own and partner moods in parallel so both are available for Room-based today view
+        val ownDef     = async { runCatching { apiService.getMoods("Bearer $token", null, null, null, 1, 500) } }
+        val partnerDef = async { runCatching { apiService.getPartnerMoods("Bearer $token") } }
+
+        ownDef.await().getOrNull()?.let { resp ->
+            if (resp.success && resp.data != null) {
+                resp.data.items.forEach { m ->
+                    val ex = m.id?.let { moodEntryDao.getByServerId(it) }
+                    moodEntryDao.upsert(MoodEntry(id = ex?.id ?: 0, moodType = m.moodType ?: "",
+                        date = m.date ?: "", note = m.note ?: "", userId = m.userId ?: 0,
+                        color = m.color ?: "",
+                        timestamp = DateUtils.parseIsoTs(m.timestamp),
+                        serverId = m.id, syncPending = false))
+                }
+            }
+        }
+        partnerDef.await().getOrNull()?.let { resp ->
+            if (resp.success && resp.data != null) {
+                resp.data.items.forEach { m ->
+                    val ex = m.id?.let { moodEntryDao.getByServerId(it) }
+                    moodEntryDao.upsert(MoodEntry(id = ex?.id ?: 0, moodType = m.moodType ?: "",
+                        date = m.date ?: "", note = m.note ?: "", userId = m.userId ?: 0,
+                        color = m.color ?: "",
+                        timestamp = DateUtils.parseIsoTs(m.timestamp),
+                        serverId = m.id, syncPending = false))
+                }
             }
         }
     }

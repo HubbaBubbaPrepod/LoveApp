@@ -17,6 +17,8 @@ import com.example.loveapp.utils.DateUtils
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -42,6 +44,11 @@ class ActivityRepository @Inject constructor(
     fun observeAllActivities(): Flow<List<ActivityLog>> = activityLogDao.observeAllActivities()
     fun observeActivitiesByUser(userId: Int): Flow<List<ActivityLog>> =
         activityLogDao.observeActivitiesByUser(userId)
+    /** All activities (own + partner) for a specific date — use instead of a network call. */
+    fun observeByDate(date: String): Flow<List<ActivityLog>> = activityLogDao.observeByDate(date)
+    /** All activities (own + partner) in a date range — use for month calendar view. */
+    fun observeByDateRange(startDate: String, endDate: String): Flow<List<ActivityLog>> =
+        activityLogDao.observeByDateRange(startDate, endDate)
 
     // в”Ђв”Ђв”Ђ Write: Room-first в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     suspend fun createActivity(
@@ -124,19 +131,31 @@ class ActivityRepository @Inject constructor(
         else Result.failure(Exception(response.message ?: "Failed to delete custom activity type"))
     } catch (e: Exception) { Result.failure(e) }
 
-    suspend fun refreshFromServer() {
-        val token = authRepository.getToken() ?: return
-        val resp = apiService.getActivities("Bearer $token", limit = 500)
-        if (resp.success && resp.data != null) {
-            resp.data.items.forEach { a ->
-                val ex = a.id?.let { activityLogDao.getByServerId(it) }
-                activityLogDao.upsert(ActivityLog(id = ex?.id ?: 0,
-                    title = a.title ?: "", description = a.description ?: a.note ?: "",
-                    category = a.activityType ?: a.category ?: "",
-                    date = a.date ?: "", userId = a.userId ?: 0,
-                    timestamp = DateUtils.parseIsoTs(a.timestamp),
-                    serverId = a.id, syncPending = false))
-            }
+    suspend fun refreshFromServer() = coroutineScope {
+        val token = authRepository.getToken() ?: return@coroutineScope
+        // Fetch own and partner activities in parallel so both are available for Room-based today view
+        val ownDef     = async { runCatching { apiService.getActivities("Bearer $token", limit = 500) } }
+        val partnerDef = async { runCatching { apiService.getPartnerActivities("Bearer $token") } }
+
+        suspend fun upsertActivity(a: ActivityResponse) {
+            val ex = a.id?.let { activityLogDao.getByServerId(it) }
+            // Take only the first 10 chars of the date string ("yyyy-MM-dd") to guard against
+            // the pg driver serialising DATE as "2026-03-03T21:00:00.000Z" in some TZ configs
+            val safeDate = (a.date ?: "").take(10)
+            activityLogDao.upsert(ActivityLog(id = ex?.id ?: 0,
+                title = a.title ?: "", description = a.description ?: a.note ?: "",
+                category = a.activityType ?: a.category ?: "",
+                imageUrls = a.imageUrls ?: "",
+                date = safeDate, userId = a.userId ?: 0,
+                timestamp = DateUtils.parseIsoTs(a.timestamp),
+                serverId = a.id, syncPending = false))
+        }
+
+        ownDef.await().getOrNull()?.let { resp ->
+            if (resp.success && resp.data != null) resp.data.items.forEach { upsertActivity(it) }
+        }
+        partnerDef.await().getOrNull()?.let { resp ->
+            if (resp.success && resp.data != null) resp.data.items.forEach { upsertActivity(it) }
         }
     }
 

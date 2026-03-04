@@ -233,18 +233,18 @@ interface LoveAppApiService {
     ): ApiResponse<Any?>
 
     // ==================== Custom Activity Type Endpoints ====================
-    @POST("custom-activity-types")
+    @POST("activities/types")
     suspend fun createCustomActivityType(
         @Header("Authorization") token: String,
         @Body request: CustomActivityTypeRequest
     ): ApiResponse<CustomActivityTypeResponse>
 
-    @GET("custom-activity-types")
+    @GET("activities/types")
     suspend fun getCustomActivityTypes(
         @Header("Authorization") token: String
     ): ApiResponse<List<CustomActivityTypeResponse>>
 
-    @DELETE("custom-activity-types/{id}")
+    @DELETE("activities/types/{id}")
     suspend fun deleteCustomActivityType(
         @Header("Authorization") token: String,
         @Path("id") id: Int

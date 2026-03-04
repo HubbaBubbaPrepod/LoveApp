@@ -3,10 +3,12 @@ package com.example.loveapp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.loveapp.data.api.models.MoodResponse
+import com.example.loveapp.data.entity.MoodEntry
 import com.example.loveapp.data.repository.AuthRepository
 import com.example.loveapp.data.repository.MoodRepository
 import com.example.loveapp.data.repository.RelationshipRepository
 import com.example.loveapp.utils.DateUtils
+import com.example.loveapp.utils.TokenManager
 import com.example.loveapp.widget.WidgetUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -24,7 +26,8 @@ class MoodViewModel @Inject constructor(
     private val moodRepository: MoodRepository,
     private val widgetUpdater: WidgetUpdater,
     private val authRepository: AuthRepository,
-    private val relationshipRepository: RelationshipRepository
+    private val relationshipRepository: RelationshipRepository,
+    private val tokenManager: TokenManager
 ) : ViewModel() {
 
     private val _myTodayMoods = MutableStateFlow<List<MoodResponse>>(emptyList())
@@ -73,9 +76,19 @@ class MoodViewModel @Inject constructor(
     // Legacy compat
     val moods: StateFlow<List<MoodResponse>> get() = _myTodayMoods
 
+    // Month cache: (year, month) → (myMoods grouped by date, partnerMoods grouped by date)
+    private val monthCache =
+        mutableMapOf<Pair<Int, Int>, Pair<Map<String, List<MoodResponse>>, Map<String, List<MoodResponse>>>>()
+
+    // Current user's server ID, resolved once during init
+    private var myUserId: Int = 0
+
     init {
         loadUserInfo()
-        loadToday()
+        viewModelScope.launch {
+            myUserId = tokenManager.getUserId()?.toIntOrNull() ?: 0
+            observeToday()
+        }
     }
 
     private fun loadUserInfo() {
@@ -97,33 +110,17 @@ class MoodViewModel @Inject constructor(
         }
     }
 
-    fun loadToday() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val today      = DateUtils.getTodayDateString()
-            val myDef      = async { moodRepository.getMoods(date = today) }
-            val partnerDef = async { moodRepository.getPartnerMoods(date = today) }
-            val myResult   = myDef.await()
-            val ptResult   = partnerDef.await()
-            myResult.onSuccess {
-                _myTodayMoods.value = it
-                it.firstOrNull()?.let { m ->
-                    if (!m.displayName.isNullOrBlank()) _myName.value = m.displayName
-                    if (!m.userAvatar.isNullOrBlank())  _myAvatar.value = m.userAvatar
-                }
-            }
-            ptResult.onSuccess { moods ->
-                _partnerTodayMoods.value = moods
-                moods.firstOrNull()?.let { m ->
-                    if (!m.displayName.isNullOrBlank()) _partnerName.value = m.displayName
-                    if (!m.userAvatar.isNullOrBlank())  _partnerAvatar.value = m.userAvatar
-                }
-            }.onFailure { /* no partner is ok */ }
-            // Push both users' moods to the home-screen widget after both loads finish
-            val my      = myResult.getOrElse { emptyList() }
-            val pt      = ptResult.getOrElse { emptyList() }
-            val myFirst = my.firstOrNull()
-            val ptFirst = pt.firstOrNull()
+    /** Subscribe to Room for today's moods — auto-updates on any write without a network call. */
+    private suspend fun observeToday() {
+        val today = DateUtils.getTodayDateString()
+        moodRepository.observeByDate(today).collect { all ->
+            val mine   = all.filter { it.userId == myUserId || it.userId == 0 }.map { it.toResponse() }
+            val theirs = all.filter { it.userId != myUserId && it.userId != 0 }.map { it.toResponse() }
+            _myTodayMoods.value    = mine
+            _partnerTodayMoods.value = theirs
+            // Push widget update when today's moods change
+            val myFirst = mine.firstOrNull()
+            val ptFirst = theirs.firstOrNull()
             viewModelScope.launch {
                 widgetUpdater.pushMoodUpdate(
                     myType = myFirst?.moodType ?: "",
@@ -134,34 +131,58 @@ class MoodViewModel @Inject constructor(
                     ptName = _partnerName.value
                 )
             }
-            _isLoading.value = false
         }
     }
+
+    /** Maps a Room entity to the API response model used by the UI. */
+    private fun MoodEntry.toResponse() = MoodResponse(
+        id        = serverId ?: id,
+        userId    = userId,
+        moodType  = moodType,
+        timestamp = "",
+        date      = date,
+        note      = note,
+        color     = color.ifBlank { null },
+        displayName = null,  // comes from loadUserInfo()
+        userAvatar  = null,   // comes from loadUserInfo()
+    )
+
+    // loadToday() kept as a public no-op for backward-compat call sites that may still reference it
+    @Deprecated("Room Flow now drives today's moods — no manual reload needed", ReplaceWith(""))
+    fun loadToday() { /* no-op: Room observeByDate handles updates reactively */ }
 
     fun addMood(moodType: String, note: String = "") {
         viewModelScope.launch {
             _isLoading.value = true
             val today = DateUtils.getTodayDateString()
             moodRepository.createMood(moodType, today, note)
-                .onSuccess {
-                    loadToday()
-                    _successMessage.value = "Запись сохранена"
-                }
+                .onSuccess { _successMessage.value = "Запись сохранена" }
                 .onFailure { _errorMessage.value = it.message }
             _isLoading.value = false
+            // No loadToday() call — Room Flow auto-updates via observeByDate
         }
     }
 
     fun deleteMood(id: Int) {
         viewModelScope.launch {
-            moodRepository.deleteMood(id).onSuccess { loadToday() }
+            moodRepository.deleteMood(id)
                 .onFailure { _errorMessage.value = it.message }
+            // No loadToday() call — Room Flow auto-updates
         }
     }
 
     fun loadCalendarMonth(year: Int, month: Int) { // month 0-based
         _calendarYear.value = year
         _calendarMonth.value = month
+
+        // Return cached data immediately without a network round-trip
+        val key = year to month
+        monthCache[key]?.let { (mine, partner) ->
+            _myMonthMoods.value    = mine
+            _partnerMonthMoods.value = partner
+            return
+        }
+
         viewModelScope.launch {
             _isCalendarLoading.value = true
             val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
@@ -172,25 +193,27 @@ class MoodViewModel @Inject constructor(
             val lastDay = fmt.format(cal.time)
             val myDef = async { moodRepository.getMoods(startDate = firstDay, endDate = lastDay) }
             val partnerDef = async { moodRepository.getPartnerMoods(startDate = firstDay, endDate = lastDay) }
-            myDef.await().onSuccess { list ->
-                _myMonthMoods.value = list.groupBy { it.date.take(10) }
-                if (_myName.value == null) {
-                    _myName.value = list.firstOrNull()?.displayName
-                }
+            val myGrouped = myDef.await().getOrElse { emptyList() }.groupBy { it.date.take(10) }
+            val partnerGrouped = partnerDef.await().getOrElse { emptyList() }.groupBy { it.date.take(10) }
+
+            _myMonthMoods.value      = myGrouped
+            _partnerMonthMoods.value = partnerGrouped
+            monthCache[key]          = myGrouped to partnerGrouped
+
+            // Back-fill name/avatar from response if not yet set
+            myGrouped.values.flatten().firstOrNull()?.let { m ->
+                if (_myName.value == null && !m.displayName.isNullOrBlank()) _myName.value = m.displayName
             }
-            partnerDef.await().onSuccess { list ->
-                _partnerMonthMoods.value = list.groupBy { it.date.take(10) }
-                if (_partnerName.value == null) {
-                    _partnerName.value = list.firstOrNull()?.displayName
-                }
-            }.onFailure { /* no partner is ok */ }
+            partnerGrouped.values.flatten().firstOrNull()?.let { m ->
+                if (_partnerName.value == null && !m.displayName.isNullOrBlank()) _partnerName.value = m.displayName
+            }
             _isCalendarLoading.value = false
         }
     }
 
     // Legacy compat for existing call sites
     fun createMood(moodType: String) = addMood(moodType)
-    fun loadTodayMoods() = loadToday()
+    fun loadTodayMoods() { /* no-op: Room Flow handles it */ }
 
     fun clearMessages() {
         _errorMessage.value = null

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Preview for MoodWidgetLarge (4×3) -->
+<!-- Preview for MoodWidgetLarge (4x3) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -7,39 +7,37 @@
     android:background="@drawable/widget_bg_mood"
     android:padding="16dp">
 
-    <!-- Title -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="💭  Настроение за день"
+        android:text="&#x1F4AD;  &#1053;&#1072;&#1089;&#1090;&#1088;&#1086;&#1077;&#1085;&#1080;&#1077; &#1079;&#1072; &#1076;&#1077;&#1085;&#1100;"
         android:textSize="13sp"
         android:textColor="#FFFF6B9D"
-        android:textStyle="bold"/>
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp"/>
 
-    <Space android:layout_width="match_parent" android:layout_height="12dp"/>
-
-    <!-- My full card -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical"
         android:background="@drawable/widget_row_pink"
-        android:padding="12dp">
+        android:padding="12dp"
+        android:layout_marginBottom="10dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="😊"
-                android:textSize="30sp"/>
-
-            <Space android:layout_width="10dp" android:layout_height="wrap_content"/>
+                android:text="&#128522;"
+                android:textSize="30sp"
+                android:layout_marginEnd="10dp"/>
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -49,7 +47,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Я"
+                    android:text="&#x042F;"
                     android:textSize="11sp"
                     android:textColor="#FFFF6B9D"
                     android:textStyle="bold"/>
@@ -57,26 +55,21 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Хорошо"
+                    android:text="&#1061;&#1086;&#1088;&#1086;&#1096;&#1086;"
                     android:textSize="16sp"
                     android:textColor="#FF30D158"
                     android:textStyle="bold"/>
             </LinearLayout>
         </LinearLayout>
 
-        <Space android:layout_width="match_parent" android:layout_height="6dp"/>
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Сегодня всё идёт отлично!"
+            android:text="&#1057;&#1077;&#1075;&#1086;&#1076;&#1085;&#1103; &#1074;&#1089;&#1105; &#1080;&#1076;&#1105;&#1090; &#1086;&#1090;&#1083;&#1080;&#1095;&#1085;&#1086;!"
             android:textSize="11sp"
             android:textColor="#FF636366"/>
     </LinearLayout>
 
-    <Space android:layout_width="match_parent" android:layout_height="10dp"/>
-
-    <!-- Partner full card -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -89,15 +82,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="😄"
-                android:textSize="30sp"/>
-
-            <Space android:layout_width="10dp" android:layout_height="wrap_content"/>
+                android:text="&#128516;"
+                android:textSize="30sp"
+                android:layout_marginEnd="10dp"/>
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -107,7 +100,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Партнёр"
+                    android:text="&#1055;&#1072;&#1088;&#1090;&#1085;&#1105;&#1088;"
                     android:textSize="11sp"
                     android:textColor="#FF636366"
                     android:textStyle="bold"/>
@@ -115,19 +108,17 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Отлично"
+                    android:text="&#1054;&#1090;&#1083;&#1080;&#1095;&#1085;&#1086;"
                     android:textSize="16sp"
                     android:textColor="#FFFF375F"
                     android:textStyle="bold"/>
             </LinearLayout>
         </LinearLayout>
 
-        <Space android:layout_width="match_parent" android:layout_height="6dp"/>
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Нет записи"
+            android:text="&#1053;&#1077;&#1090; &#1079;&#1072;&#1087;&#1080;&#1089;&#1080;"
             android:textSize="11sp"
             android:textColor="#FFAEAEB2"/>
     </LinearLayout>

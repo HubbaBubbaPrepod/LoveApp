@@ -49,4 +49,12 @@ interface ActivityLogDao {
 
     @Query("SELECT * FROM activity_logs WHERE userId = :userId AND deletedAt IS NULL ORDER BY timestamp DESC")
     fun observeActivitiesByUser(userId: Int): Flow<List<ActivityLog>>
+
+    /** Reactive: all activities (own + partner) for a given date, used by ActivityViewModel. */
+    @Query("SELECT * FROM activity_logs WHERE date = :date AND deletedAt IS NULL ORDER BY timestamp DESC")
+    fun observeByDate(date: String): Flow<List<ActivityLog>>
+
+    /** Reactive: activities in a date range (own + partner), used for calendar month view cache. */
+    @Query("SELECT * FROM activity_logs WHERE date >= :startDate AND date <= :endDate AND deletedAt IS NULL ORDER BY date DESC, timestamp DESC")
+    fun observeByDateRange(startDate: String, endDate: String): Flow<List<ActivityLog>>
 }

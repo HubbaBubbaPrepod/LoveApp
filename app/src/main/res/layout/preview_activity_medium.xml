@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Preview for ActivityDayWidget / medium (3×2) -->
+<!-- Preview for ActivityDayWidget medium (3x2) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -7,30 +7,28 @@
     android:background="@drawable/widget_bg_activity"
     android:padding="14dp">
 
-    <!-- Header -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="🏃  Активности сегодня"
+        android:text="&#x1F3C3;  &#1040;&#1082;&#1090;&#1080;&#1074;&#1085;&#1086;&#1089;&#1090;&#1080; &#1089;&#1077;&#1075;&#1086;&#1076;&#1085;&#1103;"
         android:textSize="10sp"
         android:textColor="#FF8E8E93"
-        android:textStyle="bold"/>
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
 
-    <Space android:layout_width="match_parent" android:layout_height="8dp"/>
-
-    <!-- My activity row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:background="@drawable/widget_row_blue"
         android:padding="8dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="6dp">
 
         <TextView
             android:layout_width="58dp"
             android:layout_height="wrap_content"
-            android:text="Я"
+            android:text="&#x042F;"
             android:textSize="10sp"
             android:textColor="#FF1E90FF"
             android:textStyle="bold"/>
@@ -41,29 +39,24 @@
             android:text="3"
             android:textSize="20sp"
             android:textColor="#FF1E90FF"
-            android:textStyle="bold"/>
-
-        <Space android:layout_width="4dp" android:layout_height="wrap_content"/>
+            android:textStyle="bold"
+            android:layout_marginEnd="4dp"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="акт."
+            android:text="&#1072;&#1082;&#1090;."
             android:textSize="10sp"
-            android:textColor="#FF8E8E93"/>
-
-        <Space android:layout_width="6dp" android:layout_height="wrap_content"/>
+            android:textColor="#FF8E8E93"
+            android:layout_marginEnd="6dp"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="💼 🏃 📚"
+            android:text="&#x1F4BC; &#x1F3C3; &#x1F4DA;"
             android:textSize="14sp"/>
     </LinearLayout>
 
-    <Space android:layout_width="match_parent" android:layout_height="6dp"/>
-
-    <!-- Partner activity row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -75,7 +68,7 @@
         <TextView
             android:layout_width="58dp"
             android:layout_height="wrap_content"
-            android:text="Партнёр"
+            android:text="&#1055;&#1072;&#1088;&#1090;&#1085;&#1105;&#1088;"
             android:textSize="10sp"
             android:textColor="#FF636366"
             android:textStyle="bold"/>
@@ -83,7 +76,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="—"
+            android:text="&#x2014;"
             android:textSize="16sp"
             android:textColor="#FFAEAEB2"/>
     </LinearLayout>

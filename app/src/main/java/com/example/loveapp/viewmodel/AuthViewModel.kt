@@ -1,10 +1,12 @@
-package com.example.loveapp.viewmodel
+﻿package com.example.loveapp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.net.Uri
 import com.example.loveapp.data.api.models.AuthResponse
 import com.example.loveapp.data.repository.AuthRepository
+import com.example.loveapp.sync.DataPreloadManager
+import com.example.loveapp.sync.SyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +16,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val dataPreloadManager: DataPreloadManager,
+    private val syncManager: SyncManager
 ) : ViewModel() {
 
     private val _currentUser = MutableStateFlow<AuthResponse?>(null)
@@ -41,6 +45,12 @@ class AuthViewModel @Inject constructor(
     private val _isLoggedIn = MutableStateFlow<Boolean?>(null)
     val isLoggedIn: StateFlow<Boolean?> = _isLoggedIn.asStateFlow()
 
+    /**
+     * True while preloading all repositories after login.
+     * Show a full-screen loading overlay in MainActivity while this is true.
+     */
+    val isPreloading: StateFlow<Boolean> = dataPreloadManager.isPreloading
+
     init {
         viewModelScope.launch {
             _isLoggedIn.value = authRepository.getToken() != null
@@ -53,6 +63,11 @@ class AuthViewModel @Inject constructor(
 
     fun clearNeedsProfileSetupEvent() {
         _needsProfileSetupEvent.value = false
+    }
+
+    /** Triggers background preload after a successful auth event. Fire-and-forget вЂ” tracked via [isPreloading]. */
+    private fun startPreload() {
+        viewModelScope.launch { dataPreloadManager.preloadAll() }
     }
 
     fun signup(username: String, email: String, password: String, displayName: String, gender: String) {
@@ -68,6 +83,7 @@ class AuthViewModel @Inject constructor(
                 _successMessage.value = "Signup successful"
                 _authSuccessEvent.value = true
                 _isLoading.value = false
+                startPreload()
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Signup failed"
                 _isLoading.value = false
@@ -88,6 +104,7 @@ class AuthViewModel @Inject constructor(
                 _successMessage.value = "Login successful"
                 _authSuccessEvent.value = true
                 _isLoading.value = false
+                startPreload()
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Login failed"
                 _isLoading.value = false
@@ -109,6 +126,7 @@ class AuthViewModel @Inject constructor(
                     _needsProfileSetupEvent.value = true
                 } else {
                     _authSuccessEvent.value = true
+                    startPreload()
                 }
                 _isLoading.value = false
             }.onFailure { error ->
@@ -128,6 +146,7 @@ class AuthViewModel @Inject constructor(
                 _needsProfileSetupEvent.value = false
                 _authSuccessEvent.value = true
                 _isLoading.value = false
+                startPreload()
             }.onFailure { error ->
                 _errorMessage.value = error.message ?: "Profile setup failed"
                 _isLoading.value = false
@@ -138,7 +157,8 @@ class AuthViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             _isLoading.value = true
-            val result = authRepository.logout()
+            syncManager.onLogout()          // disconnect socket before DB wipe
+            val result = authRepository.logout()   // clears token + wipes Room
             result.onSuccess {
                 _currentUser.value = null
                 _isLoggedIn.value = false

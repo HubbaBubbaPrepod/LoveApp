@@ -11,6 +11,9 @@ import com.example.loveapp.data.repository.RelationshipRepository
 import com.example.loveapp.data.repository.WishRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,28 +41,37 @@ class DataPreloadManager @Inject constructor(
         private const val TAG = "DataPreloadManager"
     }
 
+    /** True while [preloadAll] is running. Observe this to show a loading screen. */
+    private val _isPreloading = MutableStateFlow(false)
+    val isPreloading: StateFlow<Boolean> = _isPreloading.asStateFlow()
+
     /** Refreshes all repositories in parallel. Suspends until all complete. */
     suspend fun preloadAll() = coroutineScope {
-        Log.i(TAG, "Starting parallel preload of all repositories")
-        val jobs = listOf(
-            async { runCatching { noteRepository.refreshFromServer() }
-                .onFailure { Log.w(TAG, "notes refresh failed", it) } },
-            async { runCatching { wishRepository.refreshFromServer() }
-                .onFailure { Log.w(TAG, "wishes refresh failed", it) } },
-            async { runCatching { moodRepository.refreshFromServer() }
-                .onFailure { Log.w(TAG, "moods refresh failed", it) } },
-            async { runCatching { activityRepository.refreshFromServer() }
-                .onFailure { Log.w(TAG, "activities refresh failed", it) } },
-            async { runCatching { calendarRepository.refreshFromServer() }
-                .onFailure { Log.w(TAG, "calendars refresh failed", it) } },
-            async { runCatching { artRepository.refreshFromServer() }
-                .onFailure { Log.w(TAG, "art refresh failed", it) } },
-            async { runCatching { cycleRepository.refreshFromServer() }
-                .onFailure { Log.w(TAG, "cycles refresh failed", it) } },
-            async { runCatching { relationshipRepository.refreshFromServer() }
-                .onFailure { Log.w(TAG, "relationship refresh failed", it) } },
-        )
-        jobs.forEach { it.await() }
-        Log.i(TAG, "Preload complete")
+        _isPreloading.value = true
+        try {
+            Log.i(TAG, "Starting parallel preload of all repositories")
+            val jobs = listOf(
+                async { runCatching { noteRepository.refreshFromServer() }
+                    .onFailure { Log.w(TAG, "notes refresh failed", it) } },
+                async { runCatching { wishRepository.refreshFromServer() }
+                    .onFailure { Log.w(TAG, "wishes refresh failed", it) } },
+                async { runCatching { moodRepository.refreshFromServer() }
+                    .onFailure { Log.w(TAG, "moods refresh failed", it) } },
+                async { runCatching { activityRepository.refreshFromServer() }
+                    .onFailure { Log.w(TAG, "activities refresh failed", it) } },
+                async { runCatching { calendarRepository.refreshFromServer() }
+                    .onFailure { Log.w(TAG, "calendars refresh failed", it) } },
+                async { runCatching { artRepository.refreshFromServer() }
+                    .onFailure { Log.w(TAG, "art refresh failed", it) } },
+                async { runCatching { cycleRepository.refreshFromServer() }
+                    .onFailure { Log.w(TAG, "cycles refresh failed", it) } },
+                async { runCatching { relationshipRepository.refreshFromServer() }
+                    .onFailure { Log.w(TAG, "relationship refresh failed", it) } },
+            )
+            jobs.forEach { it.await() }
+            Log.i(TAG, "Preload complete")
+        } finally {
+            _isPreloading.value = false
+        }
     }
 }

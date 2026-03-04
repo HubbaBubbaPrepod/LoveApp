@@ -2,6 +2,9 @@
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import com.example.loveapp.ui.art.LockScreenService
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -91,9 +94,10 @@ fun SettingsScreen(
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
-    val isDarkMode           by settingsViewModel.isDarkMode.collectAsState()
-    val notificationsEnabled by settingsViewModel.notificationsEnabled.collectAsState()
-    val remindersEnabled     by settingsViewModel.remindersEnabled.collectAsState()
+    val isDarkMode               by settingsViewModel.isDarkMode.collectAsState()
+    val notificationsEnabled     by settingsViewModel.notificationsEnabled.collectAsState()
+    val remindersEnabled         by settingsViewModel.remindersEnabled.collectAsState()
+    val lockScreenCanvasEnabled  by settingsViewModel.lockScreenCanvasEnabled.collectAsState()
     val currentUser          by authViewModel.currentUser.collectAsState()
     val isLoading            by authViewModel.isLoading.collectAsState()
     val isLoggedIn           by authViewModel.isLoggedIn.collectAsState()
@@ -103,6 +107,17 @@ fun SettingsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val r = rememberResponsiveConfig()
     var showLogoutDialog by remember { mutableStateOf(false) }
+
+    // Grants android.permission.SYSTEM_ALERT_WINDOW (overlay over lock screen)
+    val overlayPermLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        // Called when user returns from system overlay permission screen
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)) {
+            settingsViewModel.setLockScreenCanvasEnabled(true)
+            LockScreenService.start(context)
+        }
+    }
 
     // Gallery picker for avatar upload
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -183,6 +198,41 @@ fun SettingsScreen(
                         subtitle = "Напоминать добавить настроение и активности за день",
                         checked  = remindersEnabled,
                         onCheckedChange = { settingsViewModel.setRemindersEnabled(it) }
+                    )
+                }
+            }
+
+            //  Lock-screen drawing 
+            item { SettingsSectionLabel(text = "Рисование") }
+            item {
+                SettingsGroup {
+                    SettingsToggleRow(
+                        icon     = Icons.Default.Lock,
+                        iconTint = Color(0xFF9C27B0),
+                        title    = "Виджет на экране блокировки",
+                        subtitle = "Панель «Совместный холст» появляется под часами при блокировке",
+                        checked  = lockScreenCanvasEnabled,
+                        onCheckedChange = { enabled ->
+                            if (!enabled) {
+                                settingsViewModel.setLockScreenCanvasEnabled(false)
+                                LockScreenService.stop(context)
+                            } else {
+                                val canDraw = Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+                                        Settings.canDrawOverlays(context)
+                                if (canDraw) {
+                                    settingsViewModel.setLockScreenCanvasEnabled(true)
+                                    LockScreenService.start(context)
+                                } else {
+                                    // Ask user to grant overlay permission
+                                    overlayPermLauncher.launch(
+                                        Intent(
+                                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            Uri.parse("package:${context.packageName}")
+                                        )
+                                    )
+                                }
+                            }
+                        }
                     )
                 }
             }

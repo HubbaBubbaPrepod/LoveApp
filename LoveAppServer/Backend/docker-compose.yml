@@ -118,4 +118,5 @@ volumes:
 
 networks:
   loveapp_net:
+    name: loveapp_net
     driver: bridge

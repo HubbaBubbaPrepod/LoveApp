@@ -21,9 +21,10 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
-        private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
-        private val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
-        private val REMINDERS_ENABLED_KEY = booleanPreferencesKey("reminders_enabled")
+        private val DARK_MODE_KEY              = booleanPreferencesKey("dark_mode")
+        private val NOTIFICATIONS_ENABLED_KEY  = booleanPreferencesKey("notifications_enabled")
+        private val REMINDERS_ENABLED_KEY      = booleanPreferencesKey("reminders_enabled")
+        private val LOCK_SCREEN_CANVAS_KEY     = booleanPreferencesKey("lock_screen_canvas")
     }
 
     private val _isDarkMode = MutableStateFlow(false)
@@ -34,6 +35,9 @@ class SettingsViewModel @Inject constructor(
 
     private val _remindersEnabled = MutableStateFlow(true)
     val remindersEnabled: StateFlow<Boolean> = _remindersEnabled.asStateFlow()
+
+    private val _lockScreenCanvasEnabled = MutableStateFlow(false)
+    val lockScreenCanvasEnabled: StateFlow<Boolean> = _lockScreenCanvasEnabled.asStateFlow()
 
     init {
         loadSettings()
@@ -56,6 +60,11 @@ class SettingsViewModel @Inject constructor(
             context.settingsDataStore.data
                 .map { it[REMINDERS_ENABLED_KEY] ?: true }
                 .collect { _remindersEnabled.value = it }
+        }
+        viewModelScope.launch {
+            context.settingsDataStore.data
+                .map { it[LOCK_SCREEN_CANVAS_KEY] ?: false }
+                .collect { _lockScreenCanvasEnabled.value = it }
         }
     }
 
@@ -83,6 +92,15 @@ class SettingsViewModel @Inject constructor(
                 preferences[REMINDERS_ENABLED_KEY] = enabled
             }
             _remindersEnabled.value = enabled
+        }
+    }
+
+    fun setLockScreenCanvasEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            context.settingsDataStore.edit { preferences ->
+                preferences[LOCK_SCREEN_CANVAS_KEY] = enabled
+            }
+            _lockScreenCanvasEnabled.value = enabled
         }
     }
 }

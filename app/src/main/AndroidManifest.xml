@@ -13,6 +13,12 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Required for WorkManager to run as a foreground service (API 28+, Xiaomi MIUI) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Required for lock-screen drawing notification (full-screen intent on lock screen) -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- Required on Android 14+ (API 34) when foregroundServiceType="specialUse" -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Required to draw the floating button directly on the lock screen -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Allows WorkManager to re-schedule workers after device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- System calendar access for CalendarExportManager -->
@@ -138,6 +144,16 @@
             android:turnScreenOn="true"
             android:exported="false"
             android:theme="@style/Theme.LoveApp" />
+
+        <!-- Lock-screen drawing persistent notification service -->
+        <service
+            android:name=".ui.art.LockScreenService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Persistent notification to open a drawing canvas from the lock screen without unlocking the device" />
+        </service>
 
         <!-- Art widget – Small (2×2) -->
         <receiver

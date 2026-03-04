@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -110,7 +109,7 @@ private fun LockScreenCanvas(
                     detectDragGestures(
                         onDragStart = { viewModel.strokeStart(it.x, it.y) },
                         onDrag = { change, _ ->
-                            change.consumeAllChanges()
+                            change.consume()
                             viewModel.strokeMove(change.position.x, change.position.y)
                         },
                         onDragEnd = { viewModel.strokeEnd() },

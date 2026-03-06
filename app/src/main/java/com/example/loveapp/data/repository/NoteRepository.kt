@@ -1,5 +1,6 @@
 package com.example.loveapp.data.repository
 
+import androidx.paging.PagingSource
 import com.example.loveapp.data.api.LoveAppApiService
 import com.example.loveapp.data.api.models.NoteRequest
 import com.example.loveapp.data.api.models.NoteResponse
@@ -28,6 +29,11 @@ class NoteRepository @Inject constructor(
     // ─── Live Flows from Room (drives UI) ────────────────────────────────
     fun observeAllNotes(): Flow<List<Note>> = noteDao.observeAllNotes()
     fun observeNotesByUser(userId: Int): Flow<List<Note>> = noteDao.observeNotesByUser(userId)
+
+    /** PagingSource for Paging 3 – pass to [Pager] in the ViewModel. */
+    fun pagingSource(query: String = ""): PagingSource<Int, Note> =
+        if (query.isBlank()) noteDao.pagingSource()
+        else noteDao.pagingSourceFiltered(query)
 
     // ─── Write: optimistic → REST → fallback to outbox ───────────────────
     suspend fun createNote(

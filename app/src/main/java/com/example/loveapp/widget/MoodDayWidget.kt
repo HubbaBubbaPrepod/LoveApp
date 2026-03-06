@@ -16,6 +16,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.action.actionSendBroadcast
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -51,6 +52,11 @@ import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_TYPE
 /**
  * Home-screen widget showing today's mood for both the user and their partner.
  * Tapping the widget opens the Mood Tracker screen directly.
+ *
+ * When the user has NOT yet logged a mood today, a quick-pick row of emoji
+ * buttons is displayed so they can log their mood without opening the app.
+ * Each button sends a broadcast handled by [MoodQuickLogReceiver].
+ *
  * Data is pushed via [WidgetUpdater.pushMoodUpdate] from [com.example.loveapp.viewmodel.MoodViewModel].
  */
 class MoodDayWidget : GlanceAppWidget() {
@@ -113,8 +119,62 @@ class MoodDayWidget : GlanceAppWidget() {
 
                 Spacer(GlanceModifier.height(6.dp))
 
-                // ── Partner mood ─────────────────────────────────────────────
+                // ── Partner mood ───────────────────────────────────────────
                 MoodRow(name = ptName, moodType = ptType, note = ptNote, isMe = false, avatarBitmap = ptAvatarBmp)
+
+                // ── Quick mood picker (only when own mood not logged yet) ───────────
+                if (myType.isEmpty()) {
+                    Spacer(GlanceModifier.height(8.dp))
+                    MoodQuickPicker(context)
+                }
+            }
+        }
+    }
+
+    /**
+     * A row of tappable emoji buttons that log a mood without opening the app.
+     * Each button sends a broadcast handled by [MoodQuickLogReceiver].
+     */
+    @Composable
+    private fun MoodQuickPicker(context: Context) {
+        val picks = listOf(
+            "rad"   to "😄",
+            "good"  to "😊",
+            "meh"   to "😐",
+            "bad"   to "😔",
+            "awful" to "😞"
+        )
+        Column(horizontalAlignment = Alignment.Start) {
+            Text(
+                text  = "Быстро отметить:",
+                style = TextStyle(
+                    color    = ColorProvider(Color(0xFF8E8E93)),
+                    fontSize = 9.sp
+                )
+            )
+            Spacer(GlanceModifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                picks.forEachIndexed { index, (moodType, emoji) ->
+                    Box(
+                        modifier = GlanceModifier
+                            .size(30.dp)
+                            .background(ColorProvider(Color(0x22FF6B9D)))
+                            .cornerRadius(15.dp)
+                            .clickable(
+                                actionSendBroadcast(
+                                    Intent(MoodQuickLogReceiver.ACTION)
+                                        .setPackage(context.packageName)
+                                        .putExtra(MoodQuickLogReceiver.EXTRA_MOOD_TYPE, moodType)
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = emoji, style = TextStyle(fontSize = 16.sp))
+                    }
+                    if (index < picks.size - 1) {
+                        Spacer(GlanceModifier.width(4.dp))
+                    }
+                }
             }
         }
     }

@@ -18,4 +18,15 @@
     <!-- Основная тема приложения (без splash screen атрибутов) -->
     <style name="Theme.LoveApp" parent="android:Theme.Material.Light.NoActionBar" />
 
+    <!-- Полностью прозрачная тема для LockScreenPanelActivity -->
+    <style name="Theme.LoveApp.Transparent" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
 </resources>

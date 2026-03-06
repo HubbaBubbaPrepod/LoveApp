@@ -77,6 +77,7 @@ import com.example.loveapp.viewmodel.PairingViewModel
 @Composable
 fun PairingScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToMatchSuccess: () -> Unit = {},
     viewModel: PairingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -93,6 +94,13 @@ fun PairingScreen(
         uiState.error?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearError()
+        }
+    }
+
+    // Navigate to MatchSuccess when pairing succeeds
+    LaunchedEffect(uiState.partnerName) {
+        if (uiState.partnerName != null) {
+            onNavigateToMatchSuccess()
         }
     }
 

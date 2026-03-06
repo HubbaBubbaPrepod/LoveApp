@@ -31,7 +31,7 @@ class LoveAppApplication : Application() {
 
 --- java\com\example\loveapp\MainActivity.kt ---
 
-package com.example.loveapp
+﻿package com.example.loveapp
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
@@ -988,18 +988,18 @@ interface LoveAppApiService {
     ): ApiResponse<Any?>
 
     // ==================== Custom Activity Type Endpoints ====================
-    @POST("custom-activity-types")
+    @POST("activities/types")
     suspend fun createCustomActivityType(
         @Header("Authorization") token: String,
         @Body request: CustomActivityTypeRequest
     ): ApiResponse<CustomActivityTypeResponse>
 
-    @GET("custom-activity-types")
+    @GET("activities/types")
     suspend fun getCustomActivityTypes(
         @Header("Authorization") token: String
     ): ApiResponse<List<CustomActivityTypeResponse>>
 
-    @DELETE("custom-activity-types/{id}")
+    @DELETE("activities/types/{id}")
     suspend fun deleteCustomActivityType(
         @Header("Authorization") token: String,
         @Path("id") id: Int
@@ -1642,6 +1642,7 @@ data class SavedStroke(
 
 package com.example.loveapp.data.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -1699,6 +1700,10 @@ interface ActivityLogDao {
     /** Reactive: activities in a date range (own + partner), used for calendar month view cache. */
     @Query("SELECT * FROM activity_logs WHERE date >= :startDate AND date <= :endDate AND deletedAt IS NULL ORDER BY date DESC, timestamp DESC")
     fun observeByDateRange(startDate: String, endDate: String): Flow<List<ActivityLog>>
+
+    /** Paging 3 – activity history newest first. */
+    @Query("SELECT * FROM activity_logs WHERE deletedAt IS NULL ORDER BY timestamp DESC")
+    fun pagingSource(): PagingSource<Int, ActivityLog>
 }
 
 
@@ -1858,6 +1863,7 @@ interface MenstrualCycleDao {
 
 package com.example.loveapp.data.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -1915,6 +1921,10 @@ interface MoodEntryDao {
     /** Reactive: moods in a date range (own + partner), used for calendar month view cache. */
     @Query("SELECT * FROM mood_entries WHERE date >= :startDate AND date <= :endDate AND deletedAt IS NULL ORDER BY date DESC, timestamp DESC")
     fun observeByDateRange(startDate: String, endDate: String): Flow<List<MoodEntry>>
+
+    /** Paging 3 – mood history (all users) newest first. */
+    @Query("SELECT * FROM mood_entries WHERE deletedAt IS NULL ORDER BY timestamp DESC")
+    fun pagingSource(): PagingSource<Int, MoodEntry>
 }
 
 
@@ -1922,6 +1932,7 @@ interface MoodEntryDao {
 
 package com.example.loveapp.data.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -1973,6 +1984,14 @@ interface NoteDao {
 
     @Query("SELECT * FROM notes WHERE userId = :userId AND deletedAt IS NULL ORDER BY createdAt DESC")
     fun observeNotesByUser(userId: Int): Flow<List<Note>>
+
+    /** Paging 3 – lazy-load notes ordered by creation date. */
+    @Query("SELECT * FROM notes WHERE deletedAt IS NULL ORDER BY createdAt DESC")
+    fun pagingSource(): PagingSource<Int, Note>
+
+    /** Paging 3 – search with keyword filter. */
+    @Query("SELECT * FROM notes WHERE deletedAt IS NULL AND (title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%') ORDER BY createdAt DESC")
+    fun pagingSourceFiltered(query: String): PagingSource<Int, Note>
 }
 
 
@@ -2116,6 +2135,7 @@ interface UserDao {
 
 package com.example.loveapp.data.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -2165,6 +2185,14 @@ interface WishDao {
 
     @Query("SELECT * FROM wishes WHERE userId = :userId AND isCompleted = 0 AND deletedAt IS NULL ORDER BY priority DESC, createdAt DESC")
     fun observeActiveWishesByUser(userId: Int): Flow<List<Wish>>
+
+    /** Paging 3 – lazy-load all wishes. */
+    @Query("SELECT * FROM wishes WHERE deletedAt IS NULL ORDER BY priority DESC, createdAt DESC")
+    fun pagingSource(): PagingSource<Int, Wish>
+
+    /** Paging 3 – search by title/description. */
+    @Query("SELECT * FROM wishes WHERE deletedAt IS NULL AND (title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%') ORDER BY priority DESC, createdAt DESC")
+    fun pagingSourceFiltered(query: String): PagingSource<Int, Wish>
 }
 
 
@@ -2601,11 +2629,14 @@ class ActivityRepository @Inject constructor(
 
         suspend fun upsertActivity(a: ActivityResponse) {
             val ex = a.id?.let { activityLogDao.getByServerId(it) }
+            // Take only the first 10 chars of the date string ("yyyy-MM-dd") to guard against
+            // the pg driver serialising DATE as "2026-03-03T21:00:00.000Z" in some TZ configs
+            val safeDate = (a.date ?: "").take(10)
             activityLogDao.upsert(ActivityLog(id = ex?.id ?: 0,
                 title = a.title ?: "", description = a.description ?: a.note ?: "",
                 category = a.activityType ?: a.category ?: "",
                 imageUrls = a.imageUrls ?: "",
-                date = a.date ?: "", userId = a.userId ?: 0,
+                date = safeDate, userId = a.userId ?: 0,
                 timestamp = DateUtils.parseIsoTs(a.timestamp),
                 serverId = a.id, syncPending = false))
         }
@@ -2745,6 +2776,7 @@ class ArtRepository @Inject constructor(
 
 package com.example.loveapp.data.repository
 
+import com.example.loveapp.data.LoveAppDatabase
 import com.example.loveapp.data.api.LoveAppApiService
 import com.example.loveapp.data.api.models.AuthResponse
 import com.example.loveapp.data.api.models.GoogleSignInRequest
@@ -2758,6 +2790,8 @@ import com.example.loveapp.notifications.FcmTokenManager
 import com.example.loveapp.utils.TokenManager
 import android.content.Context
 import android.net.Uri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -2768,6 +2802,7 @@ class AuthRepository @Inject constructor(
     private val userDao: UserDao,
     private val tokenManager: TokenManager,
     private val fcmTokenManager: FcmTokenManager,
+    private val database: LoveAppDatabase,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: Context
 ) {
 
@@ -2919,10 +2954,9 @@ class AuthRepository @Inject constructor(
 
     suspend fun logout(): Result<Unit> = try {
         tokenManager.clearAll()
-        val currentUser = userDao.getAllUsers().firstOrNull()
-        currentUser?.let {
-            userDao.updateUser(it.copy(isLoggedIn = false))
-        }
+        // Wipe ALL cached data from Room so a subsequent login with a different
+        // account never sees stale rows from the previous session.
+        withContext(Dispatchers.IO) { database.clearAllTables() }
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
@@ -3434,6 +3468,7 @@ class MoodRepository @Inject constructor(
 
 package com.example.loveapp.data.repository
 
+import androidx.paging.PagingSource
 import com.example.loveapp.data.api.LoveAppApiService
 import com.example.loveapp.data.api.models.NoteRequest
 import com.example.loveapp.data.api.models.NoteResponse
@@ -3462,6 +3497,11 @@ class NoteRepository @Inject constructor(
     // ─── Live Flows from Room (drives UI) ────────────────────────────────
     fun observeAllNotes(): Flow<List<Note>> = noteDao.observeAllNotes()
     fun observeNotesByUser(userId: Int): Flow<List<Note>> = noteDao.observeNotesByUser(userId)
+
+    /** PagingSource for Paging 3 – pass to [Pager] in the ViewModel. */
+    fun pagingSource(query: String = ""): PagingSource<Int, Note> =
+        if (query.isBlank()) noteDao.pagingSource()
+        else noteDao.pagingSourceFiltered(query)
 
     // ─── Write: optimistic → REST → fallback to outbox ───────────────────
     suspend fun createNote(
@@ -3658,6 +3698,7 @@ class RelationshipRepository @Inject constructor(
 
 package com.example.loveapp.data.repository
 
+import androidx.paging.PagingSource
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -3695,6 +3736,10 @@ class WishRepository @Inject constructor(
     fun observeActiveWishesByUser(userId: Int): Flow<List<Wish>> =
         wishDao.observeActiveWishesByUser(userId)
 
+    /** PagingSource for Paging 3 – pass to [Pager] in the ViewModel. */
+    fun pagingSource(query: String = ""): PagingSource<Int, Wish> =
+        if (query.isBlank()) wishDao.pagingSource()
+        else wishDao.pagingSourceFiltered(query)
 
 // ─── Write: Room-first ────────────────────────────────────────────────
     suspend fun createWish(
@@ -4162,6 +4207,7 @@ class WebSocketManager @Inject constructor(
         socket?.disconnect()
         socket = null
         _connectionState.value = SocketState.DISCONNECTED
+        lastSyncTimestamp = 0L  // Reset so the next login syncs everything from the beginning
     }
 
     /** Re-authenticate with a fresh token after token refresh. */
@@ -4353,7 +4399,8 @@ class WebSocketManager @Inject constructor(
             title       = j.get("title")?.asString ?: existing?.title ?: "",
             description = j.get("description")?.asString ?: existing?.description ?: "",
             timestamp   = j.get("timestamp")?.asLong ?: existing?.timestamp.orNow(),
-            date        = j.get("date")?.asString ?: existing?.date ?: "",
+            // syncHandler sends "event_date"; REST responses alias it to "date" — support both
+            date        = (j.get("event_date")?.asString ?: j.get("date")?.asString)?.take(10) ?: existing?.date ?: "",
             imageUrls   = j.get("image_urls")?.asString ?: existing?.imageUrls ?: "",
             category    = j.get("category")?.asString ?: existing?.category ?: "",
             photoPath   = if (j.has("photo_path") && !j.get("photo_path").isJsonNull) j.get("photo_path").asString else existing?.photoPath,
@@ -5593,7 +5640,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.consumeAllChanges
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -5681,7 +5727,7 @@ private fun LockScreenCanvas(
                     detectDragGestures(
                         onDragStart = { viewModel.strokeStart(it.x, it.y) },
                         onDrag = { change, _ ->
-                            change.consumeAllChanges()
+                            change.consume()
                             viewModel.strokeMove(change.position.x, change.position.y)
                         },
                         onDragEnd = { viewModel.strokeEnd() },
@@ -5797,6 +5843,368 @@ private fun LockToolButton(
     }
 }
 
+
+--- java\com\example\loveapp\ui\art\LockScreenPanelActivity.kt ---
+
+package com.example.loveapp.ui.art
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.os.Bundle
+import android.view.WindowManager
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+
+/**
+ * Transparent full-screen Activity displayed **over the lock screen**.
+ *
+ * Uses [setShowWhenLocked] (API 27) which is the only reliable way on modern Android
+ * to place UI above the keyguard from a non-system app.
+ *
+ * The Activity covers the full screen but only the bottom panel is visible;
+ * everything else is transparent, so the lock screen clock and wallpaper show through.
+ *
+ * Lifecycle:
+ * - Started by [LockScreenService] on ACTION_SCREEN_ON when keyguard is locked.
+ * - Finishes itself on ACTION_USER_PRESENT (device unlocked).
+ * - Finishes itself on [ACTION_CLOSE] broadcast (screen off / service stopped).
+ */
+class LockScreenPanelActivity : ComponentActivity() {
+
+    companion object {
+        const val ACTION_CLOSE = "com.example.loveapp.LOCK_PANEL_CLOSE"
+    }
+
+    private val closeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_USER_PRESENT -> finish()  // fully unlocked
+                ACTION_CLOSE               -> finish()  // service requested close
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // ── Show above the keyguard without turning the screen on ──────────
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(false)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+        }
+
+        // Register close triggers
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_USER_PRESENT)
+            addAction(ACTION_CLOSE)
+        }
+        ContextCompat.registerReceiver(
+            this, closeReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+
+        val canvasId = intent.getIntExtra("canvas_id", -1)
+
+        setContent {
+            LockScreenPanelOverlay(
+                onDraw = {
+                    startActivity(Intent(this, LockScreenDrawingActivity::class.java).apply {
+                        putExtra("canvas_id", canvasId)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    })
+                    finish()
+                },
+                onDismiss = { finish() }
+            )
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
+    override fun onDestroy() {
+        runCatching { unregisterReceiver(closeReceiver) }
+        super.onDestroy()
+    }
+}
+
+// ── UI ─────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun LockScreenPanelOverlay(
+    onDraw: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val gradient = Brush.horizontalGradient(listOf(Color(0xFFE91E63), Color(0xFF9C27B0)))
+    val panelBg  = Color(0xD7_0F0C16.toInt())     // ~85% opaque dark
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // tap anywhere outside the card → dismiss
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss
+            )
+    ) {
+        // ── Bottom panel card ────────────────────────────────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(panelBg)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDraw
+                )
+        ) {
+            // Pink→purple top accent strip
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .align(Alignment.TopCenter)
+                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .background(gradient)
+            )
+
+            // Content row
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Icon circle
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(gradient),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "\uD83C\uDFA8", fontSize = 20.sp) // 🎨
+                }
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 14.dp)
+                ) {
+                    Text(
+                        text       = "Совместный холст",
+                        fontSize   = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color      = Color.White
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        text     = "Нажмите, чтобы рисовать вместе",
+                        fontSize = 12.sp,
+                        color    = Color.White.copy(alpha = 0.65f)
+                    )
+                }
+
+                Text(
+                    text       = "\u203A",  // ›
+                    fontSize   = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color      = Color.White.copy(alpha = 0.5f)
+                )
+            }
+        }
+    }
+}
+
+
+--- java\com\example\loveapp\ui\art\LockScreenService.kt ---
+
+﻿package com.example.loveapp.ui.art
+
+import android.app.KeyguardManager
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import androidx.core.app.NotificationCompat
+import com.example.loveapp.R
+import dagger.hilt.android.AndroidEntryPoint
+
+/**
+ * Foreground service that monitors screen state and launches [LockScreenPanelActivity]
+ * вЂ” a transparent Activity with setShowWhenLocked(true) вЂ” when the keyguard is active.
+ *
+ * This is the only reliable approach on Android 8+ to show UI above the keyguard
+ * from a third-party app. WindowManager TYPE_APPLICATION_OVERLAY does NOT reliably
+ * appear above the keyguard on Android 10+.
+ *
+ * Usage:
+ *   LockScreenService.start(context)
+ *   LockScreenService.stop(context)
+ */
+@AndroidEntryPoint
+class LockScreenService : Service() {
+
+    companion object {
+        private const val CHANNEL_ID      = "lock_screen_canvas_silent"
+        private const val NOTIFICATION_ID = 2001
+        private const val EXTRA_CANVAS_ID = "canvas_id"
+
+        fun start(context: Context, canvasId: Int = -1) {
+            val intent = Intent(context, LockScreenService::class.java)
+                .putExtra(EXTRA_CANVAS_ID, canvasId)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+
+        fun stop(context: Context) {
+            context.stopService(Intent(context, LockScreenService::class.java))
+        }
+    }
+
+    private var storedCanvasId: Int = -1
+    private val handler = Handler(Looper.getMainLooper())
+
+    // в”Ђв”Ђ Screen lock / unlock receiver в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_ON -> {
+                    // Delay 250ms so the keyguard has time to fully settle
+                    handler.postDelayed({
+                        val km = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
+                        if (km.isKeyguardLocked) showPanelActivity()
+                    }, 250)
+                }
+                Intent.ACTION_SCREEN_OFF -> closePanelActivity()
+            }
+        }
+    }
+
+    // в”Ђв”Ђ Lifecycle в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel()
+        startForeground(NOTIFICATION_ID, buildSilentNotification())
+        registerReceiver(screenReceiver, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        })
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        storedCanvasId = intent?.getIntExtra(EXTRA_CANVAS_ID, -1) ?: -1
+        // If screen is already on and locked when service starts, show panel immediately
+        val km = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
+        val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
+        val screenOn = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+            pm.isInteractive
+        } else {
+            @Suppress("DEPRECATION") pm.isScreenOn
+        }
+        if (screenOn && km.isKeyguardLocked) showPanelActivity()
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        runCatching { unregisterReceiver(screenReceiver) }
+        closePanelActivity()
+        super.onDestroy()
+    }
+
+    // в”Ђв”Ђ Panel activity control в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+
+    private fun showPanelActivity() {
+        startActivity(Intent(this, LockScreenPanelActivity::class.java).apply {
+            putExtra("canvas_id", storedCanvasId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+        })
+    }
+
+    private fun closePanelActivity() {
+        sendBroadcast(Intent(LockScreenPanelActivity.ACTION_CLOSE).apply {
+            setPackage(packageName)
+        })
+    }
+
+    // в”Ђв”Ђ Silent foreground notification (required by Android OS) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+
+    private fun buildSilentNotification(): Notification =
+        NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Р РёСЃРѕРІР°РЅРёРµ Р°РєС‚РёРІРЅРѕ")
+            .setSmallIcon(R.drawable.ic_notification)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setOngoing(true)
+            .setShowWhen(false)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .build()
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel(
+                CHANNEL_ID,
+                "Р РёСЃРѕРІР°РЅРёРµ (СЃРёСЃС‚РµРјРЅС‹Р№ СЃРµСЂРІРёСЃ)",
+                NotificationManager.IMPORTANCE_MIN
+            ).apply {
+                setShowBadge(false)
+                enableLights(false)
+                enableVibration(false)
+                setSound(null, null)
+            }.also {
+                getSystemService(NotificationManager::class.java).createNotificationChannel(it)
+            }
+        }
+    }
+}
 
 --- java\com\example\loveapp\ui\components\FunctionTile.kt ---
 
@@ -11046,6 +11454,7 @@ fun LoginScreen(
     onNavigateToSignup: () -> Unit,
     onNavigateToPrivacyPolicy: () -> Unit = {},
     onNavigateToTermsOfUse: () -> Unit = {},
+    onNavigateToLoginPassword: () -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     var email by remember { mutableStateOf("") }
@@ -11153,6 +11562,12 @@ fun LoginScreen(
 
         TextButton(onClick = onNavigateToSignup) {
             Text(stringResource(R.string.no_account), fontSize = r.bodyFontSize)
+        }
+
+        Spacer(modifier = Modifier.height(r.vSpacingSmall))
+
+        TextButton(onClick = onNavigateToLoginPassword) {
+            Text("Использовать ссылку для входа", fontSize = r.bodyFontSize)
         }
 
         Spacer(modifier = Modifier.height(r.vSpacingSmall))
@@ -13875,6 +14290,7 @@ import com.example.loveapp.viewmodel.PairingViewModel
 @Composable
 fun PairingScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToMatchSuccess: () -> Unit = {},
     viewModel: PairingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -13891,6 +14307,13 @@ fun PairingScreen(
         uiState.error?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearError()
+        }
+    }
+
+    // Navigate to MatchSuccess when pairing succeeds
+    LaunchedEffect(uiState.partnerName) {
+        if (uiState.partnerName != null) {
+            onNavigateToMatchSuccess()
         }
     }
 
@@ -14449,6 +14872,15 @@ private val HEADER_DATE_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("d 
 @Composable
 fun RelationshipDashboardScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToSparkInfo: () -> Unit = {},
+    onNavigateToLevelUp: () -> Unit = {},
+    onNavigateToIntimacy: () -> Unit = {},
+    onNavigateToMemorialDay: () -> Unit = {},
+    onNavigateToStory: () -> Unit = {},
+    onNavigateToCouplePortrait: () -> Unit = {},
+    onNavigateToFestival: () -> Unit = {},
+    onNavigateToShareAnniversary: () -> Unit = {},
+    onNavigateToDailyReport: () -> Unit = {},
     viewModel: RelationshipViewModel = hiltViewModel()
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
@@ -14552,6 +14984,106 @@ fun RelationshipDashboardScreen(
                                 myAvatar = myAvatar,
                                 onEditClick = { showEditDialog = true }
                             )
+                        }
+
+                        // SparkInfo + LevelUp buttons
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Button(
+                                    onClick = onNavigateToSparkInfo,
+                                    modifier = Modifier.weight(1f),
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = PrimaryPink)
+                                ) {
+                                    Text("✨ Первый искра", fontSize = 13.sp)
+                                }
+                                Button(
+                                    onClick = onNavigateToLevelUp,
+                                    modifier = Modifier.weight(1f),
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = AccentPurple)
+                                ) {
+                                    Text("📈 Уровень выше", fontSize = 13.sp)
+                                }
+                            }
+                        }
+
+                        // Relationship sub-features section
+                        item {
+                            androidx.compose.foundation.layout.Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    "💑 Особенности отношений",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 15.sp,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = onNavigateToIntimacy,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = PrimaryPink)
+                                    ) { Text("💞 Близость", fontSize = 12.sp, maxLines = 1) }
+                                    Button(
+                                        onClick = onNavigateToMemorialDay,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = AccentPurple)
+                                    ) { Text("📅 Даты", fontSize = 12.sp, maxLines = 1) }
+                                }
+                                Spacer(Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = onNavigateToStory,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = PrimaryPink)
+                                    ) { Text("📖 Моменты", fontSize = 12.sp, maxLines = 1) }
+                                    Button(
+                                        onClick = onNavigateToCouplePortrait,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = AccentPurple)
+                                    ) { Text("👫 Портрет", fontSize = 12.sp, maxLines = 1) }
+                                }
+                                Spacer(Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = onNavigateToFestival,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = PrimaryPink)
+                                    ) { Text("🎉 Праздники", fontSize = 12.sp, maxLines = 1) }
+                                    Button(
+                                        onClick = onNavigateToShareAnniversary,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = AccentPurple)
+                                    ) { Text("🗓️ Наши даты", fontSize = 12.sp, maxLines = 1) }
+                                }
+                                Spacer(Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = onNavigateToDailyReport,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = PrimaryPink)
+                                    ) { Text("📊 Отчёт дня", fontSize = 12.sp, maxLines = 1) }
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
                         }
 
                         //  Tab row 
@@ -15186,6 +15718,8 @@ fun DatePickerDialogWrapper(
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import com.example.loveapp.ui.art.LockScreenService
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -15220,6 +15754,12 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.HeartBroken
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -15272,12 +15812,22 @@ fun SettingsScreen(
     onNavigateToPairing: () -> Unit = {},
     onNavigateToPrivacyPolicy: () -> Unit = {},
     onNavigateToTermsOfUse: () -> Unit = {},
+    onNavigateToLanguage: () -> Unit = {},
+    onNavigateToPrivacySecurity: () -> Unit = {},
+    onNavigateToContactUs: () -> Unit = {},
+    onNavigateToNotification: () -> Unit = {},
+    onNavigateToInviteFriend: () -> Unit = {},
+    onNavigateToVerifyEmail: () -> Unit = {},
+    onNavigateToPasscode: () -> Unit = {},
+    onNavigateToFeedback: () -> Unit = {},
+    onNavigateToUnpair: () -> Unit = {},
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
-    val isDarkMode           by settingsViewModel.isDarkMode.collectAsState()
-    val notificationsEnabled by settingsViewModel.notificationsEnabled.collectAsState()
-    val remindersEnabled     by settingsViewModel.remindersEnabled.collectAsState()
+    val isDarkMode               by settingsViewModel.isDarkMode.collectAsState()
+    val notificationsEnabled     by settingsViewModel.notificationsEnabled.collectAsState()
+    val remindersEnabled         by settingsViewModel.remindersEnabled.collectAsState()
+    val lockScreenCanvasEnabled  by settingsViewModel.lockScreenCanvasEnabled.collectAsState()
     val currentUser          by authViewModel.currentUser.collectAsState()
     val isLoading            by authViewModel.isLoading.collectAsState()
     val isLoggedIn           by authViewModel.isLoggedIn.collectAsState()
@@ -15368,6 +15918,36 @@ fun SettingsScreen(
                         checked  = remindersEnabled,
                         onCheckedChange = { settingsViewModel.setRemindersEnabled(it) }
                     )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon     = Icons.Default.Notifications,
+                        iconTint = Color(0xFF4CAF50),
+                        title    = "Настройки уведомлений",
+                        subtitle = "Типы, звук, режим не беспокоить",
+                        onClick  = onNavigateToNotification
+                    )
+                }
+            }
+
+            //  Lock-screen drawing 
+            item { SettingsSectionLabel(text = "Рисование") }
+            item {
+                SettingsGroup {
+                    SettingsToggleRow(
+                        icon     = Icons.Default.Lock,
+                        iconTint = Color(0xFF9C27B0),
+                        title    = "Виджет на экране блокировки",
+                        subtitle = "Панель «Совместный холст» появляется под часами при блокировке",
+                        checked  = lockScreenCanvasEnabled,
+                        onCheckedChange = { enabled ->
+                            settingsViewModel.setLockScreenCanvasEnabled(enabled)
+                            if (enabled) LockScreenService.start(context)
+                            else         LockScreenService.stop(context)
+                        }
+                    )
                 }
             }
 
@@ -15382,6 +15962,55 @@ fun SettingsScreen(
                         subtitle    = "Введите код партнёра или поделитесь своим",
                         isDestructive = false,
                         onClick     = onNavigateToPairing
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon        = Icons.Default.PersonAdd,
+                        iconTint    = Color(0xFF00BCD4),
+                        title       = "Пригласить друза",
+                        subtitle    = "Поделитесь приложением с друзьями",
+                        isDestructive = false,
+                        onClick     = onNavigateToInviteFriend
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon        = Icons.Default.HeartBroken,
+                        iconTint    = MaterialTheme.colorScheme.error,
+                        title       = "Разъединить с партнёром",
+                        subtitle    = "Отвязать аккаунт партнёра",
+                        isDestructive = true,
+                        onClick     = onNavigateToUnpair
+                    )
+                }
+            }
+
+            //  Security 
+            item { SettingsSectionLabel(text = "Безопасность") }
+            item {
+                SettingsGroup {
+                    SettingsActionRow(
+                        icon     = Icons.Default.Lock,
+                        iconTint = Color(0xFF607D8B),
+                        title    = "Pin-код",
+                        subtitle = "Защитите приложение пин-кодом",
+                        onClick  = onNavigateToPasscode
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon     = Icons.Default.Email,
+                        iconTint = Color(0xFFE91E63),
+                        title    = "Обратная связь",
+                        subtitle = "Отправить отзыв или сообщение об ошибке",
+                        onClick  = onNavigateToFeedback
                     )
                 }
             }
@@ -15489,11 +16118,55 @@ fun SettingsScreen(
                         color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
                     SettingsActionRow(
+                        icon     = Icons.Default.Security,
+                        iconTint = Color(0xFF1565C0),
+                        title    = "Конфиденциальность и безопасность",
+                        subtitle = "Геолокация, видимость, 2FA",
+                        onClick  = onNavigateToPrivacySecurity
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon     = Icons.Default.Language,
+                        iconTint = Color(0xFF0288D1),
+                        title    = "Язык приложения",
+                        subtitle = "Выберите язык интерфейса",
+                        onClick  = onNavigateToLanguage
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
                         icon     = Icons.Default.Description,
                         iconTint = Color(0xFF607D8B),
                         title    = "Условия использования",
                         subtitle = "Правила использования приложения",
                         onClick  = onNavigateToTermsOfUse
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon     = Icons.Default.Email,
+                        iconTint = Color(0xFFE91E63),
+                        title    = "Связаться с нами",
+                        subtitle = "Поддержка, вопросы, предложения",
+                        onClick  = onNavigateToContactUs
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon     = Icons.Default.VerifiedUser,
+                        iconTint = Color(0xFF43A047),
+                        title    = "Подтвердить email",
+                        subtitle = "Подтвердите адрес электронной почты",
+                        onClick  = onNavigateToVerifyEmail
                     )
                 }
             }
@@ -18423,6 +19096,8 @@ class TokenManager(private val context: Context) {
 
     suspend fun getToken(): String? = tokenFlow.first()
 
+    suspend fun getAuthHeader(): String = "Bearer ${getToken() ?: ""}"
+
     suspend fun getUserId(): String? = userIdFlow.first()
 
     suspend fun getPartnerId(): String? = context.dataStore.data.first()[PARTNER_ID_KEY]
@@ -18553,6 +19228,8 @@ class ActivityViewModel @Inject constructor(
             myUserId = tokenManager.getUserId()?.toIntOrNull() ?: 0
             observeToday()
         }
+        // Pull fresh data from server; Room Flow in observeToday() auto-updates the UI
+        viewModelScope.launch { activityRepository.refreshFromServer() }
     }
 
     private fun loadUserInfo() {
@@ -19093,6 +19770,7 @@ import android.net.Uri
 import com.example.loveapp.data.api.models.AuthResponse
 import com.example.loveapp.data.repository.AuthRepository
 import com.example.loveapp.sync.DataPreloadManager
+import com.example.loveapp.sync.SyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19103,7 +19781,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val dataPreloadManager: DataPreloadManager
+    private val dataPreloadManager: DataPreloadManager,
+    private val syncManager: SyncManager
 ) : ViewModel() {
 
     private val _currentUser = MutableStateFlow<AuthResponse?>(null)
@@ -19242,7 +19921,8 @@ class AuthViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             _isLoading.value = true
-            val result = authRepository.logout()
+            syncManager.onLogout()          // disconnect socket before DB wipe
+            val result = authRepository.logout()   // clears token + wipes Room
             result.onSuccess {
                 _currentUser.value = null
                 _isLoggedIn.value = false
@@ -19878,6 +20558,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -19976,7 +20657,9 @@ class MoodViewModel @Inject constructor(
     /** Subscribe to Room for today's moods — auto-updates on any write without a network call. */
     private suspend fun observeToday() {
         val today = DateUtils.getTodayDateString()
-        moodRepository.observeByDate(today).collect { all ->
+        moodRepository.observeByDate(today)
+            .distinctUntilChanged()
+            .collect { all ->
             val mine   = all.filter { it.userId == myUserId || it.userId == 0 }.map { it.toResponse() }
             val theirs = all.filter { it.userId != myUserId && it.userId != 0 }.map { it.toResponse() }
             _myTodayMoods.value    = mine
@@ -20092,17 +20775,30 @@ package com.example.loveapp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.filter
+import androidx.paging.map
 import com.example.loveapp.data.api.models.NoteResponse
 import com.example.loveapp.data.repository.NoteRepository
 import com.example.loveapp.utils.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class NoteViewModel @Inject constructor(
     private val noteRepository: NoteRepository
@@ -20110,6 +20806,42 @@ class NoteViewModel @Inject constructor(
 
     private val _notes = MutableStateFlow<List<NoteResponse>>(emptyList())
     val notes: StateFlow<List<NoteResponse>> = _notes.asStateFlow()
+
+    // ── Search query with debounce ────────────────────────────────────────
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    /**
+     * Paged notes driven by [searchQuery].
+     * Emits a new [PagingData] every time the debounced query changes.
+     * Use [androidx.paging.compose.collectAsLazyPagingItems] in the UI.
+     */
+    val pagedNotes: Flow<PagingData<NoteResponse>> = _searchQuery
+        .debounce(300L)
+        .distinctUntilChanged()
+        .flatMapLatest { query ->
+            Pager(PagingConfig(pageSize = 20, enablePlaceholders = false)) {
+                noteRepository.pagingSource(query)
+            }.flow.map { pagingData ->
+                pagingData
+                    .filter { it.deletedAt == null }
+                    .map { note ->
+                        NoteResponse(
+                            id          = note.serverId ?: note.id,
+                            title       = note.title,
+                            content     = note.content,
+                            userId      = note.userId,
+                            createdAt   = DateUtils.timestampToDateString(note.createdAt),
+                            updatedAt   = DateUtils.timestampToDateString(note.updatedAt),
+                            isPrivate   = note.isPrivate,
+                            tags        = note.tags,
+                            displayName = note.displayName,
+                            userAvatar  = note.userAvatar
+                        )
+                    }
+            }
+        }
+        .cachedIn(viewModelScope)
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -20127,9 +20859,10 @@ class NoteViewModel @Inject constructor(
     val currentUserId: StateFlow<Int?> = _currentUserId.asStateFlow()
 
     init {
-        // Observe Room — instantly shows cached data, auto-updates when server sync writes new rows
+        // Observe Room — distinctUntilChanged avoids redundant UI recompositions
         viewModelScope.launch {
             noteRepository.observeAllNotes()
+                .distinctUntilChanged()
                 .map { list ->
                     list.filter { it.deletedAt == null }
                         .sortedByDescending { it.updatedAt }
@@ -20155,6 +20888,11 @@ class NoteViewModel @Inject constructor(
         }
         // Pull fresh data from server in the background; Room flow updates the UI automatically
         viewModelScope.launch { noteRepository.refreshFromServer() }
+    }
+
+    /** Update the search / filter query. Paged flow reacts automatically via debounce. */
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 
     /** Triggers a background pull from server; Room flow updates the list automatically. */
@@ -20620,9 +21358,10 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
-        private val DARK_MODE_KEY = booleanPreferencesKey("dark_mode")
-        private val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
-        private val REMINDERS_ENABLED_KEY = booleanPreferencesKey("reminders_enabled")
+        private val DARK_MODE_KEY              = booleanPreferencesKey("dark_mode")
+        private val NOTIFICATIONS_ENABLED_KEY  = booleanPreferencesKey("notifications_enabled")
+        private val REMINDERS_ENABLED_KEY      = booleanPreferencesKey("reminders_enabled")
+        private val LOCK_SCREEN_CANVAS_KEY     = booleanPreferencesKey("lock_screen_canvas")
     }
 
     private val _isDarkMode = MutableStateFlow(false)
@@ -20633,6 +21372,9 @@ class SettingsViewModel @Inject constructor(
 
     private val _remindersEnabled = MutableStateFlow(true)
     val remindersEnabled: StateFlow<Boolean> = _remindersEnabled.asStateFlow()
+
+    private val _lockScreenCanvasEnabled = MutableStateFlow(false)
+    val lockScreenCanvasEnabled: StateFlow<Boolean> = _lockScreenCanvasEnabled.asStateFlow()
 
     init {
         loadSettings()
@@ -20655,6 +21397,11 @@ class SettingsViewModel @Inject constructor(
             context.settingsDataStore.data
                 .map { it[REMINDERS_ENABLED_KEY] ?: true }
                 .collect { _remindersEnabled.value = it }
+        }
+        viewModelScope.launch {
+            context.settingsDataStore.data
+                .map { it[LOCK_SCREEN_CANVAS_KEY] ?: false }
+                .collect { _lockScreenCanvasEnabled.value = it }
         }
     }
 
@@ -20684,6 +21431,15 @@ class SettingsViewModel @Inject constructor(
             _remindersEnabled.value = enabled
         }
     }
+
+    fun setLockScreenCanvasEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            context.settingsDataStore.edit { preferences ->
+                preferences[LOCK_SCREEN_CANVAS_KEY] = enabled
+            }
+            _lockScreenCanvasEnabled.value = enabled
+        }
+    }
 }
 
 
@@ -20694,18 +21450,31 @@ package com.example.loveapp.viewmodel
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.filter
+import androidx.paging.map
 import com.example.loveapp.data.api.models.WishRequest
 import com.example.loveapp.data.api.models.WishResponse
 import com.example.loveapp.data.repository.WishRepository
 import com.example.loveapp.utils.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class WishViewModel @Inject constructor(
     private val wishRepository: WishRepository
@@ -20713,6 +21482,44 @@ class WishViewModel @Inject constructor(
 
     private val _wishes = MutableStateFlow<List<WishResponse>>(emptyList())
     val wishes: StateFlow<List<WishResponse>> = _wishes.asStateFlow()
+
+    // ── Search query with debounce ────────────────────────────────────────
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    /**
+     * Paged wishes driven by [searchQuery].
+     * Use [androidx.paging.compose.collectAsLazyPagingItems] in the UI.
+     */
+    val pagedWishes: Flow<PagingData<WishResponse>> = _searchQuery
+        .debounce(300L)
+        .distinctUntilChanged()
+        .flatMapLatest { query ->
+            Pager(PagingConfig(pageSize = 20, enablePlaceholders = false)) {
+                wishRepository.pagingSource(query)
+            }.flow.map { pagingData ->
+                pagingData
+                    .filter { it.deletedAt == null }
+                    .map { wish ->
+                        WishResponse(
+                            id          = wish.serverId ?: wish.id,
+                            title       = wish.title,
+                            description = wish.description,
+                            userId      = wish.userId,
+                            createdAt   = DateUtils.timestampToDateString(wish.createdAt),
+                            isCompleted = wish.isCompleted,
+                            priority    = wish.priority,
+                            category    = wish.category,
+                            isPrivate   = wish.isPrivate,
+                            imageUrls   = wish.imageUrl,
+                            emoji       = wish.emoji,
+                            displayName = wish.displayName,
+                            userAvatar  = wish.userAvatar
+                        )
+                    }
+            }
+        }
+        .cachedIn(viewModelScope)
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -20733,9 +21540,10 @@ class WishViewModel @Inject constructor(
     val currentUserId: StateFlow<Int?> = _currentUserId.asStateFlow()
 
     init {
-        // Observe Room — instantly shows cached data, auto-updates when server sync writes new rows
+        // Observe Room — distinctUntilChanged avoids redundant UI recompositions
         viewModelScope.launch {
             wishRepository.observeAllWishes()
+                .distinctUntilChanged()
                 .map { list ->
                     list.filter { it.deletedAt == null }
                         .sortedByDescending { it.createdAt }
@@ -20764,6 +21572,11 @@ class WishViewModel @Inject constructor(
         }
         // Pull fresh data from server in the background; Room flow updates the UI automatically
         viewModelScope.launch { wishRepository.refreshFromServer() }
+    }
+
+    /** Update the search / filter query. Paged flow reacts automatically via debounce. */
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 
     /** Triggers a background pull from server; Room flow updates the list automatically. */
@@ -22085,6 +22898,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.action.actionSendBroadcast
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -22120,6 +22934,11 @@ import com.example.loveapp.widget.WidgetUpdater.Companion.KEY_MOOD_PT_TYPE
 /**
  * Home-screen widget showing today's mood for both the user and their partner.
  * Tapping the widget opens the Mood Tracker screen directly.
+ *
+ * When the user has NOT yet logged a mood today, a quick-pick row of emoji
+ * buttons is displayed so they can log their mood without opening the app.
+ * Each button sends a broadcast handled by [MoodQuickLogReceiver].
+ *
  * Data is pushed via [WidgetUpdater.pushMoodUpdate] from [com.example.loveapp.viewmodel.MoodViewModel].
  */
 class MoodDayWidget : GlanceAppWidget() {
@@ -22182,8 +23001,62 @@ class MoodDayWidget : GlanceAppWidget() {
 
                 Spacer(GlanceModifier.height(6.dp))
 
-                // ── Partner mood ─────────────────────────────────────────────
+                // ── Partner mood ───────────────────────────────────────────
                 MoodRow(name = ptName, moodType = ptType, note = ptNote, isMe = false, avatarBitmap = ptAvatarBmp)
+
+                // ── Quick mood picker (only when own mood not logged yet) ───────────
+                if (myType.isEmpty()) {
+                    Spacer(GlanceModifier.height(8.dp))
+                    MoodQuickPicker(context)
+                }
+            }
+        }
+    }
+
+    /**
+     * A row of tappable emoji buttons that log a mood without opening the app.
+     * Each button sends a broadcast handled by [MoodQuickLogReceiver].
+     */
+    @Composable
+    private fun MoodQuickPicker(context: Context) {
+        val picks = listOf(
+            "rad"   to "😄",
+            "good"  to "😊",
+            "meh"   to "😐",
+            "bad"   to "😔",
+            "awful" to "😞"
+        )
+        Column(horizontalAlignment = Alignment.Start) {
+            Text(
+                text  = "Быстро отметить:",
+                style = TextStyle(
+                    color    = ColorProvider(Color(0xFF8E8E93)),
+                    fontSize = 9.sp
+                )
+            )
+            Spacer(GlanceModifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                picks.forEachIndexed { index, (moodType, emoji) ->
+                    Box(
+                        modifier = GlanceModifier
+                            .size(30.dp)
+                            .background(ColorProvider(Color(0x22FF6B9D)))
+                            .cornerRadius(15.dp)
+                            .clickable(
+                                actionSendBroadcast(
+                                    Intent(MoodQuickLogReceiver.ACTION)
+                                        .setPackage(context.packageName)
+                                        .putExtra(MoodQuickLogReceiver.EXTRA_MOOD_TYPE, moodType)
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = emoji, style = TextStyle(fontSize = 16.sp))
+                    }
+                    if (index < picks.size - 1) {
+                        Spacer(GlanceModifier.width(4.dp))
+                    }
+                }
             }
         }
     }
@@ -22291,6 +23164,94 @@ class MoodDayWidgetReceiver : GlanceAppWidgetReceiver() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
         WidgetSyncWorker.runImmediately(context)
+    }
+}
+
+
+--- java\com\example\loveapp\widget\MoodPickerActionCallback.kt ---
+
+﻿package com.example.loveapp.widget
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.state.PreferencesGlanceStateDefinition
+import com.example.loveapp.data.repository.MoodRepository
+import com.example.loveapp.utils.DateUtils
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
+/**
+ * BroadcastReceiver that saves a quick mood entry from a home-screen widget tap.
+ *
+ * Triggered via [actionSendBroadcast] in [MoodDayWidget]:
+ * ```kotlin
+ * .clickable(
+ *     actionSendBroadcast(
+ *         Intent(MoodQuickLogReceiver.ACTION)
+ *             .setPackage(context.packageName)
+ *             .putExtra(MoodQuickLogReceiver.EXTRA_MOOD_TYPE, moodType)
+ *     )
+ * )
+ * ```
+ *
+ * The receiver:
+ *  1. Saves the mood to Room (+ server via [MoodRepository]).
+ *  2. Immediately updates widget state so the emoji appears without reopening the app.
+ *  3. Triggers a full re-render of all [MoodDayWidget] instances.
+ */
+class MoodQuickLogReceiver : BroadcastReceiver() {
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface MoodWidgetEntryPoint {
+        fun moodRepository(): MoodRepository
+    }
+
+    companion object {
+        const val ACTION = "com.example.loveapp.widget.QUICK_MOOD_LOG"
+        const val EXTRA_MOOD_TYPE = "mood_type"
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != ACTION) return
+        val moodType = intent.getStringExtra(EXTRA_MOOD_TYPE) ?: return
+
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            try {
+                val entryPoint = EntryPointAccessors.fromApplication(
+                    context.applicationContext,
+                    MoodWidgetEntryPoint::class.java
+                )
+                val today = DateUtils.getTodayDateString()
+                entryPoint.moodRepository().createMood(moodType = moodType, date = today)
+
+                // Optimistically update all MoodDayWidget instances so the emoji appears immediately
+                val manager = GlanceAppWidgetManager(context)
+                manager.getGlanceIds(MoodDayWidget::class.java).forEach { glanceId ->
+                    updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+                        prefs.toMutablePreferences().apply {
+                            this[WidgetUpdater.KEY_MOOD_MY_TYPE] = moodType
+                            if (this[WidgetUpdater.KEY_MOOD_DATE].isNullOrEmpty()) {
+                                this[WidgetUpdater.KEY_MOOD_DATE] = today
+                            }
+                        }
+                    }
+                    MoodDayWidget().update(context, glanceId)
+                }
+            } finally {
+                pendingResult.finish()
+            }
+        }
     }
 }
 
@@ -23539,214 +24500,3 @@ class WidgetUpdater @Inject constructor(
         updateClass(ArtWidgetLarge(),  ArtWidgetLarge::class.java)
     }
 }
-
-AndroidManifest.xml
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-
-    <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Read images from gallery (Android 13+) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <!-- Fallback for Android 12 and below -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <!-- Required to post notifications on Android 13+ (API 33+) -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Keep screen on for lock-screen drawing -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- Required for WorkManager to run as a foreground service (API 28+, Xiaomi MIUI) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- Allows WorkManager to re-schedule workers after device reboot -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- System calendar access for CalendarExportManager -->
-    <uses-permission android:name="android.permission.READ_CALENDAR" />
-    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
-
-    <application
-        android:name=".SimpleApplication"
-        android:allowBackup="true"
-        android:usesCleartextTraffic="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.LoveApp">
-
-        <!-- Sentry: DSN for crash reporting. Auto-init disabled — manual init in SimpleApplication -->
-        <meta-data
-            android:name="io.sentry.dsn"
-            android:value="https://503edf5c1972fa711ecf26665acaa789@o4510979258843136.ingest.de.sentry.io/4510979272147024" />
-        <meta-data android:name="io.sentry.auto-init" android:value="false" />
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.LoveApp.Starting">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name=".SimpleMainActivity"
-            android:exported="false"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.LoveApp" />
-
-        <!-- Mood day widget – Small (2×1) -->
-        <receiver
-            android:name=".widget.MoodWidgetSmallReceiver"
-            android:exported="true"
-            android:label="@string/widget_mood_small_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/mood_widget_small_info" />
-        </receiver>
-
-        <!-- Mood day widget – Medium (3×2) -->
-        <receiver
-            android:name=".widget.MoodDayWidgetReceiver"
-            android:exported="true"
-            android:label="@string/widget_mood_medium_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/mood_day_widget_info" />
-        </receiver>
-
-        <!-- Mood day widget – Large (4×3) -->
-        <receiver
-            android:name=".widget.MoodWidgetLargeReceiver"
-            android:exported="true"
-            android:label="@string/widget_mood_large_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/mood_widget_large_info" />
-        </receiver>
-
-        <!-- Activity day widget – Small (2×1) -->
-        <receiver
-            android:name=".widget.ActivityWidgetSmallReceiver"
-            android:exported="true"
-            android:label="@string/widget_activity_small_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/activity_widget_small_info" />
-        </receiver>
-
-        <!-- Activity day widget – Medium (3×2) -->
-        <receiver
-            android:name=".widget.ActivityDayWidgetReceiver"
-            android:exported="true"
-            android:label="@string/widget_activity_medium_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/activity_day_widget_info" />
-        </receiver>
-
-        <!-- Activity day widget – Large (4×3) -->
-        <receiver
-            android:name=".widget.ActivityWidgetLargeReceiver"
-            android:exported="true"
-            android:label="@string/widget_activity_large_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/activity_widget_large_info" />
-        </receiver>
-
-        <!-- Lock-screen drawing activity -->
-        <activity
-            android:name=".ui.art.LockScreenDrawingActivity"
-            android:showWhenLocked="true"
-            android:turnScreenOn="true"
-            android:exported="false"
-            android:theme="@style/Theme.LoveApp" />
-
-        <!-- Art widget – Small (2×2) -->
-        <receiver
-            android:name=".widget.ArtWidgetSmallReceiver"
-            android:exported="true"
-            android:label="@string/widget_art_small_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/art_widget_small_info" />
-        </receiver>
-
-        <!-- Art widget – Medium (3×3) -->
-        <receiver
-            android:name=".widget.ArtWidgetMediumReceiver"
-            android:exported="true"
-            android:label="@string/widget_art_medium_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/art_widget_medium_info" />
-        </receiver>
-
-        <!-- Art widget – Large (4×4) -->
-        <receiver
-            android:name=".widget.ArtWidgetLargeReceiver"
-            android:exported="true"
-            android:label="@string/widget_art_large_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/art_widget_large_info" />
-        </receiver>
-
-        <!-- Firebase Cloud Messaging -->
-        <service
-            android:name=".notifications.MyFirebaseMessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
-
-        <!--
-          Disable the default WorkManager auto-initializer so that our
-          custom Hilt-aware Configuration.Provider (in SimpleApplication) is
-          used instead.  Without this the default initializer runs first and
-          ignores our HiltWorkerFactory.
-        -->
-        <provider
-            android:name="androidx.startup.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
-            android:exported="false"
-            tools:node="merge">
-            <meta-data
-                android:name="androidx.work.impl.WorkManagerInitializer"
-                android:value="androidx.startup"
-                tools:node="remove" />
-        </provider>
-
-    </application>
-
-</manifest>

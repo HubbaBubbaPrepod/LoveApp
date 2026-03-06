@@ -75,6 +75,8 @@ class TokenManager(private val context: Context) {
 
     suspend fun getToken(): String? = tokenFlow.first()
 
+    suspend fun getAuthHeader(): String = "Bearer ${getToken() ?: ""}"
+
     suspend fun getUserId(): String? = userIdFlow.first()
 
     suspend fun getPartnerId(): String? = context.dataStore.data.first()[PARTNER_ID_KEY]

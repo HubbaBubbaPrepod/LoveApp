@@ -1,5 +1,6 @@
 package com.example.loveapp.data.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -57,4 +58,8 @@ interface MoodEntryDao {
     /** Reactive: moods in a date range (own + partner), used for calendar month view cache. */
     @Query("SELECT * FROM mood_entries WHERE date >= :startDate AND date <= :endDate AND deletedAt IS NULL ORDER BY date DESC, timestamp DESC")
     fun observeByDateRange(startDate: String, endDate: String): Flow<List<MoodEntry>>
+
+    /** Paging 3 – mood history (all users) newest first. */
+    @Query("SELECT * FROM mood_entries WHERE deletedAt IS NULL ORDER BY timestamp DESC")
+    fun pagingSource(): PagingSource<Int, MoodEntry>
 }

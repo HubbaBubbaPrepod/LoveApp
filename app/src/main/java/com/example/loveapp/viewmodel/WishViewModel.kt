@@ -3,18 +3,31 @@ package com.example.loveapp.viewmodel
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.filter
+import androidx.paging.map
 import com.example.loveapp.data.api.models.WishRequest
 import com.example.loveapp.data.api.models.WishResponse
 import com.example.loveapp.data.repository.WishRepository
 import com.example.loveapp.utils.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class WishViewModel @Inject constructor(
     private val wishRepository: WishRepository
@@ -22,6 +35,44 @@ class WishViewModel @Inject constructor(
 
     private val _wishes = MutableStateFlow<List<WishResponse>>(emptyList())
     val wishes: StateFlow<List<WishResponse>> = _wishes.asStateFlow()
+
+    // ── Search query with debounce ────────────────────────────────────────
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    /**
+     * Paged wishes driven by [searchQuery].
+     * Use [androidx.paging.compose.collectAsLazyPagingItems] in the UI.
+     */
+    val pagedWishes: Flow<PagingData<WishResponse>> = _searchQuery
+        .debounce(300L)
+        .distinctUntilChanged()
+        .flatMapLatest { query ->
+            Pager(PagingConfig(pageSize = 20, enablePlaceholders = false)) {
+                wishRepository.pagingSource(query)
+            }.flow.map { pagingData ->
+                pagingData
+                    .filter { it.deletedAt == null }
+                    .map { wish ->
+                        WishResponse(
+                            id          = wish.serverId ?: wish.id,
+                            title       = wish.title,
+                            description = wish.description,
+                            userId      = wish.userId,
+                            createdAt   = DateUtils.timestampToDateString(wish.createdAt),
+                            isCompleted = wish.isCompleted,
+                            priority    = wish.priority,
+                            category    = wish.category,
+                            isPrivate   = wish.isPrivate,
+                            imageUrls   = wish.imageUrl,
+                            emoji       = wish.emoji,
+                            displayName = wish.displayName,
+                            userAvatar  = wish.userAvatar
+                        )
+                    }
+            }
+        }
+        .cachedIn(viewModelScope)
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -42,9 +93,10 @@ class WishViewModel @Inject constructor(
     val currentUserId: StateFlow<Int?> = _currentUserId.asStateFlow()
 
     init {
-        // Observe Room — instantly shows cached data, auto-updates when server sync writes new rows
+        // Observe Room — distinctUntilChanged avoids redundant UI recompositions
         viewModelScope.launch {
             wishRepository.observeAllWishes()
+                .distinctUntilChanged()
                 .map { list ->
                     list.filter { it.deletedAt == null }
                         .sortedByDescending { it.createdAt }
@@ -73,6 +125,11 @@ class WishViewModel @Inject constructor(
         }
         // Pull fresh data from server in the background; Room flow updates the UI automatically
         viewModelScope.launch { wishRepository.refreshFromServer() }
+    }
+
+    /** Update the search / filter query. Paged flow reacts automatically via debounce. */
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 
     /** Triggers a background pull from server; Room flow updates the list automatically. */

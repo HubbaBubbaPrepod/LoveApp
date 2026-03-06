@@ -15,6 +15,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -113,7 +114,9 @@ class MoodViewModel @Inject constructor(
     /** Subscribe to Room for today's moods — auto-updates on any write without a network call. */
     private suspend fun observeToday() {
         val today = DateUtils.getTodayDateString()
-        moodRepository.observeByDate(today).collect { all ->
+        moodRepository.observeByDate(today)
+            .distinctUntilChanged()
+            .collect { all ->
             val mine   = all.filter { it.userId == myUserId || it.userId == 0 }.map { it.toResponse() }
             val theirs = all.filter { it.userId != myUserId && it.userId != 0 }.map { it.toResponse() }
             _myTodayMoods.value    = mine

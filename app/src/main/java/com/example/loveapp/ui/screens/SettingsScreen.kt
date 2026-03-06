@@ -3,7 +3,6 @@
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import com.example.loveapp.ui.art.LockScreenService
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -39,6 +38,12 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.HeartBroken
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -91,6 +96,15 @@ fun SettingsScreen(
     onNavigateToPairing: () -> Unit = {},
     onNavigateToPrivacyPolicy: () -> Unit = {},
     onNavigateToTermsOfUse: () -> Unit = {},
+    onNavigateToLanguage: () -> Unit = {},
+    onNavigateToPrivacySecurity: () -> Unit = {},
+    onNavigateToContactUs: () -> Unit = {},
+    onNavigateToNotification: () -> Unit = {},
+    onNavigateToInviteFriend: () -> Unit = {},
+    onNavigateToVerifyEmail: () -> Unit = {},
+    onNavigateToPasscode: () -> Unit = {},
+    onNavigateToFeedback: () -> Unit = {},
+    onNavigateToUnpair: () -> Unit = {},
     settingsViewModel: SettingsViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
@@ -107,17 +121,6 @@ fun SettingsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val r = rememberResponsiveConfig()
     var showLogoutDialog by remember { mutableStateOf(false) }
-
-    // Grants android.permission.SYSTEM_ALERT_WINDOW (overlay over lock screen)
-    val overlayPermLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) {
-        // Called when user returns from system overlay permission screen
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)) {
-            settingsViewModel.setLockScreenCanvasEnabled(true)
-            LockScreenService.start(context)
-        }
-    }
 
     // Gallery picker for avatar upload
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -199,6 +202,17 @@ fun SettingsScreen(
                         checked  = remindersEnabled,
                         onCheckedChange = { settingsViewModel.setRemindersEnabled(it) }
                     )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon     = Icons.Default.Notifications,
+                        iconTint = Color(0xFF4CAF50),
+                        title    = "Настройки уведомлений",
+                        subtitle = "Типы, звук, режим не беспокоить",
+                        onClick  = onNavigateToNotification
+                    )
                 }
             }
 
@@ -213,25 +227,9 @@ fun SettingsScreen(
                         subtitle = "Панель «Совместный холст» появляется под часами при блокировке",
                         checked  = lockScreenCanvasEnabled,
                         onCheckedChange = { enabled ->
-                            if (!enabled) {
-                                settingsViewModel.setLockScreenCanvasEnabled(false)
-                                LockScreenService.stop(context)
-                            } else {
-                                val canDraw = Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
-                                        Settings.canDrawOverlays(context)
-                                if (canDraw) {
-                                    settingsViewModel.setLockScreenCanvasEnabled(true)
-                                    LockScreenService.start(context)
-                                } else {
-                                    // Ask user to grant overlay permission
-                                    overlayPermLauncher.launch(
-                                        Intent(
-                                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                            Uri.parse("package:${context.packageName}")
-                                        )
-                                    )
-                                }
-                            }
+                            settingsViewModel.setLockScreenCanvasEnabled(enabled)
+                            if (enabled) LockScreenService.start(context)
+                            else         LockScreenService.stop(context)
                         }
                     )
                 }
@@ -248,6 +246,55 @@ fun SettingsScreen(
                         subtitle    = "Введите код партнёра или поделитесь своим",
                         isDestructive = false,
                         onClick     = onNavigateToPairing
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon        = Icons.Default.PersonAdd,
+                        iconTint    = Color(0xFF00BCD4),
+                        title       = "Пригласить друза",
+                        subtitle    = "Поделитесь приложением с друзьями",
+                        isDestructive = false,
+                        onClick     = onNavigateToInviteFriend
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon        = Icons.Default.HeartBroken,
+                        iconTint    = MaterialTheme.colorScheme.error,
+                        title       = "Разъединить с партнёром",
+                        subtitle    = "Отвязать аккаунт партнёра",
+                        isDestructive = true,
+                        onClick     = onNavigateToUnpair
+                    )
+                }
+            }
+
+            //  Security 
+            item { SettingsSectionLabel(text = "Безопасность") }
+            item {
+                SettingsGroup {
+                    SettingsActionRow(
+                        icon     = Icons.Default.Lock,
+                        iconTint = Color(0xFF607D8B),
+                        title    = "Pin-код",
+                        subtitle = "Защитите приложение пин-кодом",
+                        onClick  = onNavigateToPasscode
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon     = Icons.Default.Email,
+                        iconTint = Color(0xFFE91E63),
+                        title    = "Обратная связь",
+                        subtitle = "Отправить отзыв или сообщение об ошибке",
+                        onClick  = onNavigateToFeedback
                     )
                 }
             }
@@ -355,11 +402,55 @@ fun SettingsScreen(
                         color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
                     SettingsActionRow(
+                        icon     = Icons.Default.Security,
+                        iconTint = Color(0xFF1565C0),
+                        title    = "Конфиденциальность и безопасность",
+                        subtitle = "Геолокация, видимость, 2FA",
+                        onClick  = onNavigateToPrivacySecurity
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon     = Icons.Default.Language,
+                        iconTint = Color(0xFF0288D1),
+                        title    = "Язык приложения",
+                        subtitle = "Выберите язык интерфейса",
+                        onClick  = onNavigateToLanguage
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
                         icon     = Icons.Default.Description,
                         iconTint = Color(0xFF607D8B),
                         title    = "Условия использования",
                         subtitle = "Правила использования приложения",
                         onClick  = onNavigateToTermsOfUse
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon     = Icons.Default.Email,
+                        iconTint = Color(0xFFE91E63),
+                        title    = "Связаться с нами",
+                        subtitle = "Поддержка, вопросы, предложения",
+                        onClick  = onNavigateToContactUs
+                    )
+                    Divider(
+                        modifier = Modifier.padding(start = 60.dp),
+                        color    = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsActionRow(
+                        icon     = Icons.Default.VerifiedUser,
+                        iconTint = Color(0xFF43A047),
+                        title    = "Подтвердить email",
+                        subtitle = "Подтвердите адрес электронной почты",
+                        onClick  = onNavigateToVerifyEmail
                     )
                 }
             }

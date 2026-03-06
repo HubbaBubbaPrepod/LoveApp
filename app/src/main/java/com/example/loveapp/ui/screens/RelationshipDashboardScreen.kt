@@ -91,6 +91,15 @@ private val HEADER_DATE_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("d 
 @Composable
 fun RelationshipDashboardScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToSparkInfo: () -> Unit = {},
+    onNavigateToLevelUp: () -> Unit = {},
+    onNavigateToIntimacy: () -> Unit = {},
+    onNavigateToMemorialDay: () -> Unit = {},
+    onNavigateToStory: () -> Unit = {},
+    onNavigateToCouplePortrait: () -> Unit = {},
+    onNavigateToFestival: () -> Unit = {},
+    onNavigateToShareAnniversary: () -> Unit = {},
+    onNavigateToDailyReport: () -> Unit = {},
     viewModel: RelationshipViewModel = hiltViewModel()
 ) {
     var showEditDialog by remember { mutableStateOf(false) }
@@ -194,6 +203,106 @@ fun RelationshipDashboardScreen(
                                 myAvatar = myAvatar,
                                 onEditClick = { showEditDialog = true }
                             )
+                        }
+
+                        // SparkInfo + LevelUp buttons
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Button(
+                                    onClick = onNavigateToSparkInfo,
+                                    modifier = Modifier.weight(1f),
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = PrimaryPink)
+                                ) {
+                                    Text("✨ Первый искра", fontSize = 13.sp)
+                                }
+                                Button(
+                                    onClick = onNavigateToLevelUp,
+                                    modifier = Modifier.weight(1f),
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = AccentPurple)
+                                ) {
+                                    Text("📈 Уровень выше", fontSize = 13.sp)
+                                }
+                            }
+                        }
+
+                        // Relationship sub-features section
+                        item {
+                            androidx.compose.foundation.layout.Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    "💑 Особенности отношений",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 15.sp,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = onNavigateToIntimacy,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = PrimaryPink)
+                                    ) { Text("💞 Близость", fontSize = 12.sp, maxLines = 1) }
+                                    Button(
+                                        onClick = onNavigateToMemorialDay,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = AccentPurple)
+                                    ) { Text("📅 Даты", fontSize = 12.sp, maxLines = 1) }
+                                }
+                                Spacer(Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = onNavigateToStory,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = PrimaryPink)
+                                    ) { Text("📖 Моменты", fontSize = 12.sp, maxLines = 1) }
+                                    Button(
+                                        onClick = onNavigateToCouplePortrait,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = AccentPurple)
+                                    ) { Text("👫 Портрет", fontSize = 12.sp, maxLines = 1) }
+                                }
+                                Spacer(Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = onNavigateToFestival,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = PrimaryPink)
+                                    ) { Text("🎉 Праздники", fontSize = 12.sp, maxLines = 1) }
+                                    Button(
+                                        onClick = onNavigateToShareAnniversary,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = AccentPurple)
+                                    ) { Text("🗓️ Наши даты", fontSize = 12.sp, maxLines = 1) }
+                                }
+                                Spacer(Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = onNavigateToDailyReport,
+                                        modifier = Modifier.weight(1f),
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = PrimaryPink)
+                                    ) { Text("📊 Отчёт дня", fontSize = 12.sp, maxLines = 1) }
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
                         }
 
                         //  Tab row 

@@ -1,5 +1,6 @@
 package com.example.loveapp.data.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -51,4 +52,12 @@ interface NoteDao {
 
     @Query("SELECT * FROM notes WHERE userId = :userId AND deletedAt IS NULL ORDER BY createdAt DESC")
     fun observeNotesByUser(userId: Int): Flow<List<Note>>
+
+    /** Paging 3 – lazy-load notes ordered by creation date. */
+    @Query("SELECT * FROM notes WHERE deletedAt IS NULL ORDER BY createdAt DESC")
+    fun pagingSource(): PagingSource<Int, Note>
+
+    /** Paging 3 – search with keyword filter. */
+    @Query("SELECT * FROM notes WHERE deletedAt IS NULL AND (title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%') ORDER BY createdAt DESC")
+    fun pagingSourceFiltered(query: String): PagingSource<Int, Note>
 }

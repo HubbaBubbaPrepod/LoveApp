@@ -49,6 +49,7 @@ fun LoginScreen(
     onNavigateToSignup: () -> Unit,
     onNavigateToPrivacyPolicy: () -> Unit = {},
     onNavigateToTermsOfUse: () -> Unit = {},
+    onNavigateToLoginPassword: () -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     var email by remember { mutableStateOf("") }
@@ -156,6 +157,12 @@ fun LoginScreen(
 
         TextButton(onClick = onNavigateToSignup) {
             Text(stringResource(R.string.no_account), fontSize = r.bodyFontSize)
+        }
+
+        Spacer(modifier = Modifier.height(r.vSpacingSmall))
+
+        TextButton(onClick = onNavigateToLoginPassword) {
+            Text("Использовать ссылку для входа", fontSize = r.bodyFontSize)
         }
 
         Spacer(modifier = Modifier.height(r.vSpacingSmall))

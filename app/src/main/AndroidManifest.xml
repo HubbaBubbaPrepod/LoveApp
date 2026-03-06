@@ -17,8 +17,6 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- Required on Android 14+ (API 34) when foregroundServiceType="specialUse" -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <!-- Required to draw the floating button directly on the lock screen -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Allows WorkManager to re-schedule workers after device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- System calendar access for CalendarExportManager -->
@@ -98,6 +96,15 @@
                 android:resource="@xml/mood_widget_large_info" />
         </receiver>
 
+        <!-- Quick mood log from widget – handles taps on MoodDayWidget emoji buttons -->
+        <receiver
+            android:name=".widget.MoodQuickLogReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.loveapp.widget.QUICK_MOOD_LOG" />
+            </intent-filter>
+        </receiver>
+
         <!-- Activity day widget – Small (2×1) -->
         <receiver
             android:name=".widget.ActivityWidgetSmallReceiver"
@@ -144,6 +151,17 @@
             android:turnScreenOn="true"
             android:exported="false"
             android:theme="@style/Theme.LoveApp" />
+
+        <!-- Lock-screen panel overlay (transparent activity shown over keyguard) -->
+        <activity
+            android:name=".ui.art.LockScreenPanelActivity"
+            android:showWhenLocked="true"
+            android:turnScreenOn="false"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="false"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.LoveApp.Transparent" />
 
         <!-- Lock-screen drawing persistent notification service -->
         <service

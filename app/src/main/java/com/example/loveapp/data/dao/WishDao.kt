@@ -1,5 +1,6 @@
 package com.example.loveapp.data.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -49,4 +50,12 @@ interface WishDao {
 
     @Query("SELECT * FROM wishes WHERE userId = :userId AND isCompleted = 0 AND deletedAt IS NULL ORDER BY priority DESC, createdAt DESC")
     fun observeActiveWishesByUser(userId: Int): Flow<List<Wish>>
+
+    /** Paging 3 – lazy-load all wishes. */
+    @Query("SELECT * FROM wishes WHERE deletedAt IS NULL ORDER BY priority DESC, createdAt DESC")
+    fun pagingSource(): PagingSource<Int, Wish>
+
+    /** Paging 3 – search by title/description. */
+    @Query("SELECT * FROM wishes WHERE deletedAt IS NULL AND (title LIKE '%' || :query || '%' OR description LIKE '%' || :query || '%') ORDER BY priority DESC, createdAt DESC")
+    fun pagingSourceFiltered(query: String): PagingSource<Int, Wish>
 }

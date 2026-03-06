@@ -1,4 +1,4 @@
-package com.example.loveapp
+﻿package com.example.loveapp
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter

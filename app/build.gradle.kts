@@ -72,7 +72,12 @@ dependencies {
     // Room Database
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.room.paging)
     kapt(libs.room.compiler)
+
+    // Paging 3
+    implementation(libs.paging.runtime)
+    implementation(libs.paging.compose)
     
     // Hilt Dependency Injection
     implementation(libs.hilt.android)
@@ -105,6 +110,7 @@ dependencies {
 
     // Glance App Widgets
     implementation(libs.glance.appwidget)
+    implementation(libs.glance.base) // required for ActionCallback, GlanceId, etc.
 
     // Socket.IO client for real-time drawing sync
     implementation("io.socket:socket.io-client:2.1.0") {

@@ -1,5 +1,6 @@
 package com.example.loveapp.data.repository
 
+import androidx.paging.PagingSource
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -37,6 +38,10 @@ class WishRepository @Inject constructor(
     fun observeActiveWishesByUser(userId: Int): Flow<List<Wish>> =
         wishDao.observeActiveWishesByUser(userId)
 
+    /** PagingSource for Paging 3 – pass to [Pager] in the ViewModel. */
+    fun pagingSource(query: String = ""): PagingSource<Int, Wish> =
+        if (query.isBlank()) wishDao.pagingSource()
+        else wishDao.pagingSourceFiltered(query)
 
 // ─── Write: Room-first ────────────────────────────────────────────────
     suspend fun createWish(

@@ -7,7 +7,7 @@ export const databaseConfig = registerAs('database', () => ({
   username: process.env.PGUSER,
   password: process.env.PGPASSWORD,
   database: process.env.PGDATABASE,
-  synchronize: false,
+  synchronize: process.env.TYPEORM_SYNC === 'true',
   logging: process.env.NODE_ENV !== 'production',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   extra: {

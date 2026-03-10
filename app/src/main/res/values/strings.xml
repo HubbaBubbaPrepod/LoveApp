@@ -2,6 +2,9 @@
 <resources>
     <string name="app_name">LoveApp</string>
 
+    <!-- Google Maps API key (replace with your actual key) -->
+    <string name="google_maps_api_key" translatable="false">YOUR_GOOGLE_MAPS_API_KEY</string>
+
     <!-- Widgets -->
     <string name="widget_mood_description">Настроение за день</string>
     <string name="widget_mood_small_description">Настроение (компактный)</string>
@@ -53,6 +56,11 @@
     <string name="relationship">Отношения</string>
     <string name="settings">Настройки</string>
     <string name="back">Назад</string>
+    <string name="chat">Чат</string>
+    <string name="memorial_days">Памятные дни</string>
+    <string name="spark">Искра</string>
+    <string name="tasks">Задания</string>
+    <string name="sleep">Сон</string>
     
     <!-- Notes -->
     <string name="our_notes">Мои заметки</string>
@@ -174,4 +182,23 @@
     <string name="account">Аккаунт</string>
     <string name="enable_notifications">Включить уведомления</string>
     <string name="sign_out_desc">Выйти из аккаунта</string>
+
+    <!-- Phase 2 -->
+    <string name="gallery">Фотографии</string>
+    <string name="love_touch">Love Touch</string>
+    <string name="miss_you">Скучаю</string>
+    <string name="app_lock">Блокировка</string>
+
+    <!-- Phase 3 -->
+    <string name="chat_settings">Настройки чата</string>
+    <string name="daily_qa">Вопрос дня</string>
+    <string name="intimacy">Близость</string>
+
+    <!-- Phase 4 -->
+    <string name="moments">Моменты</string>
+    <string name="places">Наши места</string>
+
+    <!-- Phase 5 -->
+    <string name="pet">Питомец</string>
+    <string name="games">Игры</string>
 </resources>

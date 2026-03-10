@@ -9,6 +9,7 @@ import com.example.loveapp.data.repository.MoodRepository
 import com.example.loveapp.data.repository.NoteRepository
 import com.example.loveapp.data.repository.RelationshipRepository
 import com.example.loveapp.data.repository.WishRepository
+import com.example.loveapp.im.TIMLoginManager
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,6 +37,7 @@ class DataPreloadManager @Inject constructor(
     private val artRepository: ArtRepository,
     private val cycleRepository: CycleRepository,
     private val relationshipRepository: RelationshipRepository,
+    private val timLoginManager: TIMLoginManager,
 ) {
     companion object {
         private const val TAG = "DataPreloadManager"
@@ -67,6 +69,8 @@ class DataPreloadManager @Inject constructor(
                     .onFailure { Log.w(TAG, "cycles refresh failed", it) } },
                 async { runCatching { relationshipRepository.refreshFromServer() }
                     .onFailure { Log.w(TAG, "relationship refresh failed", it) } },
+                async { runCatching { timLoginManager.login() }
+                    .onFailure { Log.w(TAG, "TIM login failed", it) } },
             )
             jobs.forEach { it.await() }
             Log.i(TAG, "Preload complete")

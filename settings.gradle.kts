@@ -16,6 +16,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Tencent IM SDK repository
+        maven { url = uri("https://mirrors.tencent.com/nexus/repository/maven-public/") }
     }
 }
 

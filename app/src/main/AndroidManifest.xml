@@ -17,11 +17,18 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- Required on Android 14+ (API 34) when foregroundServiceType="specialUse" -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Required on Android 14+ (API 34) when foregroundServiceType="location" -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <!-- Allows WorkManager to re-schedule workers after device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- System calendar access for CalendarExportManager -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+
+    <!-- Phase 1: Location for maps / orbit tracking -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <application
         android:name=".SimpleApplication"
@@ -33,13 +40,19 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.LoveApp">
+        android:theme="@style/Theme.LoveApp"
+        tools:replace="android:allowBackup">
 
         <!-- Sentry: DSN for crash reporting. Auto-init disabled — manual init in SimpleApplication -->
         <meta-data
             android:name="io.sentry.dsn"
             android:value="https://503edf5c1972fa711ecf26665acaa789@o4510979258843136.ingest.de.sentry.io/4510979272147024" />
         <meta-data android:name="io.sentry.auto-init" android:value="false" />
+
+        <!-- Phase 1: Google Maps API key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_maps_api_key" />
 
         <activity
             android:name=".MainActivity"
@@ -171,6 +184,27 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Persistent notification to open a drawing canvas from the lock screen without unlocking the device" />
+        </service>
+
+        <!-- Real-time location tracking foreground service -->
+        <service
+            android:name=".location.LocationTrackingService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+        <!-- Phase 2: Geofence transition broadcast receiver -->
+        <receiver
+            android:name=".location.GeofenceBroadcastReceiver"
+            android:exported="false" />
+
+        <!-- Phase 3: Phone status monitoring foreground service -->
+        <service
+            android:name=".location.PhoneStatusService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Monitors phone status (battery, screen, Wi-Fi) to share with partner" />
         </service>
 
         <!-- Art widget – Small (2×2) -->

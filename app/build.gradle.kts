@@ -140,6 +140,27 @@ dependencies {
     // Sentry crash reporting (8.x has 16 KB page-aligned native libs)
     implementation("io.sentry:sentry-android:8.0.0")
 
+    // ── Phase 1: Tencent IM SDK ──
+    implementation(libs.tencent.imsdk)
+
+    // ── Phase 1: MMKV key-value storage ──
+    implementation(libs.mmkv)
+
+    // ── Phase 1: Lottie animations (Compose) ──
+    implementation(libs.lottie.compose)
+
+    // ── Phase 1: Media3 ExoPlayer ──
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+    implementation(libs.media3.session)
+
+    // ── Phase 1: Google Maps & Places ──
+    implementation(libs.play.services.maps)
+    implementation(libs.play.services.location)
+    implementation(libs.places)
+    implementation(libs.maps.compose)
+    implementation(libs.maps.utils)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

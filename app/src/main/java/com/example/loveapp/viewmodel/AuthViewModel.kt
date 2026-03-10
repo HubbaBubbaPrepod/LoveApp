@@ -6,6 +6,7 @@ import android.net.Uri
 import com.example.loveapp.data.api.models.AuthResponse
 import com.example.loveapp.data.repository.AuthRepository
 import com.example.loveapp.sync.DataPreloadManager
+import com.example.loveapp.im.TIMLoginManager
 import com.example.loveapp.sync.SyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +19,8 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val dataPreloadManager: DataPreloadManager,
-    private val syncManager: SyncManager
+    private val syncManager: SyncManager,
+    private val timLoginManager: TIMLoginManager
 ) : ViewModel() {
 
     private val _currentUser = MutableStateFlow<AuthResponse?>(null)
@@ -157,6 +159,7 @@ class AuthViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             _isLoading.value = true
+            timLoginManager.logout()         // TIM SDK logout + unregister listener
             syncManager.onLogout()          // disconnect socket before DB wipe
             val result = authRepository.logout()   // clears token + wipes Room
             result.onSuccess {

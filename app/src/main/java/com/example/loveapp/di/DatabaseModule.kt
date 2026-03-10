@@ -61,4 +61,36 @@ object DatabaseModule {
     @Singleton
     @Provides
     fun provideOutboxDao(database: LoveAppDatabase): OutboxDao = database.outboxDao()
+
+    @Singleton
+    @Provides
+    fun provideChatMessageDao(database: LoveAppDatabase) = database.chatMessageDao()
+
+    @Singleton
+    @Provides
+    fun provideMemorialDayDao(database: LoveAppDatabase) = database.memorialDayDao()
+
+    @Singleton
+    @Provides
+    fun provideSparkStreakDao(database: LoveAppDatabase) = database.sparkStreakDao()
+
+    @Singleton
+    @Provides
+    fun provideCoupleTaskDao(database: LoveAppDatabase) = database.coupleTaskDao()
+
+    @Singleton
+    @Provides
+    fun provideSleepEntryDao(database: LoveAppDatabase) = database.sleepEntryDao()
+
+    @Singleton
+    @Provides
+    fun provideGalleryPhotoDao(database: LoveAppDatabase) = database.galleryPhotoDao()
+
+    @Singleton
+    @Provides
+    fun provideMissYouEventDao(database: LoveAppDatabase) = database.missYouEventDao()
+
+    @Singleton
+    @Provides
+    fun provideAppLockSettingDao(database: LoveAppDatabase) = database.appLockSettingDao()
 }

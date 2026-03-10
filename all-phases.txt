@@ -1,0 +1,196 @@
+
+# План адаптации Love8 → LoveApp (15 фаз)
+
+## Фаза 1: Real-time Location Tracking & Orbit
+**Что есть:** Places — просто список "общих мест" на карте.  
+**Что нужно (как в Love8):**
+- **Android:** Foreground Service для GPS-трекинга 24/7, отправка координат на сервер каждые 1-5 мин, отображение партнёра на карте в реальном времени, Orbit-вид (анимированная орбита движения), мониторинг скорости и дистанции
+- **Backend:** Таблицы `location_updates`, `location_history`, эндпоинты для записи/чтения координат, 30-дневная история, WebSocket канал для live-обновлений
+- **Библиотеки:** Google Maps SDK (уже есть), Location Services (уже есть), FusedLocationProvider
+
+## Фаза 2: Геозоны и оповещения (Geofences)
+**Что есть:** Ничего.  
+**Что нужно:**
+- **Android:** Геозоны (Home/Work/School/Custom) через GeofencingClient, push «прибыл/уехал», UI для создания/редактирования геозон на карте, Street View интеграция
+- **Backend:** Таблица `geofences`, эндпоинты CRUD, триггер-уведомления
+- Категории мест: ресторан, кафе, кино, парк, пляж, бар, концерт, музей и т.д.
+
+## Фаза 3: Мониторинг статуса телефона (Phone Status)
+**Что есть:** Ничего.  
+**Что нужно:**
+- **Android:** Сервис мониторинга: батарея, Wi-Fi имя, статус экрана (locked/unlocked), Active/Inactive, отправка на сервер
+- **Backend:** Таблица `phone_status`, эндпоинты, WebSocket для live-статуса
+- **UI:** Статус партнёра на карте: "Active now" / "Inactive" / "X min ago", батарея %, Wi-Fi имя
+- «Live Activities» — вывод в notification bar
+
+## Фаза 4: Полная переработка Pet System
+**Что есть:** Базовый питомец (hunger/happiness/cleanliness, XP, levels).  
+**Что нужно (как в Love8):**
+- **60 уровней** с разблокировкой наград и навыков
+- **Egg hatching** — анимация вылупления из яйца
+- **Множество питомцев** — случайные яйца, дубликаты → золотые монеты
+- **Мебель/декорирование** — магазин мебели, расшаривание с партнёром
+- **Приключения (Adventure)** — отправка в путешествия с наградами
+- **Wishlist** питомца — исполнение желаний
+- **Рисование (Brushes)** — рисование для питомца
+- **Check-in** ежедневный, **Spin** — лотерея наград
+- **Паспорт**, коллекции, путешествия, фото
+- **Backend:** Таблицы `pet_types`, `pet_furniture`, `pet_eggs`, `pet_adventures`, `pet_wishes`, `pet_collections`, `gold_coins`
+- **Библиотеки:** PAG Engine (libpag) для 178 анимаций, Spine Runtime для скелетной анимации питомца
+
+## Фаза 5: Золотая монета + Экономика
+**Что есть:** Ничего.  
+**Что нужно:**
+- **Backend:** Таблицы `gold_coins`, `daily_deals`, `shop_items`, `coin_transactions`
+- **Android:** Экран магазина, ежедневные награды, задания за монеты, Daily Deals
+- Premium x2 множитель золота
+- Интеграция с Pet: покупка мебели, яиц, приключений за монеты
+
+## Фаза 6: Полная переработка Chat System
+**Что есть:** Базовый чат (текст, изображения, read receipts, Tencent IM SDK подключён).  
+**Что нужно (как в Love8):**
+- **56 типов сообщений** — voice, video, location, drawing, sticker, custom
+- **Voice recording** — запись и воспроизведение голосовых (MediaRecorder + ExoPlayer)
+- **Pop-Up Stickers** — полноэкранные Lottie-анимации у партнёра
+- **"I Miss U" Counter** — долгое нажатие отправляет поток эмодзи, дневной счётчик
+- **Drawing** — рисование и отправка в чат (Canvas)
+- **6 типов пузырьков** (bubble shapes)
+- **Custom Photo Background** — фото как фон чата
+- **Backend:** Расширение chat API для новых типов, хранение voice/media файлов
+
+## Фаза 7: Couple Sleep — полная система
+**Что есть:** Базовый sleep tracker (bedtime/wake, quality).  
+**Что нужно (как в Love8):**
+- **Google Health Connect** интеграция — чтение данных сна с фитнес-трекеров
+- **Стадии сна**: Awake, REM, Core (Light), Deep — графики
+- **Couple Sleep Schedule** — совместное расписание (Bedtime/Wake Up)
+- **Sleep Report** — генерация отчёта после пробуждения обоих
+- **Календарь** статуса сна, 3-месячная история
+- **3 режима**: "Мой сон" / "Наш сон" / "Сон партнёра"
+- **Уведомления**: пора спать, партнёр не спит, разблокировал телефон после отбоя
+- **Backend:** Расширение sleep API, стадии, совместные отчёты
+- **Библиотека:** `androidx.health.connect:connect-client`
+
+## Фаза 8: Виджеты — полная система (18+ типов)
+**Что есть:** 9 виджетов (Mood×3, Activity×3, Art×3).  
+**Что нужно (как в Love8):**
+- **Location Widget** — местоположение партнёра (Small 2x2 / Large 4x4)
+- **Message Widget** — последнее сообщение (Small / Large)
+- **Special Day Widget** — ближайшая памятная дата (Small / Large)
+- **Distance Widget** — расстояние до партнёра
+- **Miss You Widget** — "I Miss U"
+- **Love Pet Widget** — состояние питомца
+- **Sleep Widget** — данные сна
+- VIP/Non-VIP варианты
+- Итого: **~18 новых виджетов** через Glance AppWidget
+
+## Фаза 9: Stories/Moments — полная переработка
+**Что есть:** Базовые Moments (текст + изображение).  
+**Что нужно:**
+- **Location-tagged stories** — привязка к месту с категориями (ресторан, кино, парк...)
+- **До 9 фото** в одном посте
+- **Комментарии** — система комментариев
+- **Счётчик посещений** — "Visited X, Last visit X days ago, X stories"
+- **Приватность** — только для пары
+- **Backend:** Таблицы `story_places`, `story_comments`, `story_visits`
+
+## Фаза 10: Premium & Подписки — полная переработка
+**Что есть:** Базовый Premium (3 плана).  
+**Что нужно (как в Love8):**
+- **2 типа подписки**: Individual + Couples ("Buy one, partner free!")
+- **5 тарифов**: Daily / Weekly / Monthly / Annual / Lifetime
+- **Free Trial** — X-дневный пробный период
+- **Промо**: "50% OFF", "Limited-Time Offer", "Special Offer Ends Soon"
+- **Опрос при отмене** — 4 причины (технические, не интересно, партнёр не пользуется, расстались)
+- **Гарантия**: при unmatch партнёр теряет Premium
+- **Google Play Billing Library** — полная интеграция
+- **Backend:** Расширение premium API, duo-подписки, trial, промоакции
+
+## Фаза 11: Игры — LibGDX мини-игры
+**Что есть:** Текстовые игры (Would You Rather, Truth or Dare, Quiz).  
+**Что нужно:**
+- **Emoji Shooter** — 2D мини-игра на LibGDX
+- **Speeding Game** — гоночная мини-игра на LibGDX
+- **Spin/Roulette** — колесо фортуны для наград
+- **Библиотека:** `com.badlogicgames.gdx:gdx-backend-android`
+
+## Фаза 12: Рекламная монетизация (AppLovin)
+**Что есть:** Ничего.  
+**Что нужно:**
+- **AppLovin MAX SDK** — медиация 20+ рекламных сетей
+- **Rewarded Video** — за золотые монеты / ускорение питомца
+- **Interstitial** — между экранами
+- **Banner** — на бесплатных экранах
+- **Ad Removal** — для Premium подписчиков
+- **Библиотека:** `com.applovin:applovin-sdk`
+
+## Фаза 13: Memorial Days — тематические оформления
+**Что есть:** Базовые памятные даты.  
+**Что нужно:**
+- **Тематические оформления**: Valentine's, Christmas, Halloween, New Year
+- **Обратный отсчёт**: D/H/M/S
+- **7 интервалов напоминаний**: On day / 1/2/3/7/15/30 days before
+- **PAG/Lottie анимации** для каждой темы
+
+## Фаза 14: OEM-оптимизации и фоновая стабильность
+**Что есть:** Базовые permissions.  
+**Что нужно:**
+- **Vivo**: AutoStart, Background activity
+- **Xiaomi**: AutoStart, Battery saver whitelist
+- **Huawei**: Protected apps, Battery optimization
+- **Oppo**: AutoStart, Background data
+- **Samsung**: Sleeping apps exception
+- Network Security Config (cleartext для dev)
+- Background Location Refresh оптимизация
+- Энергопотребление: +5% батареи при real-time tracking
+
+## Фаза 15: Мультиязычность и финальная полировка
+**Что есть:** Только английский.  
+**Что нужно:**
+- **15+ языков**: EN, DE, ES, FR, ID, IT, JA, KO, PT, TH, TR, VI, ZH, ZH-TW
+- **Together Counter** — "We have been together for X days" на Dashboard
+- **Love Milestones** — уведомления о вехах
+- **Unmatch flow** — предупреждение об удалении всех данных
+- **Customer Service** — система фидбека (email feedback)
+- **Passcode** улучшения
+- **Smartwatch** — базовая поддержка данных активности
+
+---
+
+## Сводка по библиотекам для добавления
+
+| Библиотека | Назначение | Фаза |
+|-----------|----------|------|
+| PAG Engine (`com.tencent.tav:libpag`) | 178 анимаций питомца/праздников | 4, 13 |
+| Spine Runtime | Скелетная анимация питомца | 4 |
+| Health Connect (`androidx.health.connect`) | Данные сна с фитнес-трекеров | 7 |
+| LibGDX (`com.badlogicgames.gdx`) | Мини-игры (Shooter, Racing) | 11 |
+| AppLovin MAX SDK | Рекламная монетизация | 12 |
+| Google Play Billing (`com.android.billingclient`) | Подписки и покупки | 10 |
+| GeofencingClient (уже в Play Services) | Геозоны | 2 |
+
+---
+
+## Оценка объёма по фазам
+
+| Фаза | Описание | Новые файлы |
+|------|---------|-------------|
+| 1 | Location Tracking & Orbit | ~15 |
+| 2 | Геозоны | ~10 |
+| 3 | Phone Status | ~8 |
+| 4 | Pet System overhaul | ~25 |
+| 5 | Gold Coin Economy | ~10 |
+| 6 | Chat System overhaul | ~20 |
+| 7 | Couple Sleep | ~12 |
+| 8 | Виджеты (18+) | ~25 |
+| 9 | Stories upgrade | ~8 |
+| 10 | Premium upgrade | ~10 |
+| 11 | LibGDX Games | ~15 |
+| 12 | AppLovin Ads | ~8 |
+| 13 | Memorial Themes | ~6 |
+| 14 | OEM Optimizations | ~8 |
+| 15 | i18n + Polish | ~20 |
+
+---
+
+Жду подтверждения. Могу начать с **Фазы 1** или с любой другой по вашему выбору.

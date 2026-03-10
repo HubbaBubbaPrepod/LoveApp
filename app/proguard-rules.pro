@@ -103,3 +103,34 @@
 # Preserve line numbers for crash stack traces
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Phase 1 – new core libraries
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─── Tencent IM SDK ───────────────────────────────────────────────────────────
+-keep class com.tencent.imsdk.** { *; }
+-keep class com.tencent.imsdk.v2.** { *; }
+-dontwarn com.tencent.**
+
+# ─── MMKV ─────────────────────────────────────────────────────────────────────
+-keep class com.tencent.mmkv.** { *; }
+-keepclasseswithmembers class com.tencent.mmkv.MMKV {
+    native <methods>;
+    long nativeHandle;
+}
+
+# ─── Lottie ───────────────────────────────────────────────────────────────────
+-dontwarn com.airbnb.lottie.**
+-keep class com.airbnb.lottie.** { *; }
+
+# ─── Media3 / ExoPlayer ──────────────────────────────────────────────────────
+-keep class androidx.media3.** { *; }
+-dontwarn androidx.media3.**
+-keep class com.google.android.exoplayer2.** { *; }
+-dontwarn com.google.android.exoplayer2.**
+
+# ─── Google Maps & Places ────────────────────────────────────────────────────
+-keep class com.google.android.gms.maps.** { *; }
+-keep class com.google.android.libraries.places.** { *; }
+-keep class com.google.maps.android.** { *; }

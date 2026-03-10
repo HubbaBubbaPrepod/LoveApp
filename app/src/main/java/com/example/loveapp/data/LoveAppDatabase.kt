@@ -7,23 +7,39 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.loveapp.data.dao.ActivityLogDao
+import com.example.loveapp.data.dao.ChatMessageDao
+import com.example.loveapp.data.dao.CoupleTaskDao
 import com.example.loveapp.data.dao.CustomCalendarDao
 import com.example.loveapp.data.dao.CustomCalendarEventDao
+import com.example.loveapp.data.dao.MemorialDayDao
 import com.example.loveapp.data.dao.MenstrualCycleDao
 import com.example.loveapp.data.dao.MoodEntryDao
 import com.example.loveapp.data.dao.NoteDao
 import com.example.loveapp.data.dao.OutboxDao
 import com.example.loveapp.data.dao.RelationshipInfoDao
+import com.example.loveapp.data.dao.SleepEntryDao
+import com.example.loveapp.data.dao.GalleryPhotoDao
+import com.example.loveapp.data.dao.MissYouEventDao
+import com.example.loveapp.data.dao.AppLockSettingDao
+import com.example.loveapp.data.dao.SparkStreakDao
 import com.example.loveapp.data.dao.UserDao
 import com.example.loveapp.data.dao.WishDao
 import com.example.loveapp.data.entity.ActivityLog
+import com.example.loveapp.data.entity.ChatMessage
+import com.example.loveapp.data.entity.CoupleTask
 import com.example.loveapp.data.entity.CustomCalendar
 import com.example.loveapp.data.entity.CustomCalendarEvent
+import com.example.loveapp.data.entity.MemorialDay
 import com.example.loveapp.data.entity.MenstrualCycleEntry
 import com.example.loveapp.data.entity.MoodEntry
 import com.example.loveapp.data.entity.Note
 import com.example.loveapp.data.entity.OutboxEntry
 import com.example.loveapp.data.entity.RelationshipInfo
+import com.example.loveapp.data.entity.SleepEntry
+import com.example.loveapp.data.entity.GalleryPhoto
+import com.example.loveapp.data.entity.MissYouEvent
+import com.example.loveapp.data.entity.AppLockSetting
+import com.example.loveapp.data.entity.SparkStreak
 import com.example.loveapp.data.entity.User
 import com.example.loveapp.data.entity.Wish
 
@@ -38,9 +54,17 @@ import com.example.loveapp.data.entity.Wish
         CustomCalendar::class,
         CustomCalendarEvent::class,
         RelationshipInfo::class,
-        OutboxEntry::class          // offline sync queue
+        OutboxEntry::class,         // offline sync queue
+        ChatMessage::class,
+        MemorialDay::class,
+        SparkStreak::class,
+        CoupleTask::class,
+        SleepEntry::class,
+        GalleryPhoto::class,
+        MissYouEvent::class,
+        AppLockSetting::class
     ],
-    version = 5,
+    version = 9,
     exportSchema = false
 )
 abstract class LoveAppDatabase : RoomDatabase() {
@@ -54,6 +78,14 @@ abstract class LoveAppDatabase : RoomDatabase() {
     abstract fun customCalendarEventDao(): CustomCalendarEventDao
     abstract fun relationshipInfoDao(): RelationshipInfoDao
     abstract fun outboxDao(): OutboxDao
+    abstract fun chatMessageDao(): ChatMessageDao
+    abstract fun memorialDayDao(): MemorialDayDao
+    abstract fun sparkStreakDao(): SparkStreakDao
+    abstract fun coupleTaskDao(): CoupleTaskDao
+    abstract fun sleepEntryDao(): SleepEntryDao
+    abstract fun galleryPhotoDao(): GalleryPhotoDao
+    abstract fun missYouEventDao(): MissYouEventDao
+    abstract fun appLockSettingDao(): AppLockSettingDao
 
     companion object {
         @Volatile
@@ -159,6 +191,40 @@ abstract class LoveAppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `chat_messages` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `senderId` INTEGER NOT NULL, `receiverId` INTEGER NOT NULL, `coupleKey` TEXT NOT NULL, `messageType` TEXT NOT NULL, `content` TEXT NOT NULL, `imageUrl` TEXT, `isRead` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `serverId` INTEGER, `syncPending` INTEGER NOT NULL, `serverUpdatedAt` INTEGER, `deletedAt` INTEGER)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `memorial_days` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userId` INTEGER NOT NULL, `title` TEXT NOT NULL, `date` TEXT NOT NULL, `type` TEXT NOT NULL, `icon` TEXT NOT NULL, `colorHex` TEXT NOT NULL, `repeatYearly` INTEGER NOT NULL, `reminderDays` INTEGER NOT NULL, `note` TEXT NOT NULL, `serverId` INTEGER, `syncPending` INTEGER NOT NULL, `serverUpdatedAt` INTEGER, `deletedAt` INTEGER)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `spark_streaks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `coupleKey` TEXT NOT NULL, `currentStreak` INTEGER NOT NULL, `longestStreak` INTEGER NOT NULL, `lastSparkDate` TEXT, `totalSparks` INTEGER NOT NULL, `serverId` INTEGER, `syncPending` INTEGER NOT NULL, `serverUpdatedAt` INTEGER, `deletedAt` INTEGER)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `couple_tasks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `coupleKey` TEXT NOT NULL, `userId` INTEGER NOT NULL, `title` TEXT NOT NULL, `description` TEXT NOT NULL, `category` TEXT NOT NULL, `icon` TEXT NOT NULL, `points` INTEGER NOT NULL, `isCompleted` INTEGER NOT NULL, `completedBy` INTEGER, `completedAt` INTEGER, `dueDate` TEXT, `isSystem` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `serverId` INTEGER, `syncPending` INTEGER NOT NULL, `serverUpdatedAt` INTEGER, `deletedAt` INTEGER)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `sleep_entries` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userId` INTEGER NOT NULL, `date` TEXT NOT NULL, `bedtime` TEXT, `wakeTime` TEXT, `durationMinutes` INTEGER, `quality` INTEGER, `note` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `serverId` INTEGER, `syncPending` INTEGER NOT NULL, `serverUpdatedAt` INTEGER, `deletedAt` INTEGER)")
+            }
+        }
+
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Voice message columns on chat_messages
+                db.execSQL("ALTER TABLE `chat_messages` ADD COLUMN `audioUrl` TEXT")
+                db.execSQL("ALTER TABLE `chat_messages` ADD COLUMN `audioDurationSeconds` INTEGER NOT NULL DEFAULT 0")
+                // Gallery photos
+                db.execSQL("CREATE TABLE IF NOT EXISTS `gallery_photos` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `coupleKey` TEXT NOT NULL, `userId` INTEGER NOT NULL, `imageUrl` TEXT NOT NULL, `thumbnailUrl` TEXT, `caption` TEXT NOT NULL, `width` INTEGER NOT NULL, `height` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `serverId` INTEGER, `syncPending` INTEGER NOT NULL, `serverUpdatedAt` INTEGER, `deletedAt` INTEGER)")
+                // Miss you events
+                db.execSQL("CREATE TABLE IF NOT EXISTS `miss_you_events` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `senderId` INTEGER NOT NULL, `receiverId` INTEGER NOT NULL, `coupleKey` TEXT NOT NULL, `emoji` TEXT NOT NULL DEFAULT '❤️', `message` TEXT NOT NULL DEFAULT '', `timestamp` INTEGER NOT NULL, `serverId` INTEGER, `syncPending` INTEGER NOT NULL, `serverUpdatedAt` INTEGER, `deletedAt` INTEGER)")
+                // App lock settings
+                db.execSQL("CREATE TABLE IF NOT EXISTS `app_lock_settings` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `userId` INTEGER NOT NULL, `pinHash` TEXT NOT NULL, `isBiometric` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)")
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Phase 2: TIM SDK fields on chat_messages
+                db.execSQL("ALTER TABLE `chat_messages` ADD COLUMN `timMsgId` TEXT")
+                db.execSQL("ALTER TABLE `chat_messages` ADD COLUMN `timCustomType` TEXT")
+                db.execSQL("ALTER TABLE `chat_messages` ADD COLUMN `timCustomData` TEXT")
+                db.execSQL("ALTER TABLE `chat_messages` ADD COLUMN `isRevoked` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getDatabase(context: Context): LoveAppDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -166,7 +232,7 @@ abstract class LoveAppDatabase : RoomDatabase() {
                     LoveAppDatabase::class.java,
                     "loveapp_database"
                 )
-                    .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .fallbackToDestructiveMigration() // safety net for dev builds
                     .build()
                     .also { Instance = it }

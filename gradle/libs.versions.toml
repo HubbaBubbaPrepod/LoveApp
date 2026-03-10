@@ -28,6 +28,17 @@ googleid = "1.1.1"
 socketio = "2.1.0"
 paging   = "3.3.6"
 
+# Phase 1 – new core libraries
+tencentImSdk = "7.9.5680"
+mmkv = "1.3.9"
+lottieCompose = "6.6.2"
+media3 = "1.5.1"
+playServicesMaps = "19.0.0"
+playServicesLocation = "21.3.0"
+places = "4.1.0"
+mapsCompose = "6.2.1"
+mapsUtils = "3.8.0"
+
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -71,6 +82,27 @@ firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging
 credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
+
+# Tencent IM SDK
+tencent-imsdk = { group = "com.tencent.imsdk", name = "imsdk-plus", version.ref = "tencentImSdk" }
+
+# MMKV key-value storage
+mmkv = { group = "com.tencent", name = "mmkv", version.ref = "mmkv" }
+
+# Lottie animations (Compose)
+lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottieCompose" }
+
+# Media3 ExoPlayer
+media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
+media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
+media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
+
+# Google Maps & Places
+play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+places = { group = "com.google.android.libraries.places", name = "places", version.ref = "places" }
+maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }
+maps-utils = { group = "com.google.maps.android", name = "android-maps-utils", version.ref = "mapsUtils" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

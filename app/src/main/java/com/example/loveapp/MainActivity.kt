@@ -37,6 +37,7 @@ import androidx.compose.runtime.key
 import android.content.Intent
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,6 +74,33 @@ import com.example.loveapp.ui.screens.SetupProfileScreen
 import com.example.loveapp.ui.screens.SignupScreen
 import com.example.loveapp.ui.screens.WishDetailScreen
 import com.example.loveapp.ui.screens.WishesScreen
+import com.example.loveapp.ui.screens.ChatScreen
+import com.example.loveapp.ui.screens.DrawingScreen
+import com.example.loveapp.ui.screens.MemorialDaysScreen
+import com.example.loveapp.ui.screens.SparkScreen
+import com.example.loveapp.ui.screens.TaskCenterScreen
+import com.example.loveapp.ui.screens.SleepTrackerScreen
+import com.example.loveapp.ui.screens.GalleryScreen
+import com.example.loveapp.ui.screens.LoveTouchScreen
+import com.example.loveapp.ui.screens.MissYouScreen
+import com.example.loveapp.ui.screens.AppLockScreen
+import com.example.loveapp.ui.screens.ChatSettingsScreen
+import com.example.loveapp.ui.screens.DailyQAScreen
+import com.example.loveapp.ui.screens.IntimacyScreen
+import com.example.loveapp.ui.screens.MomentsScreen
+import com.example.loveapp.ui.screens.PlacesScreen
+import com.example.loveapp.ui.screens.PetScreen
+import com.example.loveapp.ui.screens.GamesHubScreen
+import com.example.loveapp.ui.screens.AchievementsScreen
+import com.example.loveapp.ui.screens.LettersScreen
+import com.example.loveapp.ui.screens.BucketListScreen
+import com.example.loveapp.ui.screens.MoodInsightsScreen
+import com.example.loveapp.ui.screens.PremiumScreen
+import com.example.loveapp.ui.screens.StoryScreen
+import com.example.loveapp.ui.screens.LocationMapScreen
+import com.example.loveapp.ui.screens.GeofencesScreen
+import com.example.loveapp.ui.screens.PhoneStatusScreen
+import com.example.loveapp.ui.screens.ShopScreen
 import com.example.loveapp.ui.theme.LoveAppTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -230,7 +258,33 @@ fun LoveAppNavigation(
                 onNavigateToCalendars = { navController.navigate(Screen.CustomCalendars.route) },
                 onNavigateToRelationship = { navController.navigate(Screen.RelationshipDashboard.route) },
                 onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
-                onNavigateToArt = { navController.navigate(Screen.ArtGallery.route) }
+                onNavigateToArt = { navController.navigate(Screen.ArtGallery.route) },
+                onNavigateToChat = { navController.navigate(Screen.Chat.route) },
+                onNavigateToMemorial = { navController.navigate(Screen.MemorialDays.route) },
+                onNavigateToSpark = { navController.navigate(Screen.SparkInfo.route) },
+                onNavigateToTasks = { navController.navigate(Screen.TaskCenter.route) },
+                onNavigateToSleep = { navController.navigate(Screen.SleepTracker.route) },
+                onNavigateToGallery = { navController.navigate(Screen.Gallery.route) },
+                onNavigateToLoveTouch = { navController.navigate(Screen.LoveTouch.route) },
+                onNavigateToMissYou = { navController.navigate(Screen.MissYou.route) },
+                onNavigateToAppLock = { navController.navigate(Screen.AppLockSettings.route) },
+                onNavigateToChatSettings = { navController.navigate(Screen.ChatSettings.route) },
+                onNavigateToDailyQA = { navController.navigate(Screen.DailyQA.route) },
+                onNavigateToIntimacy = { navController.navigate(Screen.Intimacy.route) },
+                onNavigateToMoments = { navController.navigate(Screen.Moments.route) },
+                onNavigateToPlaces = { navController.navigate(Screen.Places.route) },
+                onNavigateToPet = { navController.navigate(Screen.Pet.route) },
+                onNavigateToGames = { navController.navigate(Screen.Games.route) },
+                onNavigateToAchievements = { navController.navigate(Screen.Achievements.route) },
+                onNavigateToLetters = { navController.navigate(Screen.Letters.route) },
+                onNavigateToBucketList = { navController.navigate(Screen.BucketList.route) },
+                onNavigateToMoodInsights = { navController.navigate(Screen.MoodInsights.route) },
+                onNavigateToPremium = { navController.navigate(Screen.Premium.route) },
+                onNavigateToStory = { navController.navigate(Screen.Story.route) },
+                onNavigateToLocationMap = { navController.navigate(Screen.LocationMap.route) },
+                onNavigateToGeofences = { navController.navigate(Screen.Geofences.route) },
+                onNavigateToPhoneStatus = { navController.navigate(Screen.PhoneStatus.route) },
+                onNavigateToShop = { navController.navigate(Screen.Shop.route) }
             )
         }
 
@@ -346,6 +400,126 @@ fun LoveAppNavigation(
                 canvasId = canvasId,
                 onNavigateBack = { navController.popBackStack() }
             )
+        }
+
+        composable(Screen.Chat.route) {
+            ChatScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToDrawing = { navController.navigate(Screen.Drawing.route) }
+            )
+        }
+
+        composable(Screen.Drawing.route) {
+            val chatEntry = remember { navController.getBackStackEntry(Screen.Chat.route) }
+            val chatVm: com.example.loveapp.viewmodel.ChatViewModel =
+                androidx.hilt.navigation.compose.hiltViewModel(chatEntry)
+            DrawingScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onSendDrawing = { bytes ->
+                    chatVm.sendDrawingMessage(bytes)
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.MemorialDays.route) {
+            MemorialDaysScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.SparkInfo.route) {
+            SparkScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.TaskCenter.route) {
+            TaskCenterScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.SleepTracker.route) {
+            SleepTrackerScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Gallery.route) {
+            GalleryScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.LoveTouch.route) {
+            LoveTouchScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.MissYou.route) {
+            MissYouScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.AppLockSettings.route) {
+            AppLockScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.ChatSettings.route) {
+            ChatSettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.DailyQA.route) {
+            DailyQAScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Intimacy.route) {
+            IntimacyScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Moments.route) {
+            MomentsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Places.route) {
+            PlacesScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Pet.route) {
+            PetScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Games.route) {
+            GamesHubScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Achievements.route) {
+            AchievementsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Letters.route) {
+            LettersScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.BucketList.route) {
+            BucketListScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.MoodInsights.route) {
+            MoodInsightsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Premium.route) {
+            PremiumScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Story.route) {
+            StoryScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.LocationMap.route) {
+            LocationMapScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Geofences.route) {
+            GeofencesScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.PhoneStatus.route) {
+            PhoneStatusScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Shop.route) {
+            ShopScreen(onNavigateBack = { navController.popBackStack() })
         }
         }
 

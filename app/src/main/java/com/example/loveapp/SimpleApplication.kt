@@ -9,6 +9,9 @@ import com.example.loveapp.notifications.NotificationWorker
 import com.example.loveapp.notifications.ReminderWorker
 import com.example.loveapp.sync.SyncManager
 import com.example.loveapp.widget.WidgetSyncWorker
+import com.example.loveapp.im.TIMManager
+import com.example.loveapp.storage.MMKVManager
+import com.google.android.libraries.places.api.Places
 import dagger.hilt.android.HiltAndroidApp
 import io.sentry.android.core.SentryAndroid
 import javax.inject.Inject
@@ -42,6 +45,34 @@ class SimpleApplication : Application(), Configuration.Provider {
         // super.onCreate() initialises Hilt — must be called first
         super.onCreate()
         Log.d("LoveApp", "SimpleApplication.onCreate() Hilt OK")
+
+        // ── Phase 1: MMKV ──
+        try {
+            MMKVManager.init(this)
+            Log.d("LoveApp", "MMKV initialised")
+        } catch (e: Exception) {
+            Log.e("LoveApp", "MMKV init failed", e)
+        }
+
+        // ── Phase 1: Tencent IM SDK ──
+        try {
+            // TODO: Replace 0 with your Tencent IM SDKAppID
+            TIMManager.init(this, sdkAppId = 0)
+            Log.d("LoveApp", "Tencent IM SDK initialised")
+        } catch (e: Exception) {
+            Log.e("LoveApp", "TIM SDK init failed", e)
+        }
+
+        // ── Phase 1: Google Places ──
+        try {
+            if (!Places.isInitialized()) {
+                // TODO: Replace with your Google Maps API key
+                Places.initialize(applicationContext, getString(R.string.google_maps_api_key))
+            }
+            Log.d("LoveApp", "Google Places initialised")
+        } catch (e: Exception) {
+            Log.e("LoveApp", "Google Places init failed", e)
+        }
 
         try {
             WidgetSyncWorker.schedulePeriodicSync(this)

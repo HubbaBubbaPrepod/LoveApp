@@ -1,0 +1,16 @@
+node_modules
+dist
+.git
+.env
+*.md
+coverage
+test
+.vscode
+monitoring
+nginx
+docker-compose.yml
+scripts
+service-account.json
+combined_for_ai.txt
+import.py
+*.sql

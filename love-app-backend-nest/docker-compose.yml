@@ -1,0 +1,148 @@
+services:
+  # ─── NestJS API ────────────────────────────────────────────
+  api:
+    build: .
+    container_name: loveapp-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379
+      PGHOST: postgres
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+      - ./service-account.json:/app/service-account.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - loveapp_net
+
+  # ─── PostgreSQL ────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: loveapp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PGUSER:-loveapp}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-loveapp}
+      POSTGRES_DB: ${PGDATABASE:-loveapp}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-loveapp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - loveapp_net
+
+  # ─── Redis ────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: loveapp-redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    sysctls:
+      net.core.somaxconn: 1024
+    networks:
+      - loveapp_net
+
+  # ─── Prometheus ────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: loveapp-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d'
+    networks:
+      - loveapp_net
+
+  # ─── Grafana ──────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: loveapp-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_SERVER_ROOT_URL: https://love-app.ru:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - loveapp_net
+
+  # ─── Nginx reverse proxy ──────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: loveapp-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "3000:3000"
+      - "9000:9000"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+      - uploads_data:/var/www/loveapp/uploads:ro
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - loveapp_net
+
+  # ─── Frontend (React SPA) ─────────────────────────────────
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: loveapp-frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    networks:
+      - loveapp_net
+
+  # ─── Portainer ────────────────────────────────────────────
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: loveapp-portainer
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - loveapp_net
+
+volumes:
+  pg_data:
+  redis_data:
+  uploads_data:
+  logs_data:
+  prometheus_data:
+  grafana_data:
+  portainer_data:
+
+networks:
+  loveapp_net:
+    name: loveapp_net
+    driver: bridge

@@ -3,4 +3,3 @@ dist
 .git
 *.md
 .vscode
-.env

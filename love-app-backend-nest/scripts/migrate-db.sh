@@ -14,8 +14,8 @@ SRC_DB="${SRC_DB:-loveapp_db}"
 
 # ── Назначение (Docker-контейнер) ─────────────────────────
 DST_CONTAINER="${DST_CONTAINER:-loveapp-postgres}"
-DST_USER="${DST_USER:-loveapp}"
-DST_DB="${DST_DB:-loveapp}"
+DST_USER="${DST_USER:-spyuser}"
+DST_DB="${DST_DB:-loveapp_db}"
 
 DUMP_FILE="db_dump_$(date +%Y%m%d_%H%M%S).sql"
 

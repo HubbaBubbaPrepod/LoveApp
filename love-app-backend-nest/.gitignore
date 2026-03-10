@@ -35,16 +35,7 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# Secrets (NEVER commit)
-service-account.json
-*.pem
 
-# Dumps
-*.sql
-db_dump_*
-
-# Build artifacts
-combined_for_ai.txt
 
 # temp directory
 .temp

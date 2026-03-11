@@ -13,7 +13,7 @@ export class MenstrualCycle {
   @Column({ type: 'bigint' })
   user_id: number;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', nullable: true })
   start_date: string;
 
   @Column({ type: 'date', nullable: true })

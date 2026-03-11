@@ -22,6 +22,12 @@ export class CustomActivityType {
   @Column({ type: 'varchar', nullable: true })
   category: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  color_hex: string;
+
+  @Column({ type: 'text', nullable: true })
+  emoji: string;
+
   @CreateDateColumn()
   created_at: Date;
 }

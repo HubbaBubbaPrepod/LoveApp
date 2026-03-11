@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsIn, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsIn } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 const VALID_MOOD_TYPES = [
@@ -18,15 +18,12 @@ export class CreateMoodDto {
   @IsString()
   note?: string;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: 10 })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  @Max(10)
-  energy_level?: number;
-
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  activities?: string;
+  date?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  metadata?: Record<string, any>;
 }

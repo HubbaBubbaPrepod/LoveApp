@@ -19,11 +19,20 @@ export class ActivityLog {
   @Column({ type: 'varchar', nullable: true })
   activity_type: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  title: string;
+
   @Column({ type: 'text', nullable: true })
   description: string;
 
   @Column({ type: 'varchar', nullable: true })
   category: string;
+
+  @Column({ type: 'text', nullable: true })
+  note: string;
+
+  @Column({ type: 'text', array: true, nullable: true })
+  image_urls: string[];
 
   @Column({ type: 'int', nullable: true })
   duration_minutes: number;

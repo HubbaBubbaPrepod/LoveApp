@@ -127,7 +127,7 @@ export class AdminService {
     const rows = await this.dataSource.query(
       `SELECT u.id, u.username, u.email, u.display_name, u.role, u.is_premium,
               u.profile_image, u.created_at, u.updated_at,
-              r.partner_id
+              r.partner_user_id
        FROM users u
        LEFT JOIN relationship_info r ON r.user_id = u.id
        ${whereClause}
@@ -141,7 +141,7 @@ export class AdminService {
 
   async getUser(id: number) {
     const rows = await this.dataSource.query(
-      `SELECT u.*, r.partner_id, r.couple_name, r.anniversary_date
+      `SELECT u.*, r.partner_user_id, r.couple_name, r.anniversary_date
        FROM users u
        LEFT JOIN relationship_info r ON r.user_id = u.id
        WHERE u.id = $1`,

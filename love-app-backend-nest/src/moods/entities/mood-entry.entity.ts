@@ -19,11 +19,11 @@ export class MoodEntry {
   @Column({ type: 'text', nullable: true })
   note: string;
 
-  @Column({ type: 'int', nullable: true })
-  energy_level: number;
+  @Column({ type: 'date', nullable: true })
+  date: string;
 
-  @Column({ type: 'text', nullable: true })
-  activities: string;
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, any>;
 
   @Column({ type: 'timestamp', nullable: true })
   deleted_at: Date;

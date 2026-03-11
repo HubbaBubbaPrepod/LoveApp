@@ -52,6 +52,15 @@ export class CustomCalendarEvent {
   @Column({ type: 'int', nullable: true })
   reminder_minutes: number;
 
+  @Column({ type: 'varchar', nullable: true })
+  event_type: string;
+
+  @Column({ type: 'text', nullable: true })
+  image_url: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  marked_date: Date;
+
   @Column({ type: 'timestamp', nullable: true })
   deleted_at: Date;
 

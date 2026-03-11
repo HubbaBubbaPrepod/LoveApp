@@ -25,7 +25,7 @@ export class WidgetService {
 
     // Days together
     const [relRow] = await this.dataSource.query(
-      `SELECT start_date FROM relationship_info WHERE couple_key = $1`,
+      `SELECT relationship_start_date as start_date FROM relationship_info WHERE couple_key = $1`,
       [coupleKey],
     );
     let daysTogether = 0;

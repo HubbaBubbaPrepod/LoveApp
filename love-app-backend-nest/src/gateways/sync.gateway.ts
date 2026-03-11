@@ -40,7 +40,7 @@ const ENTITY_MAP: Record<string, { table: string; columns: string[] }> = {
   },
   cycle: {
     table: 'menstrual_cycles',
-    columns: ['id', 'user_id', 'couple_key', 'start_date', 'end_date', 'cycle_length', 'period_length', 'notes', 'symptoms', 'created_at', 'updated_at', 'is_deleted'],
+    columns: ['id', 'user_id', 'couple_key', 'cycle_start_date', 'end_date', 'cycle_duration', 'period_duration', 'notes', 'symptoms', 'created_at', 'updated_at', 'is_deleted'],
   },
   calendar: {
     table: 'custom_calendars',
@@ -52,7 +52,7 @@ const ENTITY_MAP: Record<string, { table: string; columns: string[] }> = {
   },
   relationship: {
     table: 'relationship_info',
-    columns: ['id', 'user_id', 'partner_id', 'couple_name', 'anniversary_date', 'created_at', 'updated_at'],
+    columns: ['id', 'user_id', 'partner_user_id', 'couple_key', 'anniversary_date', 'relationship_start_date', 'created_at', 'updated_at'],
   },
   chat_message: {
     table: 'chat_messages',

@@ -13,16 +13,16 @@ export class MenstrualCycle {
   @Column({ type: 'bigint', nullable: true })
   user_id: number;
 
-  @Column({ type: 'date', nullable: true })
+  @Column({ type: 'date', nullable: true, name: 'cycle_start_date' })
   start_date: string;
 
   @Column({ type: 'date', nullable: true })
   end_date: string;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'smallint', nullable: true, name: 'cycle_duration' })
   cycle_length: number;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'smallint', nullable: true, name: 'period_duration' })
   period_length: number;
 
   @Column({ type: 'jsonb', default: '{}' })

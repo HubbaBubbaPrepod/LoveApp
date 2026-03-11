@@ -44,6 +44,12 @@ export class User {
   @Column({ type: 'decimal', default: 1.0 })
   premium_coins_multiplier: number;
 
+  @Column({ nullable: true })
+  pairing_code: string;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  pairing_code_expires_at: Date;
+
   @CreateDateColumn()
   created_at: Date;
 

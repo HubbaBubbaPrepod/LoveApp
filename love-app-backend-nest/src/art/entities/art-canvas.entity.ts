@@ -19,6 +19,9 @@ export class ArtCanvas {
   @Column({ type: 'text', nullable: true })
   thumbnail_url: string;
 
+  @Column({ type: 'int', nullable: true })
+  created_by: number;
+
   @CreateDateColumn()
   created_at: Date;
 

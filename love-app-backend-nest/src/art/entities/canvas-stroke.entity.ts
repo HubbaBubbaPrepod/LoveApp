@@ -12,7 +12,7 @@ export class CanvasStroke {
   @Column({ type: 'bigint', nullable: true })
   canvas_id: number;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true, name: 'strokes_json' })
   strokes_data: string;
 
   @Column({ type: 'timestamp', default: () => 'NOW()' })

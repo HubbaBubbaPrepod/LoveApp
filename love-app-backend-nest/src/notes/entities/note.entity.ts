@@ -37,6 +37,9 @@ export class Note {
   @Column({ type: 'timestamp', default: () => 'NOW()' })
   server_updated_at: Date;
 
+  @Column({ type: 'timestamp', nullable: true })
+  updated_at: Date;
+
   @CreateDateColumn()
   created_at: Date;
 }

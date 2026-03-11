@@ -14,6 +14,7 @@ const mockNote = {
   deleted_at: new Date(),
   server_updated_at: new Date(),
   created_at: new Date(),
+  updated_at: new Date(),
   tags: [],
   image_url: '',
   due_date: '',

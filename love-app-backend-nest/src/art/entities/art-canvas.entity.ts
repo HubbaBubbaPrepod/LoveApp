@@ -10,7 +10,7 @@ export class ArtCanvas {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
-  @Column()
+  @Column({ nullable: true })
   couple_key: string;
 
   @Column({ nullable: true })

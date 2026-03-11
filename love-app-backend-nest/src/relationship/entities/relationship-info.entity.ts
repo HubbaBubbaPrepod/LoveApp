@@ -10,7 +10,7 @@ export class RelationshipInfo {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   user_id: number;
 
   @Column({ type: 'bigint', nullable: true })

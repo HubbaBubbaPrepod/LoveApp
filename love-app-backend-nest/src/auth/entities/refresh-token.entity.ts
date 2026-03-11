@@ -10,13 +10,13 @@ export class RefreshToken {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   user_id: number;
 
-  @Column()
+  @Column({ nullable: true })
   token: string;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamp', nullable: true })
   expires_at: Date;
 
   @CreateDateColumn()

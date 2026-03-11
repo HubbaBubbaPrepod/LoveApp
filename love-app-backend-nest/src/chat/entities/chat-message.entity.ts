@@ -10,13 +10,13 @@ export class ChatMessage {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   sender_id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   receiver_id: number;
 
-  @Column()
+  @Column({ nullable: true })
   couple_key: string;
 
   @Column({ default: 'text' })

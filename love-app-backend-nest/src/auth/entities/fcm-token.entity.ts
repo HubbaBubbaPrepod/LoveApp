@@ -1,19 +1,16 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   Column,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('fcm_tokens')
 export class FcmToken {
-  @PrimaryGeneratedColumn('increment')
-  id: number;
-
-  @Column({ type: 'bigint' })
+  @PrimaryColumn({ type: 'int' })
   user_id: number;
 
-  @Column()
+  @Column({ type: 'text', nullable: true })
   fcm_token: string;
 
   @Column({ nullable: true })

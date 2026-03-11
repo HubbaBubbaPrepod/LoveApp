@@ -10,22 +10,22 @@ export class CustomCalendarEvent {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   calendar_id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   user_id: number;
 
   @Column({ type: 'varchar', nullable: true })
   couple_key: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'varchar', nullable: true })
   title: string;
 
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', nullable: true })
   event_date: string;
 
   @Column({ type: 'varchar', nullable: true })

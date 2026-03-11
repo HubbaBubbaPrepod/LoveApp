@@ -9,10 +9,10 @@ export class DailyQuestion {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   question_text: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'varchar', nullable: true })
   category: string;
 
   @Column({ type: 'text', nullable: true })

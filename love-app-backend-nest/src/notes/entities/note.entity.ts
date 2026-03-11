@@ -10,10 +10,10 @@ export class Note {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   user_id: number;
 
-  @Column()
+  @Column({ nullable: true })
   title: string;
 
   @Column({ type: 'text', nullable: true })

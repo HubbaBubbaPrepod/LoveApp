@@ -10,7 +10,7 @@ export class MenstrualCycle {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   user_id: number;
 
   @Column({ type: 'date', nullable: true })

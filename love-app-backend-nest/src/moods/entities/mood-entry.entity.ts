@@ -10,10 +10,10 @@ export class MoodEntry {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   user_id: number;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'varchar', nullable: true })
   mood_type: string;
 
   @Column({ type: 'text', nullable: true })

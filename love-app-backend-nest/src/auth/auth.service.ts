@@ -244,7 +244,7 @@ export class AuthService {
     });
 
     if (existing) {
-      await this.fcmRepo.update(existing.id, {
+      await this.fcmRepo.update(existing.user_id, {
         fcm_token: dto.fcm_token,
         device_id: dto.device_id,
       });

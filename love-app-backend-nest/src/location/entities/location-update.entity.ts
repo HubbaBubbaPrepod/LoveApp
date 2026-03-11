@@ -10,16 +10,16 @@ export class LocationUpdate {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   user_id: number;
 
   @Column({ type: 'varchar', nullable: true })
   couple_key: string;
 
-  @Column({ type: 'numeric' })
+  @Column({ type: 'numeric', nullable: true })
   latitude: number;
 
-  @Column({ type: 'numeric' })
+  @Column({ type: 'numeric', nullable: true })
   longitude: number;
 
   @Column({ type: 'numeric', nullable: true })

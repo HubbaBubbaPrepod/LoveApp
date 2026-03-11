@@ -10,13 +10,13 @@ export class GalleryPhoto {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   user_id: number;
 
-  @Column()
+  @Column({ nullable: true })
   couple_key: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   image_url: string;
 
   @Column({ type: 'text', nullable: true })

@@ -9,7 +9,7 @@ export class CanvasStroke {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   canvas_id: number;
 
   @Column({ type: 'text', nullable: true })

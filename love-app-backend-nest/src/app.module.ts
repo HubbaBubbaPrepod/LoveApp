@@ -93,7 +93,7 @@ import { CronModule } from './cron/cron.module';
         username: config.get('PGUSER'),
         password: config.get('PGPASSWORD'),
         database: config.get('PGDATABASE'),
-        synchronize: false,
+        synchronize: config.get('TYPEORM_SYNC') === 'true',
         logging: config.get('NODE_ENV') !== 'production',
         autoLoadEntities: true,
         migrationsRun: false,

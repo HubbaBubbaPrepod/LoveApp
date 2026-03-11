@@ -24,10 +24,10 @@ data class GoogleSignInRequest(
 
 data class AuthResponse(
     val id: Int,
-    val username: String,
-    val email: String,
+    val username: String? = null,
+    val email: String? = null,
     @SerializedName("display_name")
-    val displayName: String,
+    val displayName: String? = null,
     val gender: String? = null,
     @SerializedName("profile_image")
     val profileImage: String? = null,

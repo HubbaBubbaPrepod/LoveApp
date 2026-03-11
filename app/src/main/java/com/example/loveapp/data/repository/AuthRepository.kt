@@ -51,19 +51,19 @@ class AuthRepository @Inject constructor(
                 tokenManager.saveToken(
                     token = token,
                     userId = response.data.id.toString(),
-                    username = response.data.username,
-                    email = response.data.email,
-                    displayName = response.data.displayName
+                    username = response.data.username ?: "",
+                    email = response.data.email ?: "",
+                    displayName = response.data.displayName ?: ""
                 )
             }
             
             // Save to local database (cache after successful server signup)
             // NOTE: password field intentionally left blank — never store passwords locally
             val user = User(
-                username = response.data.username,
-                email = response.data.email,
+                username = response.data.username ?: "",
+                email = response.data.email ?: "",
                 password = "",
-                displayName = response.data.displayName,
+                displayName = response.data.displayName ?: "",
                 gender = response.data.gender ?: "",
                 isLoggedIn = true
             )
@@ -86,19 +86,19 @@ class AuthRepository @Inject constructor(
                 tokenManager.saveToken(
                     token = token,
                     userId = response.data.id.toString(),
-                    username = response.data.username,
-                    email = response.data.email,
-                    displayName = response.data.displayName
+                    username = response.data.username ?: "",
+                    email = response.data.email ?: "",
+                    displayName = response.data.displayName ?: ""
                 )
             }
             
             // Save to local database (cache after successful server login)
             // NOTE: password field intentionally left blank — never store passwords locally
             val user = User(
-                username = response.data.username,
-                email = response.data.email,
+                username = response.data.username ?: "",
+                email = response.data.email ?: "",
                 password = "",
-                displayName = response.data.displayName,
+                displayName = response.data.displayName ?: "",
                 gender = response.data.gender ?: "",
                 isLoggedIn = true
             )
@@ -123,16 +123,16 @@ class AuthRepository @Inject constructor(
                 tokenManager.saveToken(
                     token = token,
                     userId = response.data.id.toString(),
-                    username = response.data.username,
-                    email = response.data.email,
-                    displayName = response.data.displayName
+                    username = response.data.username ?: "",
+                    email = response.data.email ?: "",
+                    displayName = response.data.displayName ?: ""
                 )
             }
             val user = User(
-                username = response.data.username,
-                email = response.data.email,
+                username = response.data.username ?: "",
+                email = response.data.email ?: "",
                 password = "",
-                displayName = response.data.displayName,
+                displayName = response.data.displayName ?: "",
                 gender = response.data.gender ?: "",
                 isLoggedIn = true
             )

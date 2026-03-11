@@ -81,8 +81,13 @@ export class AuthService {
     const refreshToken = await this.generateRefreshToken(user.id);
 
     return {
-      user: { id: user.id, username: user.username, email: user.email, display_name: user.display_name },
-      accessToken,
+      id: user.id,
+      username: user.username || '',
+      email: user.email || '',
+      display_name: user.display_name || '',
+      gender: user.gender || null,
+      profile_image: user.profile_image || null,
+      token: accessToken,
       refreshToken,
     };
   }
@@ -105,16 +110,14 @@ export class AuthService {
     const refreshToken = await this.generateRefreshToken(user.id);
 
     return {
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        display_name: user.display_name,
-        gender: user.gender,
-        profile_image: user.profile_image,
-        is_premium: user.is_premium,
-      },
-      accessToken,
+      id: user.id,
+      username: user.username || '',
+      email: user.email || '',
+      display_name: user.display_name || '',
+      gender: user.gender || null,
+      profile_image: user.profile_image || null,
+      is_premium: user.is_premium,
+      token: accessToken,
       refreshToken,
     };
   }
@@ -147,9 +150,9 @@ export class AuthService {
 
     const profile = {
       id: user.id,
-      username: user.username,
-      email: user.email,
-      display_name: user.display_name,
+      username: user.username || '',
+      email: user.email || '',
+      display_name: user.display_name || '',
       profile_image: user.profile_image,
       avatar_url: user.avatar_url,
       gender: user.gender,
@@ -223,17 +226,18 @@ export class AuthService {
     const accessToken = this.generateAccessToken(user.id);
     const refreshToken = await this.generateRefreshToken(user.id);
 
+    const needsProfileSetup = !user.gender || !user.display_name;
+
     return {
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        display_name: user.display_name,
-        profile_image: user.profile_image,
-        gender: user.gender,
-        is_premium: user.is_premium,
-      },
-      accessToken,
+      id: user.id,
+      username: user.username || '',
+      email: user.email || '',
+      display_name: user.display_name || '',
+      gender: user.gender || null,
+      profile_image: user.profile_image || null,
+      is_premium: user.is_premium,
+      needs_profile_setup: needsProfileSetup,
+      token: accessToken,
       refreshToken,
     };
   }

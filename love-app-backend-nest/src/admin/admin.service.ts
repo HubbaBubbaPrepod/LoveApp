@@ -141,7 +141,7 @@ export class AdminService {
 
   async getUser(id: number) {
     const rows = await this.dataSource.query(
-      `SELECT u.*, r.partner_user_id, r.couple_name, r.anniversary_date
+      `SELECT u.*, r.partner_user_id, r.couple_key, r.anniversary_date
        FROM users u
        LEFT JOIN relationship_info r ON r.user_id = u.id
        WHERE u.id = $1`,

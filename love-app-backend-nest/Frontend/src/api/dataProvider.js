@@ -18,23 +18,23 @@ const dataProvider = {
 
     const res = await api.get(`/admin/${resource}`, { params })
     const total = parseInt(res.headers['x-total-count'] || res.data?.length || 0)
-    const data  = Array.isArray(res.data) ? res.data : res.data?.data || []
+    const raw   = Array.isArray(res.data) ? res.data : res.data?.data || []
+    const data  = raw.map(r => ({ ...r, id: Number(r.id) }))
 
     return { data, total }
   },
 
   getOne: async (resource, { id }) => {
-    // Some resources support single fetch
-    const res = await api.get(`/admin/${resource}`, { params: { id } })
-    const data = res.data?.data || (Array.isArray(res.data) ? res.data[0] : res.data)
-    return { data: { ...data, id: data?.id || id } }
+    const res = await api.get(`/admin/${resource}/${id}`)
+    const data = res.data?.data || res.data
+    return { data: { ...data, id: Number(data?.id ?? id) } }
   },
 
   getMany: async (resource, { ids }) => {
     const results = await Promise.all(
-      ids.map(id => api.get(`/admin/${resource}`, { params: { id } })
-        .then(r => r.data?.data || r.data)
-        .catch(() => ({ id })))
+      ids.map(id => api.get(`/admin/${resource}/${id}`)
+        .then(r => { const d = r.data?.data || r.data; return { ...d, id: Number(d?.id ?? id) }; })
+        .catch(() => ({ id: Number(id) })))
     )
     return { data: results }
   },
